@@ -143,9 +143,9 @@ const EditUserPage: React.FC = () => {
                   <Shield size={14} className="mr-1" /> Administrative Role
                 </label>
                 <select name="role" value={formData.role} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none transition-all font-medium appearance-none">
-                  <option value="SUPER_ADMIN">Global Super Admin</option>
                   <option value="STORE_ADMIN">Branch Store Admin</option>
                   <option value="ACCOUNTANT">Chief Accountant</option>
+                  <option value="CASHIER">Cashier</option>
                 </select>
               </div>
             </div>

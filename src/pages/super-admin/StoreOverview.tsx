@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Store, Laptop2, CreditCard, Activity, Plus, Filter, AlertCircle, Loader2 } from 'lucide-react';
 import { storesApi, reportsApi } from '../../service/api';
+import { StatsCard } from '../../components/ui/StatsCard';
 
 const StoreOverview: React.FC = () => {
   const navigate = useNavigate();
@@ -66,65 +67,42 @@ const StoreOverview: React.FC = () => {
 
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-36 sm:h-40">
-          <div className="flex justify-between items-start">
-            <span className="text-slate-500 font-bold text-xs sm:text-sm tracking-wide">Total Stores</span>
-            <div className="w-8 h-8 rounded-md bg-blue-50 flex items-center justify-center text-blue-600">
-              <Store className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1 sm:mb-2 text-left">{stats?.totalStores || stores.length || "0"}</div>
-            <div className="text-[10px] sm:text-xs font-bold text-slate-400 flex items-center">
-              <span className="text-emerald-500 mr-1">Live</span> active
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-36 sm:h-40">
-          <div className="flex justify-between items-start">
-            <span className="text-slate-500 font-bold text-xs sm:text-sm tracking-wide">Active Devices</span>
-            <div className="w-8 h-8 rounded-md bg-indigo-50 flex items-center justify-center text-indigo-600">
-              <Laptop2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1 sm:mb-2 text-left">{stats?.activeDevices?.toLocaleString() || '0'}</div>
-            <div className="text-[10px] sm:text-xs font-bold text-slate-400 flex items-center">
-              <span className="text-emerald-500 mr-1">Live</span> provisioned devices
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-36 sm:h-40">
-          <div className="flex justify-between items-start">
-            <span className="text-slate-500 font-bold text-xs sm:text-sm tracking-wide">Total Revenue</span>
-            <div className="w-8 h-8 rounded-md bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <CreditCard className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1 sm:mb-2 text-left">Rs {stats?.totalRevenue ? stats.totalRevenue.toLocaleString() : '0'}</div>
-            <div className="text-[10px] sm:text-xs font-bold text-slate-400 flex items-center">
-              <span className="text-emerald-500 mr-1">Total</span> lifetime revenue
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between h-36 sm:h-40">
-          <div className="flex justify-between items-start">
-            <span className="text-slate-500 font-bold text-xs sm:text-sm tracking-wide">Active Trials</span>
-            <div className="w-8 h-8 rounded-md bg-amber-50 flex items-center justify-center text-amber-600">
-              <Activity className="w-4 h-4" />
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-1 sm:mb-2 text-left">{stats?.activeTrials?.toLocaleString() || '0'}</div>
-            <div className="text-[10px] sm:text-xs font-bold text-slate-400 flex items-center">
-              <span className="text-slate-500 mr-1">Current</span> total trials
-            </div>
-          </div>
-        </div>
+        <StatsCard 
+          title="Total Stores"
+          value={stats?.totalStores || stores.length || "0"}
+          icon={Store}
+          iconColorClass="text-blue-600"
+          iconBgClass="bg-blue-50"
+          description="active"
+          trend={{ value: "Live", isPositive: true, label: "Live active" }}
+        />
+        <StatsCard 
+          title="Active Devices"
+          value={stats?.activeDevices?.toLocaleString() || '0'}
+          icon={Laptop2}
+          iconColorClass="text-indigo-600"
+          iconBgClass="bg-indigo-50"
+          description="provisioned devices"
+          trend={{ value: "Live", isPositive: true, label: "Live provisioned devices" }}
+        />
+        <StatsCard 
+          title="Total Revenue"
+          value={`Rs ${stats?.totalRevenue ? stats.totalRevenue.toLocaleString() : '0'}`}
+          icon={CreditCard}
+          iconColorClass="text-emerald-600"
+          iconBgClass="bg-emerald-50"
+          description="total lifetime revenue"
+          trend={{ value: "Total", isPositive: true, label: "Total lifetime revenue" }}
+        />
+        <StatsCard 
+          title="Active Trials"
+          value={stats?.activeTrials?.toLocaleString() || '0'}
+          icon={Activity}
+          iconColorClass="text-amber-600"
+          iconBgClass="bg-amber-50"
+          description="total trials"
+          trend={{ value: "Current", isPositive: false, label: "Current total trials" }}
+        />
       </div>
 
       {/* Tabs and Filters Row */}

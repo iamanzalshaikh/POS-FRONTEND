@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Store, Mail, MapPin, Loader2, AlertCircle } from 'lucide-react';
 import { storesApi } from '../../service/api';
+import { StoreCharts } from '../../components/super-admin/StoreCharts';
 
 const EditStorePage: React.FC = () => {
   const navigate = useNavigate();
@@ -108,10 +109,14 @@ const EditStorePage: React.FC = () => {
               <Store size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Edit Store Details</h1>
-              <p className="text-sm font-medium text-slate-500 mt-1">Update configuration and identity for this branch.</p>
+              <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{formData.name || 'Store Dashboard'}</h1>
+              <p className="text-sm font-medium text-slate-500 mt-1">Analytics, configuration, and identity for this branch.</p>
             </div>
           </div>
+        </div>
+
+        <div className="p-8 pb-0">
+           <StoreCharts />
         </div>
 
         {/* Form Body */}
