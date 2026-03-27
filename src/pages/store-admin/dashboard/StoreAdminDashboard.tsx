@@ -61,6 +61,7 @@ export default function StoreAdminDashboard() {
             { value: today.transactions ?? s.totalTransactions ?? 0 },
             { value: inv.lowStockCount ?? 0 },
             { value: s.totalTransactions ?? 0 },
+            { value: s.totalDiscount ?? 0 },
           ],
           dailySales: revByDate.map((d: { date?: string; revenue?: number }) => ({ date: d.date ?? '', sales: d.revenue ?? 0 })),
           weeklyRevenue: revByDate.map((d: { date?: string; revenue?: number }) => ({ week: d.date ?? '', revenue: d.revenue ?? 0 })),

@@ -1,8 +1,15 @@
+import { useState } from "react"
 import ProductRow from "./ProductRow"
+import AddStockModal from "./AddStockModal"
 
-export default function ProductsTable({ data }: any) {
+export default function ProductsTable({ data, onRefresh }: any) {
+    const [selectedProduct, setSelectedProduct] = useState<any>(null);
+    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
-    return (
+    const handleAddStock = (product: any) => {
+        setSelectedProduct(product);
+        setIsStockModalOpen(true);
+    };
 
         <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden animate-fade-in hover:shadow-lg transition-all duration-300">
             <div className="overflow-x-auto">
@@ -25,7 +32,11 @@ export default function ProductsTable({ data }: any) {
 
                         {data.length > 0 ? (
                             data.map((p: any, i: number) => (
-                                <ProductRow key={p.id} product={p} index={i + 1} />
+                                <ProductRow 
+                                    key={p.id} 
+                                    product={{...p, onAddStock: handleAddStock}} 
+                                    index={i + 1} 
+                                />
                             ))
                         ) : (
                             <tr>
@@ -40,6 +51,13 @@ export default function ProductsTable({ data }: any) {
                 </table>
 
             </div>
+
+            <AddStockModal 
+                open={isStockModalOpen} 
+                onClose={() => setIsStockModalOpen(false)} 
+                product={selectedProduct} 
+                onSuccess={onRefresh}
+            />
 
         </div>
 

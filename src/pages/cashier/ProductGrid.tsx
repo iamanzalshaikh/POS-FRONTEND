@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus } from 'lucide-react';
+import { formatCurrency } from '@/utils/format';
 
 type Product = {
   id: string;
@@ -66,7 +67,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onAddToCart, loadin
                       }`}>{stock}</span>
                 </p>
                 <p className="text-lg font-bold text-emerald-600 mt-1">
-                  ₹{price.toFixed(2)}
+                  {formatCurrency(price)}
                 </p>
               </div>
             </div>

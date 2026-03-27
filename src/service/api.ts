@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3005/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3003/api/v1',
   withCredentials: true,
 });
 
@@ -19,14 +19,15 @@ api.interceptors.request.use((config) => {
     }
   }
   
-  // Log sales-related requests for debugging
-  if (config.url?.includes('/sales')) {
+  // Log all API requests for debugging
+  if (config.url?.includes('/sales') || config.url?.includes('/products')) {
     console.log('🌐 [API Interceptor] Outgoing request:', {
       url: config.url,
       method: config.method,
       baseURL: config.baseURL,
       fullUrl: `${config.baseURL}${config.url}`,
       headers: config.headers,
+      hasAuth: !!config.headers.Authorization,
       data: config.data,
     });
   }

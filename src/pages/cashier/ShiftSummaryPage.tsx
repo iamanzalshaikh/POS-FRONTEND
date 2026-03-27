@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
 import { CalendarDays, Printer } from 'lucide-react';
 import { reportsApi } from '../../service/api';
+import { formatCurrency } from '@/utils/format';
 
 type PaymentBreakdown = {
   method: string;
@@ -127,7 +127,7 @@ const ShiftSummaryPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <SummaryCard
               label="Total Sales Amount"
-              value={`₹${(summary.totalSalesAmount || 0).toFixed(2)}`}
+              value={formatCurrency(summary.totalSalesAmount || 0)}
             />
             <SummaryCard
               label="Total Transactions"
@@ -135,11 +135,11 @@ const ShiftSummaryPage: React.FC = () => {
             />
             <SummaryCard
               label="Average Ticket Size"
-              value={`₹${(summary.averageTicketSize || 0).toFixed(2)}`}
+              value={formatCurrency(summary.averageTicketSize || 0)}
             />
             <SummaryCard
               label="Total Discount Given"
-              value={`₹${(summary.totalDiscountGiven || 0).toFixed(2)}`}
+              value={formatCurrency(summary.totalDiscountGiven || 0)}
             />
           </div>
 
@@ -163,7 +163,7 @@ const ShiftSummaryPage: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <div className="font-bold text-slate-900">
-                        ₹{p.amount.toFixed(2)}
+                        {formatCurrency(p.amount)}
                       </div>
                       <div className="text-[10px] text-slate-500">
                         {p.count} transactions

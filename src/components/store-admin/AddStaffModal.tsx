@@ -27,6 +27,7 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
     const [terminals, setTerminals] = useState<Terminal[]>([]);
 
     useEffect(() => {
@@ -42,6 +43,7 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                 setFormData({ name: '', email: '', role: 'CASHIER', password: '' });
             }
             setError(null);
+            setShowPassword(false);
         }
     }, [isOpen, editMember]);
 
@@ -63,13 +65,8 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
     const handleClose = () => {
         setError(null);
         setFormData({ name: '', email: '', role: 'CASHIER', password: '' });
+        setShowPassword(false);
         onClose();
-    };
-
-    const toggleTerminal = (id: string) => {
-        const ids = formData.assignedTerminalIds ?? [];
-        const next = ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id];
-        setFormData({ ...formData, assignedTerminalIds: next.length ? next : undefined });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -177,33 +174,30 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                                 </select>
                             </div>
                         </div>
-
                         {formData.role === 'CASHIER' && (
                             <div className="space-y-2">
                                 <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
-                                    <Monitor className="w-4 h-4" /> Assigned Terminals
+                                    <Monitor className="w-4 h-4" /> Assign Terminal
                                 </label>
-                                {terminals.length > 0 ? (
-                                    <div className="flex flex-wrap gap-2 p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                                <div className="relative">
+                                    <Monitor className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                                    <select
+                                        value={formData.assignedTerminalIds?.[0] || ""}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setFormData({ ...formData, assignedTerminalIds: val ? [val] : undefined });
+                                        }}
+                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-xs appearance-none cursor-pointer"
+                                    >
+                                        <option value="">No Terminal Assigned</option>
                                         {terminals.map(t => (
-                                            <label key={t.id} className="flex items-center gap-2 cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={(formData.assignedTerminalIds ?? []).includes(t.id)}
-                                                    onChange={() => toggleTerminal(t.id)}
-                                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                                                />
-                                                <span className="text-sm font-medium text-slate-700">{t.deviceName}</span>
-                                            </label>
+                                            <option key={t.id} value={t.id}>{t.deviceName}</option>
                                         ))}
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-amber-600 font-medium p-3 bg-amber-50 border border-amber-100 rounded-2xl">
-                                        No terminals registered yet. Add terminals from Devices Management first, then assign this cashier.
-                                    </p>
-                                )}
+                                    </select>
+                                </div>
                             </div>
                         )}
+
 
                         <div className="space-y-2">
                             <label className="text-xs font-black uppercase tracking-widest text-slate-400 ml-1">Password {editMember ? '(Leave blank to keep same)' : '(required)'}</label>
@@ -215,8 +209,15 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                                     placeholder="••••••••"
                                     value={formData.password}
                                     onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium"
+                                    className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
                             </div>
                             <p className="text-[10px] text-slate-400 font-medium ml-1">{PASSWORD_HINT}</p>
                         </div>

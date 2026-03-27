@@ -9,6 +9,14 @@ export interface StaffMember {
     role: StaffRole;
     status: StaffStatus;
     lastLogin: string;
+    lastLogout: string;
+}
+
+export interface StaffAuthActivity {
+    action: string;
+    at: string;
+    ipAddress?: string | null;
+    userAgent?: string | null;
 }
 
 export interface CreateStaffInput {

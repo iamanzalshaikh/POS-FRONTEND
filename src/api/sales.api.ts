@@ -37,4 +37,4 @@ export const cancelSale = (id: string, reason: string) => {
 
 export const refundSale = (id: string, reason: string) => {
   return axios.post(`/sales/${id}/refund`, { reason });
-};
+};

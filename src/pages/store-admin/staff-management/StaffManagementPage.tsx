@@ -9,18 +9,24 @@ import AddStaffModal from '@/components/store-admin/AddStaffModal';
 import type { StaffMember, CreateStaffInput, StaffRole, StaffStatus } from './types/staff.types';
 import { fetchStaffMembers, createStaffMember, updateStaffMember } from '@/api/staff.api';
 
-function mapApiUser(u: { id: string; name: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | null }): StaffMember {
+function formatActivity(value?: string | null): string {
+    return value ? new Date(value).toLocaleString() : 'Never';
+}
+
+function mapApiUser(u: { id: string; name: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | null; lastLogoutAt?: string | null }): StaffMember {
     return {
         id: u.id,
         name: u.name,
         email: u.email,
         role: u.role as StaffRole,
         status: u.isActive ? 'active' : 'inactive',
-        lastLogin: u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : 'Never'
+        lastLogin: formatActivity(u.lastLoginAt),
+        lastLogout: formatActivity(u.lastLogoutAt),
     };
 }
 
 export default function StaffManagementPage() {
+    const navigate = useNavigate();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStaffToEdit, setSelectedStaffToEdit] = useState<StaffMember | undefined>(undefined);
@@ -43,7 +49,7 @@ export default function StaffManagementPage() {
                 const resData = response.data as { data?: unknown } | unknown[];
                 const users = Array.isArray(resData) ? resData : (resData && typeof resData === 'object' && 'data' in resData ? (resData as { data: unknown[] }).data : []);
                 if (Array.isArray(users)) {
-                    setStaff(users.map((u) => mapApiUser(u as { id: string; name: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | null })));
+                    setStaff(users.map((u) => mapApiUser(u as { id: string; name: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | null; lastLogoutAt?: string | null })));
                 } else {
                     setStaff([]);
                 }
@@ -77,7 +83,7 @@ export default function StaffManagementPage() {
         try {
             const response = await createStaffMember(data);
             const resData = response.data as { success?: boolean; data?: unknown };
-            const user = (resData?.data ?? resData) as { id: string; name: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | null };
+            const user = (resData?.data ?? resData) as { id: string; name: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | null; lastLogoutAt?: string | null };
             if (user?.id) {
                 setStaff(prev => [mapApiUser(user), ...prev]);
                 return { success: true };
@@ -126,7 +132,7 @@ export default function StaffManagementPage() {
             {/* Mobile Backdrop */}
             {sidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-55 lg:hidden animate-fade-in"
                     onClick={() => setSidebarOpen(false)}
                 ></div>
             )}

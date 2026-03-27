@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ShoppingCart, Scan, Package } from 'lucide-react';
+import { ShoppingCart, Scan, Package, RotateCcw } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import SidebarLink from '../../components/ui/SidebarLink';
 import DeviceAccessGate from '../../components/cashier/DeviceAccessGate';
@@ -13,6 +13,7 @@ import ShiftSummaryPage from './ShiftSummaryPage';
 import InventoryCheckPage from './InventoryCheckPage';
 import CashierProfilePage from './CashierProfilePage';
 import ProductsListPage from './ProductsListPage';
+import ReturnRefundPage from './ReturnRefundPage';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -51,6 +52,12 @@ const CashierDashboard: React.FC = () => {
           variant="emerald"
         />
         <SidebarLink
+          to="/cashier/returns"
+          icon={<RotateCcw size={20} />}
+          label="Returns / Refunds"
+          variant="emerald"
+        />
+        <SidebarLink
           to="/cashier/products"
           icon={<Package size={20} />}
           label="Products"
@@ -84,22 +91,23 @@ const CashierDashboard: React.FC = () => {
           <Route path="/devices" element={deviceId ? <Navigate to="/cashier/terminal" replace /> : <DeviceSelection />} />
           <Route path="/terminal" element={<><POSInterface /><ShiftTools /></>} />
           <Route path="/products" element={<ProductsListPage />} />
-        <Route path="/receipt/:saleId" element={<ReceiptPage />} />
-        <Route path="/receipt/offline/:saleId" element={<ReceiptPage />} />
-        <Route path="/shift-summary" element={<ShiftSummaryPage />} />
-        <Route path="/inventory" element={<InventoryCheckPage />} />
-        <Route path="/profile" element={<CashierProfilePage />} />
-        <Route
-          path="/scan"
-          element={
-            <div className="text-center p-20 bg-white border border-slate-200 rounded-3xl">
-              <Scan size={64} className="mx-auto text-emerald-500 mb-6" />
-              <h2 className="text-2xl font-bold text-slate-800">Scan Item Ready</h2>
-              <p className="text-slate-500 mt-2">Waiting for barcode input...</p>
-            </div>
-          }
-        />
-        <Route path="*" element={<Navigate to="/cashier" replace />} />
+          <Route path="/receipt/:saleId" element={<ReceiptPage />} />
+          <Route path="/receipt/offline/:saleId" element={<ReceiptPage />} />
+          <Route path="/shift-summary" element={<ShiftSummaryPage />} />
+          <Route path="/inventory" element={<InventoryCheckPage />} />
+          <Route path="/profile" element={<CashierProfilePage />} />
+          <Route path="/returns" element={<ReturnRefundPage />} />
+          <Route
+            path="/scan"
+            element={
+              <div className="text-center p-20 bg-white border border-slate-200 rounded-3xl">
+                <Scan size={64} className="mx-auto text-emerald-500 mb-6" />
+                <h2 className="text-2xl font-bold text-slate-800">Scan Item Ready</h2>
+                <p className="text-slate-500 mt-2">Waiting for barcode input...</p>
+              </div>
+            }
+          />
+          <Route path="*" element={<Navigate to="/cashier" replace />} />
         </Routes>
       </DashboardLayout>
     </DeviceAccessGate>

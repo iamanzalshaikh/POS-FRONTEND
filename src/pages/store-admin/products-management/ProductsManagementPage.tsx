@@ -134,7 +134,7 @@ export default function ProductsManagementPage() {
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] animate-pulse mt-6">Syncing Inventory Assets...</p>
                             </div>
                         ) : (
-                            <ProductsTable data={paginated} />
+                            <ProductsTable data={paginated} onRefresh={() => loadProducts()} />
                         )}
                     </div>
 
