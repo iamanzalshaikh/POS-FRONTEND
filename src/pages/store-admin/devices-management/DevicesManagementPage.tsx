@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react"
 import { getDeviceFingerprint } from "@/utils/fingerprint"
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
-
 import DevicesHeader from "@/components/store-admin/DevicesHeader"
 import AddTerminalModal from "@/components/store-admin/AddTerminalModal"
 import DevicesFilters, { type StatusFilter, type ViewFilter } from "@/components/store-admin/DevicesFilters"
@@ -15,7 +12,6 @@ import * as deviceApi from "@/api/devices.api";
 import type { Device } from "./types/device.types"
 
 export default function DevicesManagementPage() {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
     const [terminalModalOpen, setTerminalModalOpen] = useState(false)
     const [page, setPage] = useState(1)
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
@@ -90,63 +86,47 @@ export default function DevicesManagementPage() {
     const total = filtered.length
 
     return (
-        <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 flex text-slate-900 dark:text-slate-100 transition-all duration-500">
-            {/* Mobile Backdrop */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
+        <div className="animate-in fade-in duration-500 space-y-10">
+            <DevicesHeader
+                onAddTerminal={() => setTerminalModalOpen(true)}
+                terminalCount={terminals.length}
+            />
 
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-            <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-
-                <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in space-y-10">
-                    <DevicesHeader
-                        onAddTerminal={() => setTerminalModalOpen(true)}
-                        terminalCount={terminals.length}
-                    />
-
-                    <div className="mt-8">
-                        <StatsCards data={[
-                            { name: "Connected Hardware", stat: String(terminals.length), change: "+2", changeType: "positive" },
-                            { name: "Online Devices", stat: String(terminals.filter((t: any) => t.status === 'online').length), change: "100%", changeType: "positive" },
-                            { name: "Offline / Alerts", stat: String(terminals.filter((t: any) => t.status === 'offline').length), change: "0%", changeType: "negative" },
-                            { name: "POS Terminals", stat: String(terminals.filter((t: any) => t.type === 'POS').length), change: "+1", changeType: "positive" },
-                        ]} />
-                    </div>
-
-                    <AddTerminalModal
-                        isOpen={terminalModalOpen}
-                        onClose={() => setTerminalModalOpen(false)}
-                        onSuccess={() => { refetchTerminals(); setTerminalModalOpen(false); }}
-                    />
-
-                    <DevicesFilters
-                        statusFilter={statusFilter}
-                        onStatusFilterChange={(v) => { setStatusFilter(v); setPage(1); }}
-                        viewFilter={viewFilter}
-                        onViewFilterChange={(v) => { setViewFilter(v); setPage(1); }}
-                        searchQuery={searchQuery}
-                        onSearchQueryChange={(v) => { setSearchQuery(v); setPage(1); }}
-                    />
-
-                    {loading ? (
-                        <div className="bg-white rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 shadow-sm">
-                            <div className="w-12 h-12 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
-                            <p className="text-[10px] font-black text-slate-400 mt-6 uppercase tracking-[4px] animate-pulse leading-none">Scanning Hardware...</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-8 animate-fade-in">
-                            <DevicesTable data={paginated} onDelete={handleDelete} />
-                            <DevicesPagination page={page} setPage={setPage} total={total} />
-                        </div>
-                    )}
-                </main>
+            <div className="mt-8">
+                <StatsCards data={[
+                    { name: "Connected Hardware", stat: String(terminals.length), change: "+2", changeType: "positive" },
+                    { name: "Online Devices", stat: String(terminals.filter((t: any) => t.status === 'online').length), change: "100%", changeType: "positive" },
+                    { name: "Offline / Alerts", stat: String(terminals.filter((t: any) => t.status === 'offline').length), change: "0%", changeType: "negative" },
+                    { name: "POS Terminals", stat: String(terminals.filter((t: any) => t.type === 'POS').length), change: "+1", changeType: "positive" },
+                ]} />
             </div>
+
+            <AddTerminalModal
+                isOpen={terminalModalOpen}
+                onClose={() => setTerminalModalOpen(false)}
+                onSuccess={() => { refetchTerminals(); setTerminalModalOpen(false); }}
+            />
+
+            <DevicesFilters
+                statusFilter={statusFilter}
+                onStatusFilterChange={(v) => { setStatusFilter(v); setPage(1); }}
+                viewFilter={viewFilter}
+                onViewFilterChange={(v) => { setViewFilter(v); setPage(1); }}
+                searchQuery={searchQuery}
+                onSearchQueryChange={(v) => { setSearchQuery(v); setPage(1); }}
+            />
+
+            {loading ? (
+                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                    <div className="w-12 h-12 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 mt-6 uppercase tracking-[4px] animate-pulse leading-none">Scanning Hardware...</p>
+                </div>
+            ) : (
+                <div className="space-y-8 animate-fade-in">
+                    <DevicesTable data={paginated} onDelete={handleDelete} />
+                    <DevicesPagination page={page} setPage={setPage} total={total} />
+                </div>
+            )}
         </div>
     )
 }

@@ -1,46 +1,34 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useStoreStore } from '../../store/useStoreStore';
 import { useNavigate } from 'react-router-dom';
-import { 
-    Plus, 
-    Search, 
-    Store, 
-    Users, 
-    Package
+import {
+    Plus,
+    MoreVertical,
+    Eye,
+    Edit2,
+    Trash2,
+    Power,
+    MapPin,
+    Shield
 } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { showToast } from '../../utils/admin-toast';
-import Pagination from '../../components/shared/admin/Pagination';
+import { DataTable } from '@/components/global-components/data-table';
+import type { ColumnDef } from '@tanstack/react-table';
 
 const StoresListPage: React.FC = () => {
     const { stores, isLoading, fetchStores, toggleStoreStatus } = useStoreStore();
-    const [searchTerm, setSearchTerm] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
     const navigate = useNavigate();
-
-    const itemsPerPage = 5;
 
     useEffect(() => {
         fetchStores();
     }, [fetchStores]);
-
-    // Handle Search and Filter Reset
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm]);
-
-    const filteredStores = useMemo(() => {
-        return stores.filter(s => 
-            s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            s.city?.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [stores, searchTerm]);
-
-    const totalPages = Math.ceil(filteredStores.length / itemsPerPage);
-    const paginatedStores = filteredStores.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
 
     const handleToggleStatus = async (id: string, currentStatus: boolean) => {
         const success = await toggleStoreStatus(id, !currentStatus);
@@ -51,130 +39,160 @@ const StoresListPage: React.FC = () => {
         }
     };
 
+    const formatStoreName = (raw: string) => {
+        if (!raw) return '';
+        let s = raw.replace(/^(STR|STORE|S)[\W_:\-]*\d*/i, '');
+        s = s.replace(/^[\d\W_]+/, '');
+        s = s.replace(/\d+/g, '');
+        s = s.replace(/[_\-]+/g, ' ').trim();
+        s = s.replace(/\s{2,}/g, ' ');
+        return s || raw;
+    };
+
+    const columns: ColumnDef<any>[] = useMemo(() => [
+        {
+            accessorKey: "id",
+            header: "Store ID",
+            cell: ({ row }) => (
+                <span className="font-bold text-slate-400 text-xs">
+                    {(row.index + 1).toString().padStart(2, '0')}
+                </span>
+            )
+        },
+        {
+            accessorKey: "name",
+            header: "Store Name",
+            cell: ({ row }) => (
+                <div className="flex flex-col text-left">
+                    <span className="font-black text-slate-900 dark:text-white text-sm tracking-tight leading-tight">
+                        {formatStoreName(row.original.name)}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        {row.original.email || 'NO_ENDPOINT_LINKED'}
+                    </span>
+                </div>
+            )
+        },
+        {
+            accessorKey: "city",
+            header: "Store City",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <MapPin size={12} className="text-slate-400" />
+                    <span className="text-sm text-slate-900 dark:text-slate-200 font-bold tracking-tight">
+                        {row.getValue("city") || 'Universal Node'}
+                    </span>
+                </div>
+            )
+        },
+        {
+            accessorKey: "state",
+            header: "Region",
+            cell: ({ row }) => (
+                <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]">
+                    {row.original.state || 'National Port'}
+                </span>
+            )
+        },
+        {
+            accessorKey: "ownerName",
+            header: "Owner Name",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-bold text-indigo-600 text-[10px]">
+                        { (row.original.owner?.name?.[0] || 'U').toUpperCase() }
+                    </div>
+                    <span className="text-sm text-slate-900 dark:text-slate-200 font-bold">
+                        {row.original.owner?.name || row.original.ownerName || 'Unassigned Root'}
+                    </span>
+                </div>
+            )
+        },
+        {
+            accessorKey: "isActive",
+            header: "Status",
+            cell: ({ row }) => {
+                const active = row.original.isActive;
+                return (
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-200'
+                    }`}>
+                        <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                        {active ? 'Active' : 'Inactive'}
+                    </div>
+                );
+            }
+        },
+        {
+            id: "actions",
+            header: "Action",
+            cell: ({ row }) => (
+                <div className="flex justify-center">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-10 w-10 p-0 hover:bg-slate-100 rounded-full transition-all active:scale-90">
+                                <MoreVertical className="h-5 w-5 text-black" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[180px] rounded-2xl border-slate-900 shadow-2xl p-2 bg-white ring-1 ring-black/5">
+                        <DropdownMenuItem 
+                            onClick={() => navigate(`/super-admin/stores/${row.original.id}`)}
+                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer"
+                        >
+                            <Eye size={14} className="text-slate-400" />
+                            View Details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                            onClick={() => navigate(`/super-admin/stores/edit/${row.original.id}`)}
+                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer"
+                        >
+                            <Edit2 size={14} className="text-slate-400" />
+                            Edit Node
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                            onClick={() => handleToggleStatus(row.original.id, row.original.isActive)}
+                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-50"
+                        >
+                            <Power size={14} />
+                            {row.original.isActive ? 'Suspend' : 'Reactive'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer text-rose-600 focus:text-rose-600 focus:bg-rose-50"
+                        >
+                            <Trash2 size={14} />
+                            Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )
+        }
+    ], [toggleStoreStatus, navigate]);
+
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stores Directory</h1>
                     <p className="text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">Manage system branches and provisioned network nodes</p>
                 </div>
-                <button 
+                <button
                     onClick={() => navigate('/super-admin/stores/create')}
-                    className="flex items-center gap-2 px-6 py-3.5 bg-[#262255] text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-indigo-900/20 hover:bg-[#312E81] transition-all active:scale-95"
+                    className="flex items-center gap-2 px-6 py-4 bg-[#262255] text-white rounded-[20px] font-bold text-[11px] uppercase tracking-[2px] shadow-xl shadow-indigo-900/10 hover:bg-[#312E81] transition-all active:scale-95 border-b-4 border-indigo-950"
                 >
-                    <Plus size={18} />
-                    Provision New Store
+                    <Plus size={16} />
+                    Provision New Node
                 </button>
             </div>
 
-            {/* Content Card with Filters and Table */}
-            <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm overflow-hidden flex flex-col">
-                <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="relative flex-1 max-w-md group w-full">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#2563EB] transition-colors" size={18} />
-                        <input 
-                            type="text" 
-                            placeholder="Filter by name, email or city..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-12 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-[#2563EB]/40 focus:ring-4 focus:ring-[#2563EB]/5 transition-all outline-none font-medium text-slate-900"
-                        />
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Active Nodes</span>
-                        <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg font-bold text-sm">{filteredStores.length}</div>
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto min-h-[450px]">
-                    <table className="w-full text-left">
-                        <thead>
-                            <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                <th className="px-8 py-5">Store Identity</th>
-                                <th className="px-8 py-5">Network Status</th>
-                                <th className="px-8 py-5">Resource Count</th>
-                                <th className="px-8 py-5">Region</th>
-                                <th className="px-8 py-5 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {isLoading ? (
-                                <tr>
-                                    <td colSpan={5} className="px-8 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3">
-                                            <div className="w-8 h-8 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Consulting Node Registry...</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : filteredStores.length === 0 ? (
-                                <tr>
-                                    <td colSpan={5} className="px-8 py-20 text-center">
-                                        <p className="text-slate-400 font-bold uppercase tracking-widest opacity-50">No matching nodes found in the network.</p>
-                                    </td>
-                                </tr>
-                            ) : paginatedStores.map((store) => (
-                                <tr key={store.id} className="group hover:bg-[#2563EB]/5 transition-all text-sm">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-slate-50 border border-slate-100 text-slate-400 rounded-xl flex items-center justify-center group-hover:text-indigo-600 group-hover:border-indigo-100 transition-all">
-                                                <Store size={22} />
-                                            </div>
-                                            <div>
-                                                <h3 className="font-bold text-slate-900 tracking-tight leading-none mb-1.5">{store.name}</h3>
-                                                <p className="text-[11px] font-medium text-slate-400 truncate max-w-[200px]">{store.email || 'No Contact Defined'}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <button 
-                                            onClick={() => handleToggleStatus(store.id, store.isActive)}
-                                            className={`flex items-center gap-2 px-4 py-1.5 rounded-full border font-bold text-[10px] uppercase tracking-widest transition-all ${
-                                            store.isActive 
-                                                ? 'bg-emerald-50 text-emerald-600 border-emerald-500/20 hover:bg-emerald-100' 
-                                                : 'bg-rose-50 text-rose-600 border-rose-500/20 hover:bg-rose-100'
-                                        }`}>
-                                            <div className={`w-1.5 h-1.5 rounded-full ${store.isActive ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
-                                            {store.isActive ? 'Online' : 'Offline'}
-                                        </button>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-6">
-                                            <div className="flex items-center gap-2">
-                                                <Users size={14} className="text-slate-300" />
-                                                <span className="text-xs font-bold text-slate-600">{store._count?.users || 0}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Package size={14} className="text-slate-300" />
-                                                <span className="text-xs font-bold text-slate-600">{store._count?.products || 0}</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{store.city || 'Global'}, {store.state || 'WW'}</span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <button 
-                                            onClick={() => navigate(`/super-admin/stores/${store.id}`)}
-                                            className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                                        >
-                                            Manage Node
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Standardized Pagination Implementation */}
-                <Pagination 
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                />
-            </div>
+            <DataTable
+                columns={columns}
+                data={stores}
+                isLoading={isLoading}
+                searchKey="name"
+                placeholder="Filter network by store name..."
+                onRefresh={fetchStores}
+            />
         </div>
     );
 };

@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Calculator, Plus, Search, Filter, Trash2, Edit2, TrendingUp, PieChart as PieChartIcon, DollarSign, Calendar } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Calculator, Plus, Search, Filter, DollarSign, Calendar, TrendingUp } from 'lucide-react';
 import { getExpenses, createExpense, updateExpense, deleteExpense } from '../../api/expenses.api';
 import type { Expense } from '../../utils/expense-utils';
 import {
   getExpenseSummary,
-  getCategorySummary,
   getMonthlyTrend,
   applyFilters,
   formatCurrency,
@@ -13,8 +12,8 @@ import {
   getCategoryLabel,
   getMonthOptions,
 } from '../../utils/expense-utils';
-import BarChartLabelCustom from '../../components/global-components/BarChartLabelCustom';
-import GlobalPieChart from '../../components/global-components/PieChart';
+import { DataTable } from '@/components/global-components/data-table';
+import type { ColumnDef } from '@tanstack/react-table';
 
 // ============================================================================
 // TYPES
@@ -37,12 +36,12 @@ const ExpensesPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
-  
+
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedMonth, setSelectedMonth] = useState('');
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -53,21 +52,14 @@ const ExpensesPage: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
-  
+
   // Delete confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  
+
   // Summary state
   const [summary, setSummary] = useState({ today: 0, thisMonth: 0, total: 0 });
-  const [categoryData, setCategoryData] = useState<{ name: string; value: number; color: string }[]>([]);
-  const [monthlyTrendData, setMonthlyTrendData] = useState<{ month: string; amount: number }[]>([]);
 
-  // Color palette for categories
-  const categoryColors = [
-    '#F59E0B', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6',
-    '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1',
-    '#14B8A6', '#A855F7', '#64748B',
-  ];
+
 
   // ============================================================================
   // EFFECTS
@@ -91,15 +83,7 @@ const ExpensesPage: React.FC = () => {
     const summaryData = getExpenseSummary(expenses);
     setSummary(summaryData);
 
-    const categorySummary = getCategorySummary(expenses);
-    setCategoryData(categorySummary.map((cat, index) => ({
-      name: getCategoryLabel(cat.category),
-      value: cat.amount,
-      color: categoryColors[index % categoryColors.length],
-    })));
-
-    const trend = getMonthlyTrend(expenses);
-    setMonthlyTrendData(trend.map(t => ({ month: t.month, amount: t.amount })));
+    getMonthlyTrend(expenses);
   }, [expenses]);
 
   // ============================================================================
@@ -157,7 +141,7 @@ const ExpensesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const expenseData = {
       category: formData.category,
       description: formData.description,
@@ -194,6 +178,96 @@ const ExpensesPage: React.FC = () => {
     setSelectedCategory('ALL');
     setSelectedMonth('');
   };
+
+  // ============================================================================
+  // COLUMNS
+  // ============================================================================
+
+  const columns: ColumnDef<Expense>[] = useMemo(() => [
+    {
+      accessorKey: "index",
+      header: "Ref ID",
+      cell: ({ row }) => <span className="font-mono text-[11px] text-slate-300 font-medium tracking-tighter">{(row.index + 1).toString().padStart(4, '0')}</span>,
+    },
+    {
+      accessorKey: "description",
+      header: "Expense Details",
+      cell: ({ row }) => {
+        const expense = row.original;
+        return (
+          <div className="flex flex-col text-left">
+            <span className="font-bold text-slate-900 dark:text-white leading-tight">{expense.description}</span>
+            <span className="text-[11px] text-slate-400 mt-0.5">{getCategoryLabel(expense.category)}</span>
+          </div>
+        );
+      }
+    },
+    {
+      accessorKey: "amount",
+      header: "Value",
+      cell: ({ row }) => (
+        <span className="text-sm font-black text-slate-900 dark:text-white">
+          {formatCurrency(row.getValue<number>("amount"))}
+        </span>
+      )
+    },
+    {
+      accessorKey: "date",
+      header: "Posting Date",
+      cell: ({ row }) => <span className="text-sm text-slate-500 font-medium">{formatDate(row.getValue<string>("date"))}</span>
+    },
+    {
+      id: "category_badge",
+      header: "Category",
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-[10px] uppercase tracking-widest rounded-lg px-4 py-1.5 min-w-[80px]">
+            {getCategoryLabel(row.original.category).slice(0, 8)}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => {
+        const expense = row.original;
+        return (
+          <div className="flex items-center justify-end gap-3 px-2">
+            <button
+              onClick={() => handleOpenModal(expense)}
+              className="text-slate-300 hover:text-slate-600 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            </button>
+            {deleteConfirmId === expense.id ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDelete(expense.id)}
+                  className="px-2 py-1 bg-red-500 text-white text-[10px] font-black uppercase rounded-lg"
+                >
+                  OK
+                </button>
+                <button
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="px-2 py-1 bg-slate-100 text-slate-500 text-[10px] font-black uppercase rounded-lg"
+                >
+                  NO
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setDeleteConfirmId(expense.id)}
+                className="text-slate-300 hover:text-red-500 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            )}
+          </div>
+        );
+      }
+    }
+  ], [deleteConfirmId]);
 
   // ============================================================================
   // RENDER
@@ -234,7 +308,6 @@ const ExpensesPage: React.FC = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Today's Expense */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2.5 bg-emerald-50 rounded-xl">
@@ -246,7 +319,6 @@ const ExpensesPage: React.FC = () => {
           <div className="text-[10px] font-bold text-slate-500 mt-1">Expenses for today</div>
         </div>
 
-        {/* This Month Expense */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2.5 bg-amber-50 rounded-xl">
@@ -258,7 +330,6 @@ const ExpensesPage: React.FC = () => {
           <div className="text-[10px] font-bold text-slate-500 mt-1">Expenses for current month</div>
         </div>
 
-        {/* Total Expense */}
         <div className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-md transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2.5 bg-indigo-50 rounded-xl">
@@ -271,65 +342,11 @@ const ExpensesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category-wise Expense Chart */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <PieChartIcon className="w-5 h-5 text-amber-500" />
-              Category Breakdown
-            </h3>
-          </div>
-          {categoryData.length > 0 ? (
-            <GlobalPieChart
-              data={categoryData}
-              dataKey="value"
-              nameKey="name"
-              compact
-              innerRadius={50}
-              outerRadius={80}
-            />
-          ) : (
-            <div className="text-center py-12 text-slate-400">
-              <p className="text-sm font-bold">No expense data available</p>
-            </div>
-          )}
-        </div>
-
-        {/* Monthly Trend Chart */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 hover:shadow-lg transition-all">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-emerald-500" />
-              Monthly Trend
-            </h3>
-          </div>
-          {monthlyTrendData.length > 0 ? (
-            <BarChartLabelCustom
-              data={monthlyTrendData}
-              dataKey="amount"
-              labelKey="month"
-              config={{
-                amount: {
-                  label: 'Amount',
-                  color: '#10B981',
-                },
-              }}
-              height="min-h-[280px]"
-            />
-          ) : (
-            <div className="text-center py-12 text-slate-400">
-              <p className="text-sm font-bold">No trend data available</p>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Charts Row Removed (Missing Components) */}
 
       {/* Filters */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4">
         <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -341,7 +358,6 @@ const ExpensesPage: React.FC = () => {
             />
           </div>
 
-          {/* Category Filter */}
           <div className="w-full md:w-48">
             <select
               value={selectedCategory}
@@ -355,7 +371,6 @@ const ExpensesPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Month Filter */}
           <div className="w-full md:w-48">
             <select
               value={selectedMonth}
@@ -369,7 +384,6 @@ const ExpensesPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Reset Button */}
           {(searchQuery || selectedCategory !== 'ALL' || selectedMonth) && (
             <button
               onClick={resetFilters}
@@ -383,100 +397,12 @@ const ExpensesPage: React.FC = () => {
       </div>
 
       {/* Expense Table */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="text-left py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">ID</th>
-                <th className="text-left py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Category</th>
-                <th className="text-left py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Description</th>
-                <th className="text-left py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Amount</th>
-                <th className="text-left py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Date</th>
-                <th className="text-right py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredExpenses.length > 0 ? (
-                filteredExpenses.map((expense) => (
-                  <tr
-                    key={expense.id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="py-4 px-6">
-                      <span className="text-xs font-mono font-semibold text-slate-600">#{expense.id.slice(-6).toUpperCase()}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700">
-                        {getCategoryLabel(expense.category)}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div>
-                        <div className="text-sm font-semibold text-slate-900">{expense.description}</div>
-                        {expense.notes && (
-                          <div className="text-xs text-slate-500 mt-0.5">{expense.notes}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="text-base font-black text-slate-900">{formatCurrency(expense.amount)}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="text-sm font-medium text-slate-600">{formatDate(expense.date)}</span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenModal(expense)}
-                          className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        {deleteConfirmId === expense.id ? (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleDelete(expense.id)}
-                              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-lg transition-all"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-lg transition-all"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirmId(expense.id)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="py-12 text-center">
-                    <div className="text-slate-400">
-                      <Calculator className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                      <p className="text-sm font-bold">No expenses found</p>
-                      <p className="text-xs mt-1">Add your first expense to get started</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        columns={columns}
+        data={filteredExpenses}
+        searchKey="description"
+        placeholder="Search expenses..."
+      />
 
       {/* Add/Edit Modal */}
       {isModalOpen && (
@@ -497,7 +423,6 @@ const ExpensesPage: React.FC = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              {/* Category */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   Category <span className="text-red-500">*</span>
@@ -515,7 +440,6 @@ const ExpensesPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   Description <span className="text-red-500">*</span>
@@ -530,7 +454,6 @@ const ExpensesPage: React.FC = () => {
                 />
               </div>
 
-              {/* Amount & Date Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -561,7 +484,6 @@ const ExpensesPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Notes */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   Notes <span className="text-slate-400 font-normal">(optional)</span>
@@ -575,7 +497,6 @@ const ExpensesPage: React.FC = () => {
                 />
               </div>
 
-              {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <button
                   type="button"

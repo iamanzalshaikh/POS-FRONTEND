@@ -1,138 +1,138 @@
-import React, { useState } from 'react';
-import { LogOut, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
-import { useAuthStore } from '../../store/useAuthStore';
+import React from 'react';
+import { useLocation } from 'react-router-dom';
+import { Columns2, Search, Sun, Moon } from 'lucide-react';
+import { SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import AppSidebar from '@/components/app-sidebar';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useThemeStore } from '@/store/useThemeStore';
 
 interface DashboardLayoutProps {
-  sidebarContent: React.ReactNode;
   children: React.ReactNode;
-  title: string;
-  subtitle: string;
-  role: string;
-  accentColor?: string;
+  sidebarContent?: React.ReactNode;
+  title?: string;
+  subtitle?: string;
+  role?: string;
+  accentColor?: 'indigo' | 'emerald' | 'amber' | 'rose' | 'slate';
   headerExtra?: React.ReactNode;
 }
 
-// Adding a context or just cloning children if needed for isCollapsed, 
-// but it's easier to just use CSS group-hover or pass it if you control the sidebarContent.
-// For simplicity, we'll wrap the sidebar in a stateful component here.
-
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
-  sidebarContent, 
-  children, 
-  title, 
-  subtitle, 
-  role,
+const DashboardContent: React.FC<DashboardLayoutProps> = ({
+  children,
+  sidebarContent,
+  title: propTitle,
+  subtitle: propSubtitle,
+  role: propRole,
   accentColor = 'indigo',
   headerExtra
 }) => {
-  const { user, logout } = useAuthStore();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { collapsed, isMobileOpen, closeMobile } = useSidebar();
+  const { user } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
+  const location = useLocation();
+  const isSuper = location.pathname.startsWith('/super-admin');
 
-  const accentStyles: Record<string, string> = {
-    indigo: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    purple: 'bg-purple-100 text-purple-700 border-purple-200',
-    amber: 'bg-amber-100 text-amber-700 border-amber-200',
-    emerald: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  };
-
-  const avatarStyles: Record<string, string> = {
-    indigo: 'bg-indigo-600 text-white',
-    purple: 'bg-purple-600 text-white',
-    amber: 'bg-amber-500 text-white',
-    emerald: 'bg-emerald-600 text-white',
-  };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans antialiased overflow-hidden">
-      
-      {/* Mobile Sidebar Overlay */}
-      {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden"
-          onClick={() => setIsMobileOpen(false)}
-        />
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 transition-colors duration-300">
+      {/* Sidebar Wrapper */}
+      {sidebarContent ? (
+        <>
+          {/* Custom Desktop Sidebar */}
+          <aside
+            className={`bg-[#262255] border-r border-[#262255]/20 text-slate-200 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300 hidden lg:flex ${collapsed ? 'w-20' : 'w-[260px]'
+              }`}
+          >
+            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar">
+              {sidebarContent}
+            </div>
+          </aside>
+          {/* Custom Mobile Drawer */}
+          {isMobileOpen && (
+            <div className="fixed inset-0 z-[60] lg:hidden">
+              <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={closeMobile} />
+              <div className="fixed left-0 top-0 h-full w-[260px] bg-[#262255] z-[70] shadow-2xl animate-in slide-in-from-left duration-300 p-4 overflow-y-auto custom-scrollbar">
+                {sidebarContent}
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <AppSidebar />
       )}
 
-      {/* Sliding Sidebar */}
-      <aside 
-        className={`fixed inset-y-0 left-0 bg-[#262255] border-r border-[#2A2760]/20 flex flex-col shadow-xl z-50 transition-all duration-300 ease-in-out
-          ${isSidebarOpen ? 'w-64' : 'w-20'} 
-          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
+      <div
+        className={`flex-1 flex flex-col transition-all duration-300 ${collapsed ? 'lg:ml-20' : 'lg:ml-[260px]'
+          }`}
       >
-        {/* Toggle Button (Desktop) */}
-        <button 
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="hidden lg:flex absolute -right-3 top-8 w-6 h-6 bg-[#2A2760] border border-[#262255]/20 rounded-full items-center justify-center text-white hover:bg-[#262255] shadow-sm z-50"
-        >
-          {isSidebarOpen ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-        </button>
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md transition-all">
+          <div className="flex items-center gap-4">
+            <SidebarTrigger className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+              <Columns2 size={20} />
+            </SidebarTrigger>
 
-        {/* Mobile Close Button */}
-        <button 
-          onClick={() => setIsMobileOpen(false)}
-          className="lg:hidden absolute top-4 right-4 text-slate-400 hover:text-slate-600"
-        >
-          <X size={20} />
-        </button>
-
-        {/* We wrap the sidebarContent in a div with a custom data attribute or CSS class to let the inner items know if they should show labels */}
-        <div className={`flex-1 overflow-y-auto p-4 flex flex-col ${isSidebarOpen ? 'sidebar-expanded' : 'sidebar-collapsed'}`}>
-           <div className="flex-1">
-             {/* Note: In a real app we'd pass isSidebarOpen via Context, but for this quick fix we'll use CSS to hide/show text based on the parent class */}
-             <div className="sidebar-container">
-               {sidebarContent}
-             </div>
-           </div>
-
-           <button 
-            onClick={logout}
-            className={`mt-auto flex items-center ${isSidebarOpen ? 'justify-start space-x-3 px-3' : 'justify-center'} py-3 text-slate-400 hover:text-red-400 hover:bg-red-950/20 rounded-xl transition-all font-medium`}
-            title="Logout"
-          >
-            <LogOut size={20} className="flex-shrink-0" />
-            <span className={`transition-all duration-300 ${isSidebarOpen ? 'opacity-100 w-auto' : 'opacity-0 w-0 hidden'}`}>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main 
-        className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ease-in-out
-          ${isSidebarOpen ? 'lg:pl-64' : 'lg:pl-20'}
-        `}
-      >
-        <header className="bg-white border-b border-slate-200 px-6 lg:px-10 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => setIsMobileOpen(true)}
-              className="lg:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg"
-            >
-              <Menu size={24} />
-            </button>
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{title}</h1>
-              <p className="text-slate-500 text-sm font-medium hidden sm:block mt-1">{subtitle}</p>
+            <div className="hidden sm:flex items-center gap-2">
+              <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${accentColor === 'indigo' ? 'bg-indigo-500' :
+                  accentColor === 'emerald' ? 'bg-emerald-500' :
+                    accentColor === 'amber' ? 'bg-amber-500' : 'bg-slate-500'
+                }`} />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-widest leading-none">
+                  {propTitle || (isSuper ? 'Infrastructure Console' : 'Operations Hub')}
+                </span>
+                {propSubtitle && (
+                  <span className="text-[9px] text-slate-400 font-medium uppercase tracking-tighter mt-0.5">{propSubtitle}</span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+
+          <div className="flex items-center gap-2 sm:gap-4">
             {headerExtra}
-            <div className={`${accentStyles[accentColor]} px-3 py-1 lg:px-4 lg:py-1.5 rounded-full text-[10px] lg:text-xs tracking-wide font-bold border uppercase shadow-sm`}>
-              {role.replace('_', ' ')}
-            </div>
-            <div className={`${avatarStyles[accentColor]} w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center font-bold shadow-md shadow-${accentColor}-500/20`}>
-              <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Admin'}&background=random`} alt="User avatar" className="w-full h-full object-cover rounded-full" />
+
+            {!isSuper && !headerExtra && (
+              <div className="relative hidden md:block group">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="w-48 lg:w-64 pl-10 pr-4 py-1.5 bg-slate-50 dark:bg-slate-800 border-transparent focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 rounded-xl text-xs transition-all outline-none"
+                />
+              </div>
+            )}
+
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg dark:hover:bg-slate-800 transition-all"
+            >
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
+
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1" />
+
+            <div className="flex items-center gap-3 pl-1 group cursor-pointer">
+              <div className="text-right hidden xs:block">
+                <p className="text-xs font-bold text-slate-900 dark:text-slate-100 leading-none truncate max-w-[100px]">{user?.name}</p>
+                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter mt-0.5">{propRole || user?.role?.replace('_', ' ')}</p>
+              </div>
+              <div className="w-8 h-8 rounded-xl bg-[#262255] border border-white/10 flex items-center justify-center text-white text-xs font-black shadow-sm group-hover:scale-105 transition-transform">
+                {(user?.name || 'U')[0].toUpperCase()}
+              </div>
             </div>
           </div>
         </header>
 
-        <div className="p-6 lg:p-10 flex-1 overflow-auto bg-slate-50">
+        <main className="flex-1 p-4 lg:p-8 animate-in fade-in duration-500 overflow-x-hidden">
           {children}
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };
 
-export default DashboardLayout;
+export default function DashboardLayout(props: DashboardLayoutProps) {
+  return (
+    <SidebarProvider>
+      <DashboardContent {...props} />
+    </SidebarProvider>
+  );
+}

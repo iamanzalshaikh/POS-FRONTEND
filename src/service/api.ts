@@ -22,7 +22,7 @@ api.interceptors.request.use((config) => {
       console.error('Error parsing auth-storage', e);
     }
   }
-  
+
   // Log all API requests for debugging
   if (config.url?.includes('/sales') || config.url?.includes('/products')) {
     console.log('🌐 [API Interceptor] Outgoing request:', {
@@ -35,7 +35,7 @@ api.interceptors.request.use((config) => {
       data: config.data,
     });
   }
-  
+
   return config;
 });
 
@@ -145,16 +145,17 @@ export const reportsApi = {
   getSuperAdminOverview: () => api.get('/reports/superadmin/overview'),
   getSalesReport: (params: { startDate: string; endDate: string }) =>
     api.get('/reports/sales', { params }),
-  getAuditLogs: (params: { 
-    entity?: string; 
-    action?: string; 
-    limit?: number; 
-    page?: number; 
-    startDate?: string; 
-    endDate?: string; 
+  getAuditLogs: (params: {
+    entity?: string;
+    action?: string;
+    limit?: number;
+    page?: number;
+    startDate?: string;
+    endDate?: string;
     storeId?: string;
     userId?: string;
   }) => api.get('/reports/audit-logs', { params }),
+  getHealth: () => api.get('/health'),
 };
 
 export default api;

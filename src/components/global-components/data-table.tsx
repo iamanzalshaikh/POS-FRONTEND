@@ -138,12 +138,12 @@ function DataTableComponent<TData, TValue>({
 
     const exportToExcel = () => {
         const rowsToExport = table.getFilteredRowModel().rows
-        const visibleColumns = table.getVisibleFlatColumns().filter(col => 
-            col.id !== "actions" && 
-            col.id !== "select" && 
+        const visibleColumns = table.getVisibleFlatColumns().filter(col =>
+            col.id !== "actions" &&
+            col.id !== "select" &&
             (!!col.columnDef.header || !!col.id)
         )
-        
+
         const dataToExport = rowsToExport.map(row => {
             const rowData: Record<string, any> = {}
             visibleColumns.forEach(col => {
@@ -158,9 +158,9 @@ function DataTableComponent<TData, TValue>({
                         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                         .join(' ');
                 }
-                
+
                 let value = row.getValue(col.id)
-                
+
                 // Better data extraction for common objects
                 if (value && typeof value === 'object' && !Array.isArray(value)) {
                     value = (value as any).name || (value as any).fullName || (value as any).title || JSON.stringify(value)
@@ -182,12 +182,12 @@ function DataTableComponent<TData, TValue>({
                         value = Number(value);
                     }
                 }
-                
+
                 rowData[header] = value
             })
             return rowData
         })
-        
+
         if (onExport) {
             onExport(data)
         }
@@ -251,8 +251,8 @@ function DataTableComponent<TData, TValue>({
                                         Columns <ChevronDown className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-[180px]">
-                                            {table
+                                <DropdownMenuContent className="w-[180px]">
+                                    {table
                                         .getAllColumns()
                                         .filter((column) => column.getCanHide())
                                         .map((column) => (
@@ -275,13 +275,13 @@ function DataTableComponent<TData, TValue>({
             )}
 
             {/* Table */}
-            <div className="rounded-2xl border border-border overflow-hidden shadow-sm bg-card">
+            <div className="rounded-[2rem] border border-slate-200/60 overflow-hidden shadow-sm bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-md">
                 <Table>
-                    <TableHeader className="bg-muted/50 border-b border-border">
+                    <TableHeader className="bg-transparent border-y-[1.5px] border-slate-950 dark:border-white">
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
+                            <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                                 {headerGroup.headers.map((header) => (
-                                    <TableHead key={header.id}>
+                                    <TableHead key={header.id} className="h-14 px-6 text-[11px] font-black uppercase tracking-[0.1em] text-slate-900 dark:text-white">
                                         {header.isPlaceholder
                                             ? null
                                             : flexRender(
@@ -296,10 +296,10 @@ function DataTableComponent<TData, TValue>({
                     <TableBody>
                         {isLoading ? (
                             [...Array(10)].map((_, i) => (
-                                <TableRow key={i}>
+                                <TableRow key={i} className="border-b border-slate-900/10 dark:border-slate-800/50">
                                     {columns.map((_, j) => (
-                                        <TableCell key={j} className="h-14">
-                                            <div className="h-5 w-full bg-muted/20 animate-pulse rounded-lg" />
+                                        <TableCell key={j} className="h-20 px-6">
+                                            <div className="h-5 w-full bg-slate-100 dark:bg-slate-800/50 animate-pulse rounded-lg" />
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -309,9 +309,10 @@ function DataTableComponent<TData, TValue>({
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
+                                    className="group border-b border-slate-950 dark:border-white/10 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="font-medium text-muted-foreground">
+                                        <TableCell key={cell.id} className="py-5 px-6 font-medium text-slate-600 dark:text-slate-400">
                                             {flexRender(
                                                 cell.column.columnDef.cell,
                                                 cell.getContext()
@@ -324,9 +325,9 @@ function DataTableComponent<TData, TValue>({
                             <TableRow>
                                 <TableCell
                                     colSpan={columns.length}
-                                    className="h-24 text-center"
+                                    className="h-32 text-center text-slate-400 font-medium italic"
                                 >
-                                    No results.
+                                    No results found in the registry.
                                 </TableCell>
                             </TableRow>
                         )}

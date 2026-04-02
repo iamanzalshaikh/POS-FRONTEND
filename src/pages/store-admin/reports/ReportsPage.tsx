@@ -1,6 +1,4 @@
 import { useState } from "react";
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
 import ReportsHeader from "@/components/store-admin/Reports/ReportsHeader";
 import StatsCards from "@/components/global-components/StatsCards";
 import ReportsCharts from "@/components/store-admin/Reports/ReportsCharts";
@@ -12,7 +10,6 @@ import { AlertTriangle, FileText } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
 
 const ReportsPage = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'sales' | 'inventory'>('sales');
     const [dateRangeFilter, setDateRangeFilter] = useState('This Week');
 
@@ -70,74 +67,62 @@ const ReportsPage = () => {
     ] : [];
 
     return (
-        <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 flex text-slate-900 dark:text-slate-100">
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
+    return (
+        <div className="animate-in fade-in duration-500 space-y-10">
+            <ReportsHeader
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                dateRange={dateRangeFilter}
+                onDateRangeChange={setDateRangeFilter}
+            />
 
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-            <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-
-                <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in space-y-10">
-                    <ReportsHeader
-                        activeTab={activeTab}
-                        onTabChange={setActiveTab}
-                        dateRange={dateRangeFilter}
-                        onDateRangeChange={setDateRangeFilter}
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-4 animate-pulse">
+                    <div className="w-12 h-12 border-4 border-slate-200 dark:border-slate-800 border-t-blue-600 rounded-full animate-spin"></div>
+                    <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Compiling Data Stream...</p>
+                </div>
+            ) : error ? (
+                <div className="bg-white dark:bg-slate-900 p-12 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-xl text-center max-w-lg mx-auto mt-12 animate-in zoom-in-95 duration-500 transition-colors duration-300">
+                    <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/20 rounded-full flex items-center justify-center text-rose-500 mx-auto mb-6 border border-rose-100 dark:border-rose-800 shadow-sm">
+                        <AlertTriangle size={40} />
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Report Failure</h2>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed px-4">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            ) : activeTab === 'sales' && data ? (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <StatsCards data={salesStats} />
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-8">
+                            <ReportsCharts charts={data.charts || {}} />
+                        </div>
+                        <div className="lg:col-span-4">
+                            <TopPerformingProducts products={data.topProducts || []} />
+                        </div>
+                    </div>
+                </div>
+            ) : activeTab === 'inventory' && data ? (
+                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <StatsCards data={inventoryStats} />
+                    <InventoryReportTables
+                        lowStock={data.lowStock ?? []}
+                        outOfStock={data.outOfStock ?? []}
                     />
-
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-24 gap-4 animate-pulse">
-                            <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin"></div>
-                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Compiling Data Stream...</p>
-                        </div>
-                    ) : error ? (
-                        <div className="bg-white dark:bg-slate-900 p-12 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-xl text-center max-w-lg mx-auto mt-12 animate-in zoom-in-95 duration-500">
-                            <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/20 rounded-full flex items-center justify-center text-rose-500 mx-auto mb-6 border border-rose-100 dark:border-rose-800 shadow-sm">
-                                <AlertTriangle size={40} />
-                            </div>
-                            <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Report Failure</h2>
-                            <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed px-4">{error}</p>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none"
-                            >
-                                Try Again
-                            </button>
-                        </div>
-                    ) : activeTab === 'sales' && data ? (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <StatsCards data={salesStats} />
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                                <div className="lg:col-span-8">
-                                    <ReportsCharts charts={data.charts || {}} />
-                                </div>
-                                <div className="lg:col-span-4">
-                                    <TopPerformingProducts products={data.topProducts || []} />
-                                </div>
-                            </div>
-                        </div>
-                    ) : activeTab === 'inventory' && data ? (
-                        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <StatsCards data={inventoryStats} />
-                            <InventoryReportTables
-                                lowStock={data.lowStock ?? []}
-                                outOfStock={data.outOfStock ?? []}
-                            />
-                        </div>
-                    ) : (
-                        <div className="text-center py-20 text-slate-400 font-black tracking-widest uppercase text-xs">
-                            No report data available for this criteria.
-                        </div>
-                    )}
-                </main>
-            </div>
+                </div>
+            ) : (
+                <div className="text-center py-20 text-slate-400 dark:text-slate-500 font-black tracking-widest uppercase text-xs">
+                    No report data available for this criteria.
+                </div>
+            )}
         </div>
+    );
+};
     );
 };
 

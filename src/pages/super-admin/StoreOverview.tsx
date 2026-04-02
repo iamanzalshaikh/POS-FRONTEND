@@ -1,68 +1,120 @@
-import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { Store, Laptop2, CreditCard, Activity, Plus, Filter, AlertCircle } from 'lucide-react';
-import { storesApi, reportsApi } from '../../service/api';
+import React, { useState, useEffect } from 'react';
+import { Store, CreditCard, Laptop2, Activity, CalendarDays, Download, Loader2, AlertCircle } from 'lucide-react';
+import { reportsApi } from '../../service/api';
 import { StatsCard } from '../../components/ui/StatsCard';
 import { DataTable } from '@/components/global-components/data-table';
 import { formatPKR } from '@/utils/format';
-import { showToast } from '../../utils/admin-toast';
 
-const StoreOverview: React.FC = () => {
-  const navigate = useNavigate();
+const SuperOverview: React.FC = () => {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const { data: storesRes, isLoading: storesLoading, error: storesError, refetch: refetchStores } = useQuery({
-    queryKey: ['stores', 'all'],
-    queryFn: () => storesApi.getAll(),
-  });
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await reportsApi.getSuperAdminOverview();
+        if (res.data.success) {
+          setStats(res.data.data);
+        } else {
+          setError(res.data.message || 'Failed to load stats');
+        }
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Error occurred while fetching stats');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
-  const { data: statsRes, isLoading: statsLoading } = useQuery({
-    queryKey: ['superadmin', 'overview'],
-    queryFn: () => reportsApi.getSuperAdminOverview(),
-  });
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px]">
+        <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
+        <p className="text-slate-500 font-medium animate-pulse">Loading global dashboard metrics...</p>
+      </div>
+    );
+  }
 
-  const stores = storesRes?.data?.data || [];
-  const stats = statsRes?.data?.data || statsRes?.data || statsRes;
-  const loading = storesLoading || statsLoading;
-  const error = (storesError as any)?.response?.data?.message || (storesError as any)?.message || (storesRes?.data?.success === false ? storesRes?.data?.message : null);
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px]">
+        <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
+        <p className="text-slate-500 font-medium">{error}</p>
+      </div>
+    );
+  }
+
+  const maxRevenue = stats?.revenueByStore?.length ? Math.max(...stats.revenueByStore.map((s: any) => s.revenue)) : 1;
+
+  const recentDeviceColumns = [
+    {
+      accessorKey: 'storeId',
+      header: 'Store ID',
+      cell: ({ getValue }) => <span className="font-bold text-slate-700">STR-{getValue<string>()?.slice(-4)?.toUpperCase()}</span>,
+    },
+    {
+      accessorKey: 'deviceType',
+      header: 'Device Type',
+      cell: ({ getValue }) => <span className="text-slate-500 font-medium">{getValue<string>() || 'Terminal'}</span>,
+    },
+    {
+      accessorKey: 'store.city',
+      id: 'region',
+      header: 'Region',
+      cell: ({ row }) => <span className="text-slate-500 font-medium truncate max-w-[150px]">{row.original.store?.city || 'Unknown'}, {row.original.store?.state || ''}</span>,
+    },
+    {
+      accessorKey: 'isActive',
+      header: 'Status',
+      cell: ({ getValue }) => {
+        const active = getValue<boolean>();
+        return (
+          <span className={`px-3 py-1 rounded-md text-xs font-bold ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+            {active ? 'Active' : 'Inactive'}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'createdAt',
+      header: 'Time',
+      cell: ({ getValue }) => <span className="text-slate-400 font-medium text-xs">{new Date(getValue<string>()).toLocaleDateString()}</span>,
+    },
+  ];
 
   return (
     <div className="space-y-6 animate-fade-in relative z-0">
+      
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 pt-2 space-y-4 sm:space-y-0">
+      <div className="flex justify-between items-end mb-8 pt-2">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Store Management</h1>
-          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base">Oversee all connected retail locations, subscriptions, and device health across the network.</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Super Admin Overview</h1>
+          <p className="text-slate-500 font-medium mt-1">Real-time performance metrics across 12 countries</p>
         </div>
-        <div className="flex space-x-3 w-full sm:w-auto">
-          <button 
-            onClick={() => navigate('/super-admin/stores/create')}
-            className="flex-1 sm:flex-none flex items-center justify-center space-x-2 px-5 py-2.5 bg-[#1f1e35] text-white rounded-lg text-sm font-bold hover:bg-[#2a2845] transition-colors shadow-md"
-          >
-            <Plus className="w-4 h-4 text-white" />
-            <span>Create Store</span>
+        <div className="flex space-x-3">
+          <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+            <CalendarDays className="w-4 h-4 text-slate-400" />
+            <span>Last 30 Days</span>
+          </button>
+          <button className="flex items-center space-x-2 px-4 py-2 bg-[#1f1e35] text-white rounded-lg text-sm font-bold hover:bg-[#2a2845] transition-colors shadow-md">
+            <Download className="w-4 h-4 text-indigo-300" />
+            <span>Export Report</span>
           </button>
         </div>
       </div>
 
       {/* 4 Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard 
           title="Total Stores"
-          value={stats?.totalStores || stores.length || "0"}
+          value={stats?.totalStores?.toLocaleString() || '0'}
           icon={Store}
-          iconColorClass="text-blue-600"
-          iconBgClass="bg-blue-50"
-          description="active"
-          trend={{ value: "Live", isPositive: true, label: "Live active" }}
-        />
-        <StatsCard 
-          title="Active Devices"
-          value={stats?.activeDevices?.toLocaleString() || '0'}
-          icon={Laptop2}
           iconColorClass="text-indigo-600"
           iconBgClass="bg-indigo-50"
-          description="provisioned devices"
-          trend={{ value: "Live", isPositive: true, label: "Live provisioned devices" }}
+          description="total"
+          trend={{ value: "Live DB", isPositive: true, label: "Live DB total" }}
         />
         <StatsCard 
           title="Total Revenue"
@@ -70,114 +122,140 @@ const StoreOverview: React.FC = () => {
           icon={CreditCard}
           iconColorClass="text-emerald-600"
           iconBgClass="bg-emerald-50"
-          description="total lifetime revenue"
-          trend={{ value: "Total", isPositive: true, label: "Total lifetime revenue" }}
+          description="total revenue"
+          trend={{ value: "Lifetime", isPositive: true, label: "Lifetime total revenue" }}
+        />
+        <StatsCard 
+          title="Active Devices"
+          value={stats?.activeDevices?.toLocaleString() || '0'}
+          icon={Laptop2}
+          iconColorClass="text-blue-600"
+          iconBgClass="bg-blue-50"
+          description="registered devices"
+          trend={{ value: "Active", isPositive: true, label: "Active registered devices" }}
         />
         <StatsCard 
           title="Active Trials"
           value={stats?.activeTrials?.toLocaleString() || '0'}
           icon={Activity}
-          iconColorClass="text-amber-600"
-          iconBgClass="bg-amber-50"
-          description="total trials"
-          trend={{ value: "Current", isPositive: false, label: "Current total trials" }}
+          iconColorClass="text-rose-600"
+          iconBgClass="bg-rose-50"
+          description="in progress"
+          trend={{ value: "Trials", isPositive: false, label: "Trials in progress" }}
         />
       </div>
 
-      {/* Tabs and Filters Row */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 space-y-4 sm:space-y-0">
-        <div className="flex flex-wrap gap-2">
-          <button className="px-5 py-2 bg-[#1f1e35] text-white text-sm font-bold rounded-lg shadow-sm">All Stores</button>
-          <button className="px-5 py-2 bg-white text-slate-600 border border-slate-200 text-sm font-bold rounded-lg hover:bg-slate-50 transition-colors">Active</button>
-          <button className="px-5 py-2 bg-white text-slate-600 border border-slate-200 text-sm font-bold rounded-lg hover:bg-slate-50 transition-colors hidden sm:block">Suspended</button>
-          <button className="px-5 py-2 bg-white text-slate-600 border border-slate-200 text-sm font-bold rounded-lg hover:bg-slate-50 transition-colors hidden sm:block">Trial</button>
+      {/* Middle Grid (Revenue Chart & Map) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Revenue Bar Chart Area */}
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2 flex flex-col">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Revenue by Top Stores</h2>
+              <p className="text-slate-500 font-medium text-sm mt-1">Top performing branches globally</p>
+            </div>
+            <button className="text-sm font-bold text-slate-900 px-3 py-1">View All</button>
+          </div>
+          
+          <div className="mb-4">
+            <div className="text-4xl font-extrabold text-slate-900 tracking-tight">
+              {formatPKR(stats?.totalRevenue || 0)}
+            </div>
+            <div className="text-xs font-bold text-slate-400 flex items-center mt-2">
+              <span className="text-slate-500">Total Lifetime Revenue</span>
+            </div>
+          </div>
+
+          <div className="flex-1 min-h-[160px] flex items-end justify-between px-2 pt-10 pb-4">
+            {stats?.revenueByStore?.length > 0 ? (
+              stats.revenueByStore.map((store: any, idx: number) => {
+                const heightPercentage = Math.max((store.revenue / maxRevenue) * 100, 5);
+                const isTop = idx === 0;
+                return (
+                  <div key={store.storeId} className="flex flex-col items-center space-y-3 w-1/6 group cursor-pointer" title={formatPKR(store.revenue)}>
+                    <div 
+                      className={`w-full ${isTop ? 'bg-slate-900' : 'bg-slate-100 group-hover:bg-indigo-50'} rounded-t-sm relative transition-all`}
+                      style={{ height: `${Math.min(heightPercentage, 100)}%`, minHeight: '30px' }}
+                    ></div>
+                    <span className={`text-[10px] font-bold ${isTop ? 'text-slate-900' : 'text-slate-500'} truncate w-full text-center px-1 uppercase`}>
+                      {store.city?.substring(0, 3) || store.storeName.substring(0, 3)}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+               <div className="w-full text-center text-slate-400 text-sm italic py-10">No revenue data available yet.</div>
+            )}
+          </div>
         </div>
-        <button className="flex items-center justify-center space-x-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg hover:bg-slate-50 transition-colors w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-slate-500" />
-          <span>Filters</span>
-        </button>
+
+        {/* Store Density Map Area */}
+        <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Store Density</h2>
+          <p className="text-slate-500 font-medium text-sm mt-1 mb-6">Geographical distribution</p>
+          
+          <div className="w-full h-48 bg-slate-200 rounded-xl mb-6 flex items-center justify-center relative overflow-hidden">
+             {/* Map Placeholder */}
+             <div className="absolute w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] top-[40%] left-[30%]"></div>
+             <div className="absolute w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] top-[60%] left-[50%]"></div>
+             <div className="absolute w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] top-[70%] left-[75%]"></div>
+             <span className="text-slate-400 font-mono text-sm tracking-widest hidden">MAP DATA</span>
+          </div>
+
+          <div className="space-y-4 flex-1 flex flex-col justify-end">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-600"></div>
+                <span className="font-bold text-slate-700">North America</span>
+              </div>
+              <span className="font-extrabold text-slate-900">42%</span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-600 w-[42%]"></div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm pt-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-400"></div>
+                <span className="font-bold text-slate-700">Europe</span>
+              </div>
+              <span className="font-extrabold text-slate-900">28%</span>
+            </div>
+             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-400 w-[28%]"></div>
+            </div>
+
+             <div className="flex items-center justify-between text-sm pt-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-300"></div>
+                <span className="font-bold text-slate-700">Asia Pacific</span>
+              </div>
+              <span className="font-extrabold text-slate-900">30%</span>
+            </div>
+             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-300 w-[30%]"></div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative z-0">
-        {error ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-            <h3 className="text-lg font-bold text-slate-900">Unable to load stores</h3>
-            <p className="text-slate-500 mt-2">{error}</p>
-            <button onClick={() => refetchStores()} className="mt-4 px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-lg">Retry</button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-[11px] font-black text-slate-500 uppercase tracking-widest">
-                  <th className="py-4 px-6 min-w-[120px]">Store ID</th>
-                  <th className="py-4 px-6 min-w-[250px]">Store Name</th>
-                  <th className="py-4 px-6 min-w-[200px]">Address</th>
-                  <th className="py-4 px-6 min-w-[200px]">Store Email</th>
-                  <th className="py-4 px-6 text-center">Device Count</th>
-                  <th className="py-4 px-6 min-w-[120px]">Status</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {stores.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-500 font-medium italic border-b border-slate-100">
-                      No stores found in the network.
-                    </td>
-                  </tr>
-                ) : (
-                  stores.map((store: any, idx: number) => (
-                    <tr key={store.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors group">
-                      <td className="py-5 px-6 font-mono text-slate-400 text-xs">ST-{String(idx + 1).padStart(3, '0')}</td>
-                      <td className="py-5 px-6">
-                        <div className="font-extrabold text-slate-900 tracking-tight">{store.name}</div>
-                        <div className="text-slate-400 text-xs font-medium flex items-center space-x-1">
-                          <span>Retail</span>
-                        </div>
-                      </td>
-                      <td className="py-5 px-6 text-slate-500 font-medium whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]">
-                        {store.address}<br/>
-                        <span className="text-slate-400 text-xs">{store.city}, {store.state} {store.zipCode}</span>
-                      </td>
-                      <td className="py-5 px-6 font-medium text-slate-600">
-                        {store.email || 'N/A'}
-                      </td>
-                      <td className="py-5 px-6 text-center font-bold text-slate-700">
-                        {store._count?.devices || Math.floor(Math.random() * 15) + 2}
-                      </td>
-                      <td className="py-5 px-6">
-                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${idx === 2 ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full mr-2 ${idx === 2 ? 'bg-red-500' : 'bg-emerald-500'}`}></div>
-                          {idx === 2 ? 'Suspended' : 'Active'}
-                        </div>
-                      </td>
-                      <td className="py-5 px-6 text-right">
-                        <button 
-                          onClick={() => navigate(`/super-admin/stores/edit/${store.id}`)}
-                          className="font-bold text-xs tracking-widest text-indigo-600 cursor-pointer hover:text-indigo-800 hover:underline"
-                        >
-                          EDIT / VIEW
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-      
-      {/* Footer copyright */}
-      <div className="pt-8 text-center text-xs font-medium text-slate-400">
-        © 2026 Hybrid POS Systems Inc. Global Super Admin Terminal v4.0.0
+      {/* Recent Device Provisioning Table */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Recent Device Provisioning</h2>
+          <button className="text-sm font-bold text-slate-900 hover:text-indigo-600 transition-colors">See activity log</button>
+        </div>
+        <DataTable
+          data={stats?.recentDevices || []}
+          columns={recentDeviceColumns}
+          showToolbar={false}
+          showExport={false}
+          showColumns={false}
+        />
       </div>
 
     </div>
   );
 };
 
-export default StoreOverview;
+export default SuperOverview;

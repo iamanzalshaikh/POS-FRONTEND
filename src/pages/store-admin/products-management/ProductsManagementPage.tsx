@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react"
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
 
 import ProductsHeader from "@/components/store-admin/ProductsHeader"
 import ProductsFilters from "@/components/store-admin/ProductsFilters"
@@ -15,7 +13,6 @@ import { fetchFullInventory } from "@/api/inventory.api";
 import { getCategories } from "@/api/category.api"
 
 export default function ProductsManagementPage() {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
     const [openModal, setOpenModal] = useState(false)
 
     const [page, setPage] = useState(1)
@@ -79,64 +76,44 @@ export default function ProductsManagementPage() {
     const total = products.length
 
     return (
+        <div className="animate-in fade-in duration-500">
+            <ProductsHeader openModal={() => setOpenModal(true)} />
 
-        <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 flex text-slate-900 dark:text-slate-100">
-            {/* Mobile Backdrop */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
+            <div className="mt-8">
+                <StatsCards data={[
+                    { name: "Total Products", stat: String(total), change: "+2.5%", changeType: "positive" },
+                    { name: "Categories", stat: String(categories.length), change: "0%", changeType: "positive" },
+                    { name: "Out of Stock", stat: String(products.filter((p: any) => p.stock <= 0).length), change: "-5%", changeType: "negative" },
+                    { name: "Low Stock", stat: String(products.filter((p: any) => p.stock > 0 && p.stock <= 10).length), change: "+1.2%", changeType: "negative" },
+                ]} />
+            </div>
 
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-            <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-                <TopNavbar
-                    onMenuClick={() => setSidebarOpen(true)}
+            <div className="mt-10">
+                <ProductsFilters
+                    search={search}
+                    setSearch={setSearch}
+                    categoryId={categoryId}
+                    setCategoryId={setCategoryId}
+                    isActive={isActive}
+                    setIsActive={setIsActive}
+                    categories={categories}
+                    onFilter={refetchProducts}
                 />
+            </div>
 
-                <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in">
-                    <ProductsHeader openModal={() => setOpenModal(true)} />
-
-                    <div className="mt-8">
-                        <StatsCards data={[
-                            { name: "Total Products", stat: String(total), change: "+2.5%", changeType: "positive" },
-                            { name: "Categories", stat: String(categories.length), change: "0%", changeType: "positive" },
-                            { name: "Out of Stock", stat: String(products.filter((p: any) => p.stock <= 0).length), change: "-5%", changeType: "negative" },
-                            { name: "Low Stock", stat: String(products.filter((p: any) => p.stock > 0 && p.stock <= 10).length), change: "+1.2%", changeType: "negative" },
-                        ]} />
+            <div className="mt-8">
+                {loading ? (
+                    <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                        <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[2px] animate-pulse mt-6">Syncing Inventory Assets...</p>
                     </div>
+                ) : (
+                    <ProductsTable data={paginated} onRefresh={() => refetchProducts()} />
+                )}
+            </div>
 
-                    <div className="mt-10">
-                        <ProductsFilters
-                            search={search}
-                            setSearch={setSearch}
-                            categoryId={categoryId}
-                            setCategoryId={setCategoryId}
-                            isActive={isActive}
-                            setIsActive={setIsActive}
-                            categories={categories}
-                            onFilter={refetchProducts}
-                        />
-                    </div>
-
-
-                    <div className="mt-8">
-                        {loading ? (
-                            <div className="bg-white rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 shadow-sm">
-                                <div className="w-12 h-12 border-[3px] border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px] animate-pulse mt-6">Syncing Inventory Assets...</p>
-                            </div>
-                        ) : (
-                            <ProductsTable data={paginated} onRefresh={() => refetchProducts()} />
-                        )}
-                    </div>
-
-                    <div className="mt-10">
-                        <ProductPagination page={page} setPage={setPage} total={total} />
-                    </div>
-                </main>
+            <div className="mt-10">
+                <ProductPagination page={page} setPage={setPage} total={total} />
             </div>
 
             <AddProductModal
@@ -144,9 +121,6 @@ export default function ProductsManagementPage() {
                 onClose={() => setOpenModal(false)}
                 onSuccess={() => refetchProducts()}
             />
-
         </div>
-
     )
-
 }

@@ -1,7 +1,5 @@
 import { useState, useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
 import DashboardGrid from './components/DashboardGrid';
 import ChartAreaAxes from '@/components/global-components/chart-line-dots';
 import BarChartLabelCustom from '@/components/global-components/BarChartLabelCustom';
@@ -27,7 +25,6 @@ interface DashboardView {
 }
 
 export default function StoreAdminDashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dateRange, setDateRange] = useState('7D'); // 7D, 30D, Today
 
   const calculateDateRange = (range: string) => {
@@ -197,109 +194,100 @@ export default function StoreAdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 flex text-slate-900 dark:text-slate-100">
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in" onClick={() => setSidebarOpen(false)} />
-      )}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Console Overview</h1>
-              <p className="text-slate-500 dark:text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">Real-time Analytics & Performance</p>
-            </div>
-            <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-              {['Today', '7D', '30D'].map((range) => (
-                <button
-                  key={range}
-                  onClick={() => setDateRange(range)}
-                  className={cn(
-                    "px-6 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all",
-                    dateRange === range
-                      ? "bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-none"
-                      : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
-                  )}
-                >
-                  {range}
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Console Overview</h1>
+          <p className="text-slate-500 dark:text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">Real-time Analytics & Performance</p>
+        </div>
+        <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          {['Today', '7D', '30D'].map((range) => (
+            <button
+              key={range}
+              onClick={() => setDateRange(range)}
+              className={cn(
+                "px-6 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all",
+                dateRange === range
+                  ? "bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-none"
+                  : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+              )}
+            >
+              {range}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          <DashboardGrid>
-            <div className="xl:col-span-12">
-              <StatsCards data={statsData} />
-            </div>
+      <DashboardGrid>
+        <div className="xl:col-span-12">
+          <StatsCards data={statsData} />
+        </div>
 
-            {/* Row 1: Charts & Pie Chart */}
-            <div className="xl:col-span-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm h-full flex flex-col group transition-all duration-500 hover:shadow-xl dark:hover:shadow-none">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Daily Sales Revenue</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Daily trend in period</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm shadow-blue-100 dark:shadow-none"></span>
-                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Revenue</span>
-                    </div>
-                  </div>
-                  <div className="flex-1 min-h-[220px]">
-                    <ChartAreaAxes
-                      data={data?.dailySales.map(d => ({ date: d.date, sales: d.sales })) ?? []}
-                      className="h-[220px]"
-                      noWrapper
-                    />
-                  </div>
+        {/* Row 1: Charts & Pie Chart */}
+        <div className="xl:col-span-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm h-full flex flex-col group transition-all duration-500 hover:shadow-xl dark:hover:shadow-none">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Daily Sales Revenue</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Daily trend in period</p>
                 </div>
-
-                <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm h-full flex flex-col group transition-all duration-500 hover:shadow-xl dark:hover:shadow-none">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Revenue Trend</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Comparative performance</p>
-                    </div>
-                    <div className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-800 shadow-sm">
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Bar View</span>
-                    </div>
-                  </div>
-                  {data?.weeklyRevenue && data.weeklyRevenue.length > 0 ? (
-                    <BarChartLabelCustom
-                      data={data.weeklyRevenue.map((d: { week: string; revenue: number }) => ({
-                        label: new Date(d.week).toLocaleDateString('en-US', { weekday: 'short' }),
-                        value: d.revenue
-                      }))}
-                      dataKey="value"
-                      labelKey="label"
-                      config={{ value: { label: "Revenue", color: "#262255" } }}
-                      noWrapper
-                      height="min-h-[220px]"
-                    />
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center">
-                      <p className="font-inter text-slate-400 font-bold text-sm">No revenue data found</p>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm shadow-blue-100 dark:shadow-none"></span>
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Revenue</span>
                 </div>
               </div>
-            </div>
-            <div className="xl:col-span-4">
-              <CategoryPieChart data={data?.categories ?? []} />
+              <div className="flex-1 min-h-[220px]">
+                <ChartAreaAxes
+                  data={data?.dailySales.map(d => ({ date: d.date, sales: d.sales })) ?? []}
+                  className="h-[220px]"
+                  noWrapper
+                />
+              </div>
             </div>
 
-            {/* Row 2: Top Selling Inventory & Active Devices */}
-            <div className="xl:col-span-8">
-              <TopProductsTable products={data?.topProducts ?? []} />
+            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm h-full flex flex-col group transition-all duration-500 hover:shadow-xl dark:hover:shadow-none">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Revenue Trend</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Comparative performance</p>
+                </div>
+                <div className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-800 shadow-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Bar View</span>
+                </div>
+              </div>
+              {data?.weeklyRevenue && data.weeklyRevenue.length > 0 ? (
+                <BarChartLabelCustom
+                  data={data.weeklyRevenue.map((d: { week: string; revenue: number }) => ({
+                    label: new Date(d.week).toLocaleDateString('en-US', { weekday: 'short' }),
+                    value: d.revenue
+                  }))}
+                  dataKey="value"
+                  labelKey="label"
+                  config={{ value: { label: "Revenue", color: "#262255" } }}
+                  noWrapper
+                  height="min-h-[220px]"
+                />
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <p className="font-inter text-slate-400 font-bold text-sm">No revenue data found</p>
+                </div>
+              )}
             </div>
-            <div className="xl:col-span-4">
-              <ActiveDevicesPanel devices={data?.devices ?? []} />
-            </div>
-          </DashboardGrid>
-        </main>
-      </div>
+          </div>
+        </div>
+        <div className="xl:col-span-4">
+          <CategoryPieChart data={data?.categories ?? []} />
+        </div>
+
+        {/* Row 2: Top Selling Inventory & Active Devices */}
+        <div className="xl:col-span-8">
+          <TopProductsTable products={data?.topProducts ?? []} />
+        </div>
+        <div className="xl:col-span-4">
+          <ActiveDevicesPanel devices={data?.devices ?? []} />
+        </div>
+      </DashboardGrid>
     </div>
   );
 }

@@ -1,68 +1,63 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { createContext, useContext, useEffect, useState } from 'react'
 
-interface SidebarLinkProps {
-  icon: React.ReactNode;
-  label: string;
-  to?: string;
-  onClick?: () => void;
-  variant?: 'indigo' | 'purple' | 'amber' | 'emerald' | 'navy';
+interface SidebarContextValue {
+  collapsed: boolean
+  setCollapsed: (v: boolean) => void
+  isMobileOpen: boolean
+  setIsMobileOpen: (v: boolean) => void
+  toggle: () => void
+  openMobile: () => void
+  closeMobile: () => void
 }
 
-const SidebarLink: React.FC<SidebarLinkProps> = ({ 
-  icon, 
-  label, 
-  to,
-  onClick,
-  variant: _variant = 'navy'
-}) => {
-  const variantStyles = {
-    indigo: 'bg-[#2A2760] shadow-md text-white',
-    purple: 'bg-[#2A2760] shadow-md text-white',
-    amber: 'bg-[#2A2760] shadow-md text-white',
-    emerald: 'bg-[#2A2760] shadow-md text-white',
-    navy: 'bg-[#2A2760] shadow-md text-white'
-  };
+const SidebarContext = createContext<SidebarContextValue | null>(null)
 
-  const baseClasses = "flex items-center px-4 py-3.5 mb-2 rounded-2xl transition-all duration-200 cursor-pointer overflow-hidden group";
+export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('superadmin_sidebar_collapsed') === 'true'
+    } catch (e) {
+      return false
+    }
+  })
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
 
-  if (to) {
-    return (
-      <NavLink 
-        to={to} 
-        onClick={onClick}
-        title={label}
-        end
-        className={({ isActive }) => 
-          `${baseClasses} ${
-            isActive 
-              ? `${variantStyles.navy}` 
-              : 'text-slate-400 hover:text-white hover:bg-[#2A2760]'
-          }`
-        }
-      >
-        {({ isActive }) => (
-          <div className="flex items-center space-x-3 w-full">
-             <div className={`flex-shrink-0 flex items-center justify-center w-6 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-500'}`}>{icon}</div>
-             <span className="sidebar-label whitespace-nowrap transition-all duration-300 ease-in-out font-bold tracking-wide text-sm">{label}</span>
-          </div>
-        )}
-      </NavLink>
-    );
+  useEffect(() => {
+    try { localStorage.setItem('superadmin_sidebar_collapsed', String(collapsed)) } catch (e) {}
+  }, [collapsed])
+
+  const toggle = () => setCollapsed(prev => !prev)
+  const openMobile = () => setIsMobileOpen(true)
+  const closeMobile = () => setIsMobileOpen(false)
+
+  return (
+    <SidebarContext.Provider value={{ collapsed, setCollapsed, isMobileOpen, setIsMobileOpen, toggle, openMobile, closeMobile }}>
+      {children}
+    </SidebarContext.Provider>
+  )
+}
+
+export const useSidebar = () => {
+  const ctx = useContext(SidebarContext)
+  if (!ctx) throw new Error('useSidebar must be used within SidebarProvider')
+  return ctx
+}
+
+export const SidebarTrigger: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = (props) => {
+  const { toggle, openMobile } = useSidebar()
+  const onClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // On narrow screens, open mobile drawer instead
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      openMobile()
+    } else {
+      toggle()
+    }
+    props.onClick?.(e)
   }
 
   return (
-    <div 
-      onClick={onClick}
-      title={label}
-      className={`${baseClasses} text-slate-400 hover:text-white hover:bg-[#2A2760]`}
-    >
-      <div className="flex items-center space-x-3 w-full">
-        <div className="flex-shrink-0 flex items-center justify-center w-6 text-slate-400 group-hover:text-indigo-500 transition-colors">{icon}</div>
-        <span className="sidebar-label whitespace-nowrap transition-all duration-300 ease-in-out font-bold tracking-wide text-sm">{label}</span>
-      </div>
-    </div>
-  );
-};
-
-export default SidebarLink;
+    <button {...props} onClick={onClick} aria-label="Toggle sidebar">
+      {props.children}
+    </button>
+  )
+}

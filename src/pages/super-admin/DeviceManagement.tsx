@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Laptop2, AlertCircle, Plus, Activity, Search } from 'lucide-react';
 import { devicesApi } from '../../service/api';
 import { DataTable } from '@/components/global-components/data-table';
+import type { ColumnDef } from '@tanstack/react-table';
 
 const DeviceManagement: React.FC = () => {
 
@@ -55,98 +56,35 @@ const DeviceManagement: React.FC = () => {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-[11px] font-black text-slate-500 uppercase tracking-widest bg-white">
-                  <th className="py-4 px-6 min-w-[200px]">Device Name</th>
-                  <th className="py-4 px-6 min-w-[150px]">Store Reference</th>
-                  <th className="py-4 px-6 min-w-[180px]">Serial Number</th>
-                  <th className="py-4 px-6">Scanner</th>
-                  <th className="py-4 px-6 min-w-[120px]">Status</th>
-                  <th className="py-4 px-6 min-w-[180px]">Last Hearbeat</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[1, 2, 3, 4, 5].map((item) => (
-                  <tr key={item} className="border-b border-slate-50 animate-pulse">
-                    <td className="py-5 px-6">
-                      <div className="h-5 bg-slate-200 rounded w-3/4 mb-2"></div>
-                      <div className="h-3 bg-slate-100 rounded w-1/2"></div>
-                    </td>
-                    <td className="py-5 px-6"><div className="h-4 bg-slate-200 rounded w-24"></div></td>
-                    <td className="py-5 px-6"><div className="h-4 bg-slate-200 rounded w-32"></div></td>
-                    <td className="py-5 px-6"><div className="h-6 bg-slate-200 rounded w-16"></div></td>
-                    <td className="py-5 px-6"><div className="h-6 bg-slate-200 rounded-full w-20"></div></td>
-                    <td className="py-5 px-6"><div className="h-4 bg-slate-200 rounded w-28"></div></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : error ? (
-           <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-            <AlertCircle className="w-12 h-12 text-red-400 mb-4" />
-            <h3 className="text-lg font-bold text-slate-900">Fleet offline</h3>
-            <p className="text-slate-500 mt-2">{error}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[800px]">
-              <thead>
-                <tr className="border-b border-slate-100 text-[11px] font-black text-slate-500 uppercase tracking-widest bg-white">
-                  <th className="py-4 px-6 min-w-[200px]">Device Name</th>
-                  <th className="py-4 px-6 min-w-[150px]">Store Reference</th>
-                  <th className="py-4 px-6 min-w-[180px]">Serial Number</th>
-                  <th className="py-4 px-6">Scanner</th>
-                  <th className="py-4 px-6 min-w-[120px]">Status</th>
-                  <th className="py-4 px-6 min-w-[180px]">Last Hearbeat</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {devices.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 font-medium italic border-b border-slate-100 bg-slate-50/50">
-                      No devices have been registered in the network.
-                    </td>
-                  </tr>
-                ) : (
-                  devices.map((device: any) => (
-                    <tr key={device.id} className="border-b border-slate-50 hover:bg-slate-50/80 transition-colors group">
-                      <td className="py-5 px-6">
-                        <div className="font-extrabold text-slate-900 tracking-tight">{device.deviceName}</div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">{device.deviceType}</div>
-                      </td>
-                      <td className="py-5 px-6 font-mono text-slate-500 text-xs">
-                        {device.storeId.substring(0,8)}...
-                      </td>
-                      <td className="py-5 px-6 font-mono text-slate-900 font-bold text-xs uppercase">
-                        {device.serialNumber}
-                      </td>
-                      <td className="py-5 px-6">
-                         {device.barcodeScanner ? (
-                           <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-md text-xs font-bold font-mono tracking-wider">{device.scannerType || 'USB'}</span>
-                         ) : (
-                           <span className="text-slate-300 font-bold text-xs">NONE</span>
-                         )}
-                      </td>
-                      <td className="py-5 px-6">
-                         <div className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${device.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                          <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${device.isActive ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
-                          {device.isActive ? 'Online' : 'Offline'}
-                        </div>
-                      </td>
-                      <td className="py-5 px-6 text-slate-500 font-medium text-xs">
-                        {device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString() : 'Never'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="p-6">
+          {/* Use shared DataTable for consistent behaviour and features */}
+          <DataTable
+            columns={(
+              [
+                {
+                  accessorKey: 'deviceName',
+                  header: 'Device Name',
+                  cell: ({ row }) => (
+                    <div>
+                      <div className="font-extrabold text-slate-900 tracking-tight">{row.original.deviceName}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">{row.original.deviceType}</div>
+                    </div>
+                  ),
+                },
+                { accessorKey: 'storeId', header: 'Store Reference', cell: ({ getValue }) => String(getValue()).substring(0,8) + '...' },
+                { accessorKey: 'serialNumber', header: 'Serial Number' },
+                { accessorKey: 'barcodeScanner', header: 'Scanner', cell: ({ row }) => row.original.barcodeScanner ? (row.original.scannerType || 'USB') : 'NONE' },
+                { accessorKey: 'isActive', header: 'Status', cell: ({ getValue }) => getValue() ? 'Online' : 'Offline' },
+                { accessorKey: 'lastActiveAt', header: 'Last Heartbeat', cell: ({ getValue }) => getValue() ? new Date(getValue() as string).toLocaleString() : 'Never' },
+              ] as ColumnDef<any, any>[]
+            )}
+            data={devices}
+            searchKey="serialNumber"
+            showExport
+            isLoading={isLoading}
+            placeholder="Search devices..."
+          />
+        </div>
       </div>
     </div>
   );

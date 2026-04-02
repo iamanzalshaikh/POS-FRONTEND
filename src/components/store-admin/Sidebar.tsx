@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-    LayoutDashboard,
+    Columns2,
     Users,
     Boxes,
     ShoppingCart,
@@ -13,12 +13,13 @@ import {
     ChevronRight,
     Package,
     Layers,
-    Settings2
+    Settings2,
+    Activity
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
 const menuItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/store-admin/dashboard' },
+    { name: 'Dashboard', icon: Columns2, path: '/store-admin/dashboard' },
     { name: 'Staff Management', icon: Users, path: '/store-admin/staff' },
     {
         name: 'Inventory',
@@ -34,6 +35,7 @@ const menuItems = [
     { name: 'Sales History', icon: ShoppingCart, path: '/store-admin/sales' },
     { name: 'Devices', icon: Monitor, path: '/store-admin/devices' },
     { name: 'Reports', icon: BarChart3, path: '/store-admin/reports' },
+    { name: 'Activity Logs', icon: Activity, path: '/store-admin/activity-logs' },
     { name: 'Store Settings', icon: Settings, path: '/store-admin/settings' },
 ];
 
@@ -60,7 +62,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div className="p-6 border-b border-slate-100/10 dark:border-slate-800/50">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-[#262255] rounded-xl flex items-center justify-center shadow-indigo-100 shadow-xl border border-indigo-500/20">
-                        <LayoutDashboard size={24} className="text-white" />
+                        <Columns2 size={24} className="text-white" />
                     </div>
                     <div>
                         <h1 className="font-bold text-xl text-white tracking-tight leading-none">Hybrid POS</h1>

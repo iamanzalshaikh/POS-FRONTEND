@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
 import SettingsTabs from '@/components/store-admin/SettingsTabs';
 import StoreIdentityCard from '@/components/store-admin/StoreIdentityCard';
 import TaxSettingsForm from '@/components/store-admin/TaxSettingsForm';
@@ -11,7 +9,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getCurrentUser, getStoreInfo } from '@/api/dashboard.api';
 
 const SettingsPage = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Store Profile');
 
     const { data: userData } = useQuery({
@@ -28,65 +25,50 @@ const SettingsPage = () => {
     const storeData = (storeRes as any)?.data || storeRes;
 
     return (
-        <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 flex text-slate-900 dark:text-slate-100">
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
+        <div className="animate-in fade-in duration-500 space-y-10">
+            {/* Header Section */}
+            <div>
+                <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Settings</h1>
+                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Manage your store preferences, tax configurations, and system alerts.</p>
+            </div>
 
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-            <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+            {/* Content Section */}
+            {activeTab === 'Store Profile' ? (
+                <div className="max-w-4xl mx-auto w-full flex flex-col gap-8">
+                    <StoreIdentityCard data={storeData} isLoading={isLoading} />
+                    <TaxSettingsForm data={storeData} isLoading={isLoading} />
 
-                <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in space-y-10">
-                    {/* Header Section */}
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Settings</h1>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Manage your store preferences, tax configurations, and system alerts.</p>
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-end gap-3 pt-4">
+                        <button className="flex items-center gap-2 px-6 py-3.5 bg-white dark:bg-slate-900 text-[#1E1B4B] dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-[#1E1B4B]/20 dark:border-slate-800 shadow-sm active:scale-95">
+                            <X size={16} className="text-rose-600" />
+                            Discard Changes
+                        </button>
+                        <button className="flex items-center gap-2 px-8 py-3.5 bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-blue-800 shadow-lg shadow-blue-400/20 transition-all border border-blue-600 active:scale-95">
+                            <Save size={16} />
+                            Save Profile Settings
+                        </button>
                     </div>
 
-                    <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
-
-                    {/* Content Section */}
-                    {activeTab === 'Store Profile' ? (
-                        <div className="max-w-4xl mx-auto w-full flex flex-col gap-8">
-                            <StoreIdentityCard data={storeData} isLoading={isLoading} />
-                            <TaxSettingsForm data={storeData} isLoading={isLoading} />
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center justify-end gap-3 pt-4">
-                                <button className="flex items-center gap-2 px-6 py-3.5 bg-white text-[#1E1B4B] font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-50 transition-all border border-[#1E1B4B]/20 shadow-sm active:scale-95">
-                                    <X size={16} className="text-rose-600" />
-                                    Discard Changes
-                                </button>
-                                <button className="flex items-center gap-2 px-8 py-3.5 bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-blue-800 shadow-lg shadow-blue-400/20 transition-all border border-blue-600 active:scale-95">
-                                    <Save size={16} />
-                                    Save Profile Settings
-                                </button>
-                            </div>
-
-                            {/* Info Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 pb-10">
-                                <StoreHealthCard />
-                                <StoreBrandingCard />
-                                <QuickHelpCard />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="bg-white rounded-[40px] p-24 flex flex-col items-center justify-center border border-slate-100 shadow-sm">
-                            <div className="w-16 h-16 bg-slate-50 rounded-[24px] flex items-center justify-center text-slate-300 mb-6 border border-slate-100">
-                                <Save size={32} />
-                            </div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                {activeTab} modules are currently under construction
-                            </p>
-                        </div>
-                    )}
-                </main>
-            </div>
+                    {/* Info Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 pb-10">
+                        <StoreHealthCard />
+                        <StoreBrandingCard />
+                        <QuickHelpCard />
+                    </div>
+                </div>
+            ) : (
+                <div className="bg-white dark:bg-slate-900 rounded-[40px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                    <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-[24px] flex items-center justify-center text-slate-300 dark:text-slate-600 mb-6 border border-slate-100 dark:border-slate-800">
+                        <Save size={32} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                        {activeTab} modules are currently under construction
+                    </p>
+                </div>
+            )}
         </div>
     );
 };

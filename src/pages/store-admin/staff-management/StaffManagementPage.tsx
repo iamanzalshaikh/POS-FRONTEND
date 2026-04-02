@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
 import StaffHeader from '@/components/store-admin/StaffHeader';
 import StaffFilters from '@/components/store-admin/StaffFilters';
 import StaffTable from '@/components/store-admin/StaffTable';
@@ -30,7 +28,6 @@ function mapApiUser(u: any): StaffMember {
 
 export default function StaffManagementPage() {
     const navigate = useNavigate();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStaffToEdit, setSelectedStaffToEdit] = useState<StaffMember | undefined>(undefined);
 
@@ -101,75 +98,59 @@ export default function StaffManagementPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 flex text-slate-900 dark:text-slate-100">
-            {/* Mobile Backdrop */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-55 lg:hidden animate-fade-in"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
+        <div className="animate-in fade-in duration-500 space-y-10">
+            <StaffHeader
+                onAddStaff={() => setIsModalOpen(true)}
+                onExport={() => alert('Export CSV feature coming soon!')}
+                onRefresh={() => refetchStaff()}
+            />
 
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-            <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-
-                <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in space-y-10">
-                    <StaffHeader
-                        onAddStaff={() => setIsModalOpen(true)}
-                        onExport={() => alert('Export CSV feature coming soon!')}
-                        onRefresh={() => refetchStaff()}
-                    />
-
-                    <div className="mt-8">
-                        <StatsCards data={[
-                            { name: "Total Team", stat: String(staff.length), change: "+1", changeType: "positive" },
-                            { name: "Active Now", stat: String(staff.filter((m: any) => m.status === 'active').length), change: "100%", changeType: "positive" },
-                            { name: "Managers", stat: String(staff.filter((m: any) => m.role === 'ADMIN').length), change: "0%", changeType: "positive" },
-                            { name: "Cashiers", stat: String(staff.filter((m: any) => m.role === 'CASHIER').length), change: "+2", changeType: "positive" },
-                        ]} />
-                    </div>
-
-                    <StaffFilters
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        roleFilter={roleFilter}
-                        onRoleChange={setRoleFilter}
-                        statusFilter={statusFilter}
-                        onStatusChange={setStatusFilter}
-                    />
-
-                    {loading ? (
-                        <div className="bg-white rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 shadow-sm">
-                            <div className="flex flex-col items-center gap-6">
-                                <div className="w-12 h-12 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[4px] animate-pulse">Syncing Workforce...</p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-8 animate-fade-in">
-                            <StaffTable
-                                staff={paginatedStaff}
-                                onToggleStatus={handleToggleStatus}
-                                onEdit={(member) => {
-                                    setSelectedStaffToEdit(member);
-                                    setIsModalOpen(true);
-                                }}
-                                onViewDetails={(member) => navigate(`/store-admin/staff/${member.id}`)}
-                            />
-
-                            <StaffPagination
-                                currentPage={currentPage}
-                                totalPages={totalPages}
-                                totalCount={totalCount}
-                                itemsPerPage={5}
-                                onPageChange={setCurrentPage}
-                            />
-                        </div>
-                    )}
-                </main>
+            <div className="mt-8">
+                <StatsCards data={[
+                    { name: "Total Team", stat: String(staff.length), change: "+1", changeType: "positive" },
+                    { name: "Active Now", stat: String(staff.filter((m: any) => m.status === 'active').length), change: "100%", changeType: "positive" },
+                    { name: "Managers", stat: String(staff.filter((m: any) => m.role === 'ADMIN').length), change: "0%", changeType: "positive" },
+                    { name: "Cashiers", stat: String(staff.filter((m: any) => m.role === 'CASHIER').length), change: "+2", changeType: "positive" },
+                ]} />
             </div>
+
+            <StaffFilters
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                roleFilter={roleFilter}
+                onRoleChange={setRoleFilter}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+            />
+
+            {loading ? (
+                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="w-12 h-12 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[4px] animate-pulse leading-none">Syncing Workforce...</p>
+                    </div>
+                </div>
+            ) : (
+                <div className="space-y-8 animate-fade-in">
+                    <StaffTable
+                        staff={paginatedStaff}
+                        onToggleStatus={handleToggleStatus}
+                        onEdit={(member) => {
+                            setSelectedStaffToEdit(member);
+                            setIsModalOpen(true);
+                        }}
+                        onViewDetails={(member) => navigate(`/store-admin/staff/${member.id}`)}
+                    />
+
+                    <StaffPagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalCount={totalCount}
+                        itemsPerPage={itemsPerPage}
+                        onPageChange={setCurrentPage}
+                    />
+                </div>
+            )}
 
             <AddStaffModal
                 isOpen={isModalOpen}

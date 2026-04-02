@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Tooltip, ResponsiveContainer } from "recharts"
+import { Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { cn } from "../../lib/utils"
 
 export interface ChartConfig {
@@ -45,6 +45,42 @@ export function ChartContainer({
 }
 
 export const ChartTooltip = Tooltip
+export const ChartLegend = Legend
+
+export function ChartLegendContent({
+  payload,
+  verticalAlign = "bottom",
+  align = "center",
+  className,
+}: any) {
+  if (!payload?.length) {
+    return null
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-center gap-4 pt-2",
+        verticalAlign === "top" ? "pb-2" : "pt-2",
+        align === "left" && "justify-start",
+        align === "right" && "justify-end",
+        className
+      )}
+    >
+      {payload.map((entry: any, index: number) => (
+        <div key={index} className="flex items-center gap-2">
+          <div
+            className="h-2 w-2 rounded-full shrink-0"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+            {entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export function ChartTooltipContent({
   active,
