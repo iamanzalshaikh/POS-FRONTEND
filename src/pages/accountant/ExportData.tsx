@@ -55,30 +55,38 @@ const ExportData: React.FC = () => {
   const handleExport = async (optionId: string) => {
     try {
       setLoading(optionId);
-      
+
       if (optionId === '4') { // Revenue Report
         const response = await getSalesReport({ startDate, endDate });
-        if (response.data?.success) {
+        if (response.success) {
           alert('Revenue report downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       } else if (optionId === '3') { // Expense Ledger
         const response = await getInventoryReport();
-        if (response.data?.success) {
+        if (response.success) {
           alert('Expense ledger downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       } else if (optionId === '2') { // Tax Reports
         const response = await getSalesReport({ startDate, endDate });
-        if (response.data?.success) {
+        if (response.success) {
           alert('Tax report downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       } else { // Financial Statements
         const response = await getSalesTransactions({ startDate, endDate, limit: 100 });
-        if (response.data?.success) {
+        if (response.success) {
           alert('Financial statements downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       }
     } catch (err: any) {
-      alert(`Export failed: ${err.response?.data?.message || 'Unknown error'}`);
+      alert(`Export failed: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(null);
     }
@@ -204,7 +212,7 @@ const ExportData: React.FC = () => {
       {/* Scheduled Exports */}
       <div className="bg-white border border-slate-200 rounded-3xl p-8">
         <h3 className="text-lg font-bold text-slate-900 mb-6">Scheduled Exports</h3>
-        
+
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
             <div className="flex items-center space-x-4">

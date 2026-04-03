@@ -25,8 +25,19 @@ export default function BarChartLabelCustom({
   config = {},
   className = "",
   noWrapper = false,
-  height = "min-h-[300px]",
+  height = "h-[300px]",
 }: BarChartLabelCustomProps) {
+  // Return null if no data
+  if (!data || data.length === 0) {
+    return (
+      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm w-full">
+        <div className="flex items-center justify-center h-[300px] text-slate-400 text-sm font-bold">
+          No data available
+        </div>
+      </div>
+    );
+  }
+
   const chartContent = (
     <ChartContainer config={config} className={`w-full ${height}`}>
       <BarChart
@@ -34,7 +45,7 @@ export default function BarChartLabelCustom({
         layout="vertical"
         margin={{
           left: 16,
-          right: 40, // Space for the value label on the right
+          right: 40,
           top: 10,
           bottom: 10,
         }}
@@ -56,17 +67,15 @@ export default function BarChartLabelCustom({
         <Bar
           dataKey={dataKey}
           fill={`var(--color-${dataKey})`}
-          radius={8} // Rounded bars
+          radius={8}
           barSize={40}
         >
-          {/* Custom Labels: Left -> label (month) */}
           <LabelList
             dataKey={labelKey}
             position="insideLeft"
             offset={12}
             className="fill-[var(--color-label)] font-bold text-sm"
           />
-          {/* Custom Labels: Right -> value (desktop) */}
           <LabelList
             dataKey={dataKey}
             position="right"

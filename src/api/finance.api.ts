@@ -3,7 +3,7 @@ import axios, { type AxiosResponse, type AxiosError } from 'axios';
 
 /**
  * Finance Module API
- * 
+ *
  * All endpoints are accessible by ACCOUNTANT role.
  * Standardized response format for consistent handling.
  */
@@ -52,6 +52,63 @@ export interface InventoryLogsParams {
   changeType?: string;
   startDate?: string;
   endDate?: string;
+}
+
+export interface ProfitLossData {
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  grossMargin: number;
+  operatingExpenses: number;
+  expenseRatio: number;
+  netProfit: number;
+  netMargin: number;
+  expenseByCategory: Record<string, number>;
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  metrics: {
+    totalSales: number;
+    totalExpenses: number;
+  };
+}
+
+export interface MonthlyCloseData {
+  period: {
+    startDate: string;
+    endDate: string;
+    year: number;
+    month: number;
+  };
+  sales: {
+    totalRevenue: number;
+    totalTransactions: number;
+    totalDiscount: number;
+    totalTax: number;
+    netRevenue: number;
+  };
+  expenses: {
+    total: number;
+    byCategory: Array<{
+      category: string;
+      amount: number;
+      percentage: number;
+    }>;
+  };
+  cogs: number;
+  profit: {
+    grossProfit: number;
+    grossMargin: number;
+    netProfit: number;
+    netMargin: number;
+  };
+  inventory: {
+    totalProducts: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+    stockValuation: number;
+  };
 }
 
 // ============================================================================
@@ -170,12 +227,12 @@ export interface ApiError {
  */
 export const handleApiError = (error: unknown, context: string): ApiError => {
   const timestamp = new Date().toISOString();
-  
+
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<BackendApiResponse>;
     const backendMessage = axiosError.response?.data?.message;
     const status = axiosError.response?.status;
-    
+
     console.error(`[Finance API] ${context}:`, {
       timestamp,
       status,
@@ -183,7 +240,7 @@ export const handleApiError = (error: unknown, context: string): ApiError => {
       url: (error as any).config?.url,
       method: (error as any).config?.method,
     });
-    
+
     return {
       success: false,
       message: backendMessage || axiosError.message || 'Failed to fetch data',
@@ -191,14 +248,14 @@ export const handleApiError = (error: unknown, context: string): ApiError => {
       originalError: error,
     };
   }
-  
+
   const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-  
+
   console.error(`[Finance API] ${context}:`, {
     timestamp,
     message: errorMessage,
   });
-  
+
   return {
     success: false,
     message: errorMessage,
@@ -213,7 +270,7 @@ export const handleApiError = (error: unknown, context: string): ApiError => {
 /**
  * Normalizes backend responses to standard format
  * Handles various backend response structures
- * 
+ *
  * @param response - Axios response from backend
  * @param context - Context for error logging
  * @returns Standardized response with consistent structure
@@ -223,12 +280,12 @@ export const normalizeResponse = <T>(
   context: string
 ): StandardApiResponse<T> => {
   const backendData = response.data;
-  
+
   // Handle different backend response structures
   let data: T;
   let success: boolean;
   let message: string | undefined;
-  
+
   // Structure 1: { success: true, data: T, message: string }
   if (backendData && typeof backendData === 'object' && 'data' in backendData) {
     data = backendData.data as T;
@@ -253,7 +310,7 @@ export const normalizeResponse = <T>(
     success = true;
     message = undefined;
   }
-  
+
   return {
     success,
     data,
@@ -323,7 +380,7 @@ export const getSaleById = async (saleId: string): Promise<StandardApiResponse<S
  */
 export const getSaleByInvoiceNumber = async (invoiceNumber: string): Promise<StandardApiResponse<SaleDetail> | ApiError> => {
   const encodedInvoiceNumber = encodeURIComponent(invoiceNumber);
-  
+
   return withErrorHandling(
     () => api.get<BackendApiResponse<SaleDetail>>(`/sales/invoice/${encodedInvoiceNumber}`),
     `Failed to fetch sale with invoice ${invoiceNumber}`
@@ -359,6 +416,55 @@ export const getInventoryLogs = async (params?: InventoryLogsParams): Promise<St
   return withErrorHandling(
     () => api.get<BackendApiResponse<InventoryLogsData>>('/inventory/logs', { params }),
     'Failed to fetch inventory logs'
+  );
+};
+
+// ============================================================================
+// FINANCE REPORTS (NEW - Correct COGS Calculation)
+// Endpoint: GET /finance/*
+// Access: ACCOUNTANT, STORE_ADMIN, SUPER_ADMIN
+// ============================================================================
+
+/**
+ * Fetches Profit & Loss statement with correct COGS calculation
+ * COGS = SUM(cost_price × quantity_sold) - NOT total inventory value
+ */
+export const getProfitAndLoss = async (params: SalesReportParams): Promise<StandardApiResponse<ProfitLossData> | ApiError> => {
+  return withErrorHandling(
+    () => api.get<BackendApiResponse<ProfitLossData>>('/finance/profit-loss', { params }),
+    'Failed to fetch P&L statement'
+  );
+};
+
+/**
+ * Fetches Monthly Close report with correct COGS
+ */
+export const getMonthlyCloseReport = async (year: number, month: number): Promise<StandardApiResponse<MonthlyCloseData> | ApiError> => {
+  return withErrorHandling(
+    () => api.get<BackendApiResponse<MonthlyCloseData>>('/finance/monthly-close', { 
+      params: { year, month } 
+    }),
+    'Failed to fetch monthly close report'
+  );
+};
+
+/**
+ * Fetches expenses grouped by category
+ */
+export const getFinanceExpensesByCategory = async (params: SalesReportParams): Promise<StandardApiResponse<any> | ApiError> => {
+  return withErrorHandling(
+    () => api.get('/finance/expenses-by-category', { params }),
+    'Failed to fetch expenses by category'
+  );
+};
+
+/**
+ * Fetches monthly expense trend
+ */
+export const getFinanceExpensesTrend = async (months?: number): Promise<StandardApiResponse<any> | ApiError> => {
+  return withErrorHandling(
+    () => api.get('/finance/expenses-trend', { params: { months: months || 12 } }),
+    'Failed to fetch expense trend'
   );
 };
 

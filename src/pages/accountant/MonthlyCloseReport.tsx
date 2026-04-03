@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart } from 'lucide-react';
 import { getSalesReport, getInventoryReport } from '../../api/finance.api';
+import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
+import type { Expense } from '../../utils/expense-utils';
+import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
 
 interface MonthlyCloseData {
   period: {
@@ -15,6 +18,14 @@ interface MonthlyCloseData {
     totalTax: number;
     netRevenue: number;
   };
+  expenses: {
+    total: number;
+    byCategory: Array<{
+      category: string;
+      amount: number;
+      percentage: number;
+    }>;
+  };
   inventory: {
     openingStock?: number;
     closingStock: number;
@@ -25,6 +36,8 @@ interface MonthlyCloseData {
   profit: {
     grossProfit: number;
     grossMargin: number;
+    netProfit: number;
+    netMargin: number;
   };
 }
 
@@ -48,11 +61,18 @@ const MonthlyCloseReport: React.FC = () => {
       const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
       const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-      // Fetch sales and inventory data
-      const [salesResponse, inventoryResponse] = await Promise.all([
+      console.log('📊 [MonthlyClose] Fetching data for:', { startDate, endDate, selectedMonth });
+
+      // Fetch sales, inventory, and expenses
+      const [salesResponse, inventoryResponse, expensesResponse] = await Promise.all([
         getSalesReport({ startDate, endDate }),
-        getInventoryReport()
+        getInventoryReport(),
+        getExpenses()
       ]);
+
+      console.log('📊 [MonthlyClose] Sales Response:', salesResponse);
+      console.log('📊 [MonthlyClose] Inventory Response:', inventoryResponse);
+      console.log('📊 [MonthlyClose] Expenses Response:', expensesResponse);
 
       if (!salesResponse.success || !inventoryResponse.success) {
         throw new Error('Failed to fetch data');
@@ -60,18 +80,51 @@ const MonthlyCloseReport: React.FC = () => {
 
       const salesData = salesResponse.data as SalesReportData;
       const inventoryData = inventoryResponse.data as InventoryReportData;
+      
+      // Filter expenses by selected month
+      let allExpenses: Expense[] = [];
+      if (expensesResponse.success && expensesResponse.data) {
+        allExpenses = expensesResponse.data.filter((expense: Expense) => {
+          const expenseDate = new Date(expense.date);
+          const expenseMonth = expenseDate.toISOString().slice(0, 7);
+          return expenseMonth === selectedMonth;
+        });
+      }
+      
+      console.log('📊 [MonthlyClose] Filtered expenses:', allExpenses.length, 'items');
 
-      // Calculate metrics
+      // Calculate sales metrics
       const totalRevenue = salesData.summary.totalRevenue;
       const totalDiscount = salesData.summary.totalDiscount;
       const totalTax = salesData.summary.totalTax;
       const netRevenue = totalRevenue - totalDiscount - totalTax;
 
-      // Estimate COGS (in production, backend should provide this)
-      // Using 70% of revenue as estimated COGS
-      const estimatedCOGS = totalRevenue * 0.70;
-      const grossProfit = netRevenue - estimatedCOGS;
+      // Calculate actual expenses from API
+      const totalExpenses = allExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+      console.log('📊 [MonthlyClose] Total Expenses:', totalExpenses);
+
+      // Calculate expense breakdown by category
+      const expenseByCategory = EXPENSE_CATEGORIES
+        .map(cat => {
+          const catExpenses = allExpenses.filter(e => e.category === cat.value);
+          const catAmount = catExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+          return {
+            category: cat.label,
+            value: cat.value,
+            amount: catAmount,
+            percentage: totalExpenses > 0 ? (catAmount / totalExpenses) * 100 : 0,
+          };
+        })
+        .filter(c => c.amount > 0)
+        .sort((a, b) => b.amount - a.amount);
+
+      console.log('📊 [MonthlyClose] Expense by Category:', expenseByCategory);
+
+      // Calculate profit with ACTUAL expenses (no estimates)
+      const grossProfit = netRevenue - totalExpenses;
       const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+      const netProfit = grossProfit; // For now, net = gross (can add other deductions later)
+      const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
       setData({
         period: {
@@ -85,6 +138,10 @@ const MonthlyCloseReport: React.FC = () => {
           totalTax,
           netRevenue
         },
+        expenses: {
+          total: totalExpenses,
+          byCategory: expenseByCategory
+        },
         inventory: {
           closingStock: inventoryData.summary.totalStockValue,
           stockValuation: inventoryData.summary.totalStockValue,
@@ -93,7 +150,9 @@ const MonthlyCloseReport: React.FC = () => {
         },
         profit: {
           grossProfit,
-          grossMargin
+          grossMargin,
+          netProfit,
+          netMargin
         }
       });
     } catch (err: any) {
@@ -265,7 +324,7 @@ const MonthlyCloseReport: React.FC = () => {
       </div>
 
       {/* Detailed Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Breakdown */}
         <div className="bg-white border border-slate-200 rounded-3xl p-8">
           <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
@@ -290,6 +349,36 @@ const MonthlyCloseReport: React.FC = () => {
               <span className="text-lg font-black text-emerald-600">{formatCurrency(data.sales.netRevenue)}</span>
             </div>
           </div>
+        </div>
+
+        {/* Expense Breakdown */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-8">
+          <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+            <PieChart size={20} className="text-red-400" />
+            Expense Breakdown
+          </h3>
+          {data.expenses.byCategory.length > 0 ? (
+            <div className="space-y-3">
+              {data.expenses.byCategory.map((cat) => (
+                <div key={cat.category} className="flex justify-between items-center py-2">
+                  <span className="text-sm font-bold text-slate-700">{cat.category}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-slate-900">{formatCurrency(cat.amount)}</span>
+                    <span className="text-[10px] font-bold text-slate-500 ml-2">({cat.percentage.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between items-center py-3 pt-4 border-t-2 border-slate-200 mt-4">
+                <span className="text-sm font-black uppercase text-slate-700 tracking-widest">Total Expenses</span>
+                <span className="text-lg font-black text-red-600">{formatCurrency(data.expenses.total)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400">
+              <PieChart size={48} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-bold">No expenses recorded</p>
+            </div>
+          )}
         </div>
 
         {/* Inventory Status */}
@@ -325,6 +414,33 @@ const MonthlyCloseReport: React.FC = () => {
                 </span>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Profit Summary */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-8">
+        <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+          <TrendingUp size={20} className="text-amber-400" />
+          Profit Summary
+        </h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center py-4 border-b border-slate-100">
+            <span className="text-base font-bold text-slate-700">Net Revenue</span>
+            <span className="text-xl font-black text-emerald-600">{formatCurrency(data.sales.netRevenue)}</span>
+          </div>
+          <div className="flex justify-between items-center py-4 border-b border-slate-100">
+            <span className="text-base font-bold text-slate-700">Total Expenses</span>
+            <span className="text-xl font-black text-red-600">-{formatCurrency(data.expenses.total)}</span>
+          </div>
+          <div className="flex justify-between items-center py-6 px-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 mt-4">
+            <div>
+              <span className="text-base font-black uppercase text-amber-900 tracking-widest">Net Profit</span>
+              <div className="text-[10px] font-bold text-amber-700 mt-1">
+                {data.profit.netMargin.toFixed(1)}% margin
+              </div>
+            </div>
+            <span className="text-3xl font-black text-amber-600">{formatCurrency(data.profit.netProfit)}</span>
           </div>
         </div>
       </div>

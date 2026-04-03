@@ -47,14 +47,8 @@ export const EXPENSE_CATEGORIES = [
   { value: 'UTILITIES', label: 'Utilities' },
   { value: 'RENT', label: 'Rent' },
   { value: 'SALARIES', label: 'Salaries' },
-  { value: 'SUPPLIES', label: 'Supplies' },
   { value: 'MAINTENANCE', label: 'Maintenance' },
   { value: 'MARKETING', label: 'Marketing' },
-  { value: 'INSURANCE', label: 'Insurance' },
-  { value: 'TRANSPORT', label: 'Transport' },
-  { value: 'FOOD_BEVERAGES', label: 'Food & Beverages' },
-  { value: 'EQUIPMENT', label: 'Equipment' },
-  { value: 'PROFESSIONAL_SERVICES', label: 'Professional Services' },
   { value: 'TAXES', label: 'Taxes' },
   { value: 'OTHER', label: 'Other' },
 ] as const;
@@ -67,7 +61,7 @@ export const EXPENSE_CATEGORIES = [
  * Calculate total expenses from all records
  */
 export const getTotalExpenses = (expenses: Expense[]): number => {
-  return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  return expenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
 };
 
 /**
@@ -76,14 +70,14 @@ export const getTotalExpenses = (expenses: Expense[]): number => {
 export const getTodayExpenses = (expenses: Expense[]): number => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
+
   return expenses
     .filter(expense => {
       const expenseDate = new Date(expense.date);
       expenseDate.setHours(0, 0, 0, 0);
       return expenseDate.getTime() === today.getTime();
     })
-    .reduce((sum, expense) => sum + expense.amount, 0);
+    .reduce((sum, expense) => sum + Number(expense.amount), 0);
 };
 
 /**
@@ -93,16 +87,15 @@ export const getMonthlyExpenses = (expenses: Expense[]): number => {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
-  
+
   return expenses
     .filter(expense => {
       const expenseDate = new Date(expense.date);
-      return expenseDate.getMonth() === currentMonth && 
+      return expenseDate.getMonth() === currentMonth &&
              expenseDate.getFullYear() === currentYear;
     })
-    .reduce((sum, expense) => sum + expense.amount, 0);
+    .reduce((sum, expense) => sum + Number(expense.amount), 0);
 };
-
 /**
  * Get complete expense summary (today, month, total)
  */
