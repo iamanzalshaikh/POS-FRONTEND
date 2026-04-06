@@ -34,14 +34,23 @@ const chartConfig = {
 interface ChartLineDotsProps {
   className?: string;
   noWrapper?: boolean;
+  data?: any[];
+  dataKey?: string;
+  config?: ChartConfig;
 }
 
-const ChartLineDots = ({ className = "", noWrapper = false }: ChartLineDotsProps) => {
+const ChartLineDots = ({ 
+  className = "", 
+  noWrapper = false, 
+  data = chartData, 
+  dataKey = "desktop",
+  config = chartConfig
+}: ChartLineDotsProps) => {
   const chartContent = (
-    <ChartContainer config={chartConfig}>
+    <ChartContainer config={config}>
       <LineChart
         accessibilityLayer
-        data={chartData}
+        data={data}
         margin={{
           left: 12,
           right: 12,
@@ -50,8 +59,8 @@ const ChartLineDots = ({ className = "", noWrapper = false }: ChartLineDotsProps
         <CartesianGrid vertical={false} stroke="#f1f5f9" />
         <XAxis
           axisLine={false}
-          dataKey="month"
-          tickFormatter={(value) => value.slice(0, 3)}
+          dataKey="date"
+          tickFormatter={(value) => value && value.slice ? value.slice(0, 3) : value}
           tickLine={false}
           tickMargin={8}
           className="text-xs font-bold text-slate-400"
@@ -64,11 +73,11 @@ const ChartLineDots = ({ className = "", noWrapper = false }: ChartLineDotsProps
           activeDot={{
             r: 6,
           }}
-          dataKey="desktop"
+          dataKey={dataKey}
           dot={{
-            fill: "var(--color-desktop)",
+            fill: `var(--color-${dataKey})`,
           }}
-          stroke="var(--color-desktop)"
+          stroke={`var(--color-${dataKey})`}
           strokeWidth={2}
           type="natural"
         />

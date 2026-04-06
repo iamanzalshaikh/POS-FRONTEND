@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Bar, BarChart, XAxis, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, XAxis } from 'recharts';
 
 import {
   type ChartConfig,
@@ -43,6 +43,7 @@ interface MonthlyActivityChartProps {
   title?: string;
   subtitle?: string;
   height?: number | string;
+  className?: string;
 }
 
 const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
@@ -50,7 +51,8 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
   isLoading = false,
   title = "Monthly Activity",
   subtitle = "Last 12 months",
-  height = 250
+  height = 250,
+  className
 }) => {
   const displayData = data || defaultChartData;
 
@@ -64,7 +66,7 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
   }
 
   return (
-    <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm dark:bg-slate-900 dark:border-slate-800 flex flex-col transition-all hover:shadow-md">
+    <div className={`bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm dark:bg-slate-900 dark:border-slate-800 flex flex-col transition-all hover:shadow-md ${className}`}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{title}</h3>
@@ -72,9 +74,8 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
         </div>
       </div>
 
-      <div style={{ height }}>
+      <div style={{ height }} className="overflow-hidden">
         <ChartContainer config={chartConfig}>
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={displayData}>
               <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={10} />
               <Bar dataKey="activity" fill="var(--chart-1)" radius={4} />
@@ -95,7 +96,6 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
                 cursor={false}
               />
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
       </div>
     </div>

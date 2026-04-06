@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, ResponsiveContainer } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 
 import {
     type ChartConfig,
@@ -43,45 +43,43 @@ const ChartBarStacked: React.FC<ChartBarStackedProps> = ({
                 </div>
             )}
 
-            <div style={{ height }}>
+            <div style={{ height }} className="overflow-hidden">
                 <ChartContainer config={config}>
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart accessibilityLayer data={data}>
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
-                            <XAxis
-                                axisLine={false}
-                                dataKey="month"
-                                tickFormatter={(value) => value.slice(0, 3)}
-                                tickLine={false}
-                                tickMargin={10}
-                                className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"
-                            />
-                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                            <ChartLegend content={<ChartLegendContent />} />
+                    <BarChart accessibilityLayer data={data}>
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis
+                            axisLine={false}
+                            dataKey="month"
+                            tickFormatter={(value) => value.slice(0, 3)}
+                            tickLine={false}
+                            tickMargin={10}
+                            className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"
+                        />
+                        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                        <ChartLegend content={<ChartLegendContent />} />
 
-                            {keys.map((key, index) => {
-                                const isLast = index === keys.length - 1;
-                                const isFirst = index === 0;
+                        {keys.map((key, index) => {
+                            const isLast = index === keys.length - 1;
+                            const isFirst = index === 0;
 
-                                // Rounded corners for the stack: bottom bar rounded at bottom, top bar rounded at top
-                                const radius: [number, number, number, number] = isFirst
-                                    ? [0, 0, 4, 4]
-                                    : isLast
-                                        ? [4, 4, 0, 0]
-                                        : [0, 0, 0, 0];
+                            // Rounded corners for the stack: bottom bar rounded at bottom, top bar rounded at top
+                            const radius: [number, number, number, number] = isFirst
+                                ? [0, 0, 4, 4]
+                                : isLast
+                                    ? [4, 4, 0, 0]
+                                    : [0, 0, 0, 0];
 
-                                return (
-                                    <Bar
-                                        key={key}
-                                        dataKey={key}
-                                        fill={`var(--color-${key})`}
-                                        radius={radius}
-                                        stackId="a"
-                                    />
-                                );
-                            })}
-                        </BarChart>
-                    </ResponsiveContainer>
+                            return (
+                                <Bar
+                                    key={key}
+                                    dataKey={key}
+                                    fill={`var(--color-${key})`}
+                                    radius={radius}
+                                    stackId="a"
+                                />
+                            );
+                        })}
+                    </BarChart>
                 </ChartContainer>
             </div>
         </div>
