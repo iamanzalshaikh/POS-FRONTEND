@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React from 'react';
 import GlobalPieChart from '@/components/global-components/PieChart';
 import StatsCards from "@/components/global-components/StatsCards";
 import {
@@ -22,7 +22,6 @@ import { useQuery } from '@tanstack/react-query';
 import { getSuperAdminOverview } from '@/api/dashboard.api';
 
 export default function Dashboard() {
-    const today = new Date().toISOString().split('T')[0];
 
     // React Query Hook
     const { data: dashboardRes, isLoading } = useQuery({
@@ -90,8 +89,8 @@ export default function Dashboard() {
                                     <h3 className="text-xl font-extrabold text-slate-900">Revenue by Top Stores</h3>
                                     <p className="text-sm text-slate-500 font-medium">Top performing branches globally</p>
                                 </div>
-                                <button className="text-slate-400 hover:text-slate-600">
-                                    <MoreVertical size={20} />
+                                <button className="text-black hover:text-slate-600 group">
+                                    <MoreVertical size={24} strokeWidth={3} className="group-hover:scale-110 transition-transform" />
                                 </button>
                             </div>
                             <div className="h-[300px] w-full">
@@ -137,7 +136,6 @@ export default function Dashboard() {
                                 nameKey="name"
                                 innerRadius={60}
                                 outerRadius={80}
-                                showLabels={false}
                             />
                         </div>
                     </div>

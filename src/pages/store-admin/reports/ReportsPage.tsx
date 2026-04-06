@@ -67,7 +67,6 @@ const ReportsPage = () => {
     ] : [];
 
     return (
-    return (
         <div className="animate-in fade-in duration-500 space-y-10">
             <ReportsHeader
                 activeTab={activeTab}
@@ -121,8 +120,6 @@ const ReportsPage = () => {
                 </div>
             )}
         </div>
-    );
-};
     );
 };
 
