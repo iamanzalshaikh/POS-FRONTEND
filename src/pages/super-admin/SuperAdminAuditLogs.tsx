@@ -142,5 +142,3 @@ const SuperAdminAuditLogs: React.FC = () => {
 };
 
 export default SuperAdminAuditLogs;
-
-export default SuperAdminAuditLogs;
