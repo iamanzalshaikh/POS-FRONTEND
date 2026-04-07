@@ -13,8 +13,7 @@ import {
     ChevronRight,
     Package,
     Layers,
-    Settings2,
-    Activity
+    Settings2
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -35,7 +34,7 @@ const menuItems = [
     { name: 'Sales History', icon: ShoppingCart, path: '/store-admin/sales' },
     { name: 'Devices', icon: Monitor, path: '/store-admin/devices' },
     { name: 'Reports', icon: BarChart3, path: '/store-admin/reports' },
-    { name: 'Activity Logs', icon: Activity, path: '/store-admin/activity-logs' },
+
     { name: 'Store Settings', icon: Settings, path: '/store-admin/settings' },
 ];
 

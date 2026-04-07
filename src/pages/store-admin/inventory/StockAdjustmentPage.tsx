@@ -1,25 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StockAdjustmentForm from '@/components/store-admin/StockAdjustmentForm';
 import StockAdjustmentTable from '@/components/store-admin/StockAdjustmentTable';
-import { useQuery } from '@tanstack/react-query';
 import { fetchProducts } from '@/api/products.api';
 import { fetchInventoryLogs } from '@/api/inventory.api';
 import { getAuditLogs } from '@/api/reports.api';
 
 const StockAdjustmentPage = () => {
-    // React Query Hooks
-    const { data: productsRes } = useQuery({
-        queryKey: ['products'],
-        queryFn: () => fetchProducts(),
-    });
-    const { data: logsRes } = useQuery({
-        queryKey: ['inventory-logs', { limit: 40 }],
-        queryFn: () => fetchInventoryLogs({ limit: 40 }),
-    });
-    const { data: auditLogsRes } = useQuery({
-        queryKey: ['audit-logs', { limit: 100 }],
-        queryFn: () => getAuditLogs({ limit: 100 }),
-    });
+    const [productsRes, setProductsRes] = useState<any>(null);
+    const [logsRes, setLogsRes] = useState<any>(null);
+    const [auditLogsRes, setAuditLogsRes] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    const loadData = async () => {
+        setLoading(true);
+        try {
+            const [products, logs, auditLogs] = await Promise.all([
+                fetchProducts(),
+                fetchInventoryLogs({ limit: 40 }),
+                getAuditLogs({ limit: 100 })
+            ]);
+            setProductsRes(products);
+            setLogsRes(logs);
+            setAuditLogsRes(auditLogs);
+        } catch (error) {
+            console.error("Failed to load adjustment data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    const handleSuccess = () => {
+        loadData();
+    };
 
     const products = (productsRes as any)?.data || (Array.isArray(productsRes) ? productsRes : []);
     const logs = (logsRes as any)?.data || (Array.isArray(logsRes) ? logsRes : []);
@@ -46,9 +62,14 @@ const StockAdjustmentPage = () => {
         };
     });
 
-    const handleSuccess = () => {
-        // React Query handles invalidation in the mutation hook onSuccess
-    };
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                <p className="mt-4 text-xs font-black text-slate-400 uppercase tracking-widest animate-pulse">Syncing Inventory Logs...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="animate-in fade-in duration-500 space-y-10">

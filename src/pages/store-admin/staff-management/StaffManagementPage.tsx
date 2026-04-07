@@ -1,13 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import StaffHeader from '@/components/store-admin/StaffHeader';
+import { useState, useEffect } from 'react';
 import StaffFilters from '@/components/store-admin/StaffFilters';
 import StaffTable from '@/components/store-admin/StaffTable';
 import StaffPagination from '@/components/store-admin/StaffPagination';
 import AddStaffModal from '@/components/store-admin/AddStaffModal';
 import StatsCards from '@/components/global-components/StatsCards';
 import type { StaffMember, CreateStaffInput, StaffRole, StaffStatus } from './types/staff.types';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStaffMembers, createStaffMember, updateStaffMember } from '@/api/staff.api';
 
 function formatActivity(value?: string | null): string {
@@ -27,7 +24,6 @@ function mapApiUser(u: any): StaffMember {
 }
 
 export default function StaffManagementPage() {
-    const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStaffToEdit, setSelectedStaffToEdit] = useState<StaffMember | undefined>(undefined);
 
@@ -37,24 +33,26 @@ export default function StaffManagementPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    const queryClient = useQueryClient();
-    // React Query Hooks
-    const { data: staffDataRes, isLoading: loading, refetch: refetchStaff } = useQuery({
-        queryKey: ['staff'],
-        queryFn: fetchStaffMembers,
-    });
-    const createStaffMutation = useMutation({
-        mutationFn: createStaffMember,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['staff'] });
-        },
-    });
-    const updateStaffMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: any }) => updateStaffMember(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['staff'] });
-        },
-    });
+    const [staffDataRes, setStaffDataRes] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    const loadStaff = async () => {
+        setLoading(true);
+        try {
+            const data = await fetchStaffMembers();
+            setStaffDataRes(data);
+        } catch (error) {
+            console.error("Failed to fetch staff:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadStaff();
+    }, []);
+
+    const refetchStaff = loadStaff;
 
     const staffRaw = (staffDataRes as any)?.data || (Array.isArray(staffDataRes) ? staffDataRes : []);
     const staff: StaffMember[] = Array.isArray(staffRaw) ? staffRaw.map(mapApiUser) : [];
@@ -76,7 +74,8 @@ export default function StaffManagementPage() {
 
     const handleAddStaff = async (data: CreateStaffInput): Promise<{ success: boolean; error?: string }> => {
         try {
-            await createStaffMutation.mutateAsync(data);
+            await createStaffMember(data);
+            await loadStaff();
             return { success: true };
         } catch (err: any) {
             const msg = err?.response?.data?.message || 'Failed to create staff';
@@ -84,44 +83,27 @@ export default function StaffManagementPage() {
         }
     };
 
-    const handleToggleStatus = async (id: string, active: boolean) => {
-        await updateStaffMutation.mutateAsync({ id, data: { isActive: active } });
-    };
-
     const handleEditStaff = async (id: string, data: any): Promise<{ success: boolean; error?: string }> => {
         try {
-            await updateStaffMutation.mutateAsync({ id, data });
+            await updateStaffMember(id, data);
+            await loadStaff();
             return { success: true };
         } catch (err) {
             return { success: false, error: 'Failed to update user details' };
         }
     };
 
+
     return (
         <div className="animate-in fade-in duration-500 space-y-10">
-            <StaffHeader
-                onAddStaff={() => setIsModalOpen(true)}
-                onExport={() => alert('Export CSV feature coming soon!')}
-                onRefresh={() => refetchStaff()}
-            />
-
             <div className="mt-8">
                 <StatsCards data={[
                     { name: "Total Team", stat: String(staff.length), change: "+1", changeType: "positive" },
                     { name: "Active Now", stat: String(staff.filter((m: any) => m.status === 'active').length), change: "100%", changeType: "positive" },
-                    { name: "Managers", stat: String(staff.filter((m: any) => m.role === 'ADMIN').length), change: "0%", changeType: "positive" },
-                    { name: "Cashiers", stat: String(staff.filter((m: any) => m.role === 'CASHIER').length), change: "+2", changeType: "positive" },
+                    { name: "Managers", stat: String(staff.filter((m: any) => m.role === 'STORE_ADMIN' || m.role === 'ADMIN').length), change: "0%", changeType: "positive" },
+                    { name: "Staff", stat: String(staff.filter((m: any) => m.role === 'CASHIER' || m.role === 'ACCOUNTANT').length), change: "+2", changeType: "positive" },
                 ]} />
             </div>
-
-            <StaffFilters
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                roleFilter={roleFilter}
-                onRoleChange={setRoleFilter}
-                statusFilter={statusFilter}
-                onStatusChange={setStatusFilter}
-            />
 
             {loading ? (
                 <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
@@ -131,16 +113,28 @@ export default function StaffManagementPage() {
                     </div>
                 </div>
             ) : (
-                <div className="space-y-8 animate-fade-in">
-                    <StaffTable
-                        staff={paginatedStaff}
-                        onToggleStatus={handleToggleStatus}
-                        onEdit={(member) => {
-                            setSelectedStaffToEdit(member);
-                            setIsModalOpen(true);
-                        }}
-                        onViewDetails={(member) => navigate(`/store-admin/staff/${member.id}`)}
-                    />
+                <div className="space-y-10">
+                    <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden mb-1 transition-all duration-300 hover:shadow-md dark:shadow-none animate-fade-in">
+                        <StaffFilters
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            roleFilter={roleFilter}
+                            onRoleChange={setRoleFilter}
+                            statusFilter={statusFilter}
+                            onStatusChange={setStatusFilter}
+                            onAddStaff={() => setIsModalOpen(true)}
+                            onExport={() => alert('Export CSV feature coming soon!')}
+                            onRefresh={() => refetchStaff()}
+                        />
+                        
+                        <StaffTable
+                            staff={paginatedStaff}
+                            onEdit={(member) => {
+                                setSelectedStaffToEdit(member);
+                                setIsModalOpen(true);
+                            }}
+                        />
+                    </div>
 
                     <StaffPagination
                         currentPage={currentPage}

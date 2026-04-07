@@ -1,26 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SettingsTabs from '@/components/store-admin/SettingsTabs';
 import StoreIdentityCard from '@/components/store-admin/StoreIdentityCard';
 import TaxSettingsForm from '@/components/store-admin/TaxSettingsForm';
 import { StoreHealthCard, StoreBrandingCard, QuickHelpCard } from '@/components/store-admin/SettingsUtilityCards';
 import { Save, X } from 'lucide-react';
 
-import { useQuery } from '@tanstack/react-query';
 import { getCurrentUser, getStoreInfo } from '@/api/dashboard.api';
 
 const SettingsPage = () => {
     const [activeTab, setActiveTab] = useState('Store Profile');
 
-    const { data: userData } = useQuery({
-        queryKey: ['auth', 'me'],
-        queryFn: getCurrentUser,
-    });
-    const storeId = (userData as any)?.data?.storeId || (userData as any)?.storeId;
-    const { data: storeRes, isLoading } = useQuery({
-        queryKey: ['store', storeId],
-        queryFn: () => getStoreInfo(storeId!),
-        enabled: !!storeId,
-    });
+    const [storeRes, setStoreRes] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const loadSettings = async () => {
+        setIsLoading(true);
+        try {
+            const user = await getCurrentUser();
+            const storeId = (user as any)?.data?.storeId || (user as any)?.storeId;
+            if (storeId) {
+                const store = await getStoreInfo(storeId);
+                setStoreRes(store);
+            }
+        } catch (error) {
+            console.error("Failed to load settings:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadSettings();
+    }, []);
 
     const storeData = (storeRes as any)?.data || storeRes;
 

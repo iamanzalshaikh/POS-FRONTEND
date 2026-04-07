@@ -44,15 +44,19 @@ interface MonthlyActivityChartProps {
   subtitle?: string;
   height?: number | string;
   className?: string;
+  unit?: string;
+  isCurrency?: boolean;
 }
 
 const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
   data,
   isLoading = false,
-  title = "Monthly Activity",
-  subtitle = "Last 12 months",
+  title = "Monthly Performance",
+  subtitle = "Last 6 months",
   height = 250,
-  className
+  className,
+  unit = "activity",
+  isCurrency = false
 }) => {
   const displayData = data || defaultChartData;
 
@@ -85,8 +89,8 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
                     formatter={(value: any) => (
                       <div className="flex min-w-[130px] items-center text-xs text-muted-foreground">
                         <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium text-foreground tabular-nums">
-                          {value}
-                          <span className="font-normal text-muted-foreground ml-1">activity</span>
+                          {isCurrency ? `₨ ${Number(value).toLocaleString()}` : value}
+                          <span className="font-normal text-muted-foreground ml-1">{unit}</span>
                         </div>
                       </div>
                     )}

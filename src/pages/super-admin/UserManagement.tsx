@@ -1,5 +1,4 @@
-import React, { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, UserPlus, Shield, AlertCircle } from 'lucide-react';
 import { usersApi } from '../../service/api';
@@ -10,14 +9,24 @@ import type { ColumnDef } from '@tanstack/react-table';
 const UserManagement: React.FC = () => {
   const navigate = useNavigate();
 
-  // 1. Data Fetching
-  const { data: usersRes, isLoading } = useQuery({
-    queryKey: ['superadmin-users'],
-    queryFn: async () => {
+  const [usersRes, setUsersRes] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadUsers = async () => {
+    setIsLoading(true);
+    try {
       const res = await usersApi.getAll();
-      return res.data?.data || [];
+      setUsersRes(res.data?.data || []);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+    } finally {
+      setIsLoading(false);
     }
-  });
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const users = usersRes || [];
 

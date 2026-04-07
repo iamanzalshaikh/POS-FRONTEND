@@ -7,7 +7,6 @@ import ProductPagination from "@/components/store-admin/ProductPagination"
 import AddProductModal from "@/components/store-admin/AddProductModal"
 import StatsCards from "@/components/global-components/StatsCards"
 
-import { useQuery } from '@tanstack/react-query';
 import { fetchProducts } from "@/api/products.api";
 import { fetchFullInventory } from "@/api/inventory.api";
 import { getCategories } from "@/api/category.api"
@@ -38,20 +37,52 @@ export default function ProductsManagementPage() {
         void loadCategories()
     }, [])
 
+    const [productsDataRes, setProductsDataRes] = useState<any>(null);
+    const [productsLoading, setProductsLoading] = useState(true);
+    const [inventoryDataRes, setInventoryDataRes] = useState<any>(null);
+    const [inventoryLoading, setInventoryLoading] = useState(true);
+
     const queryParams: any = {}
     if (search) queryParams.search = search;
     if (categoryId && categoryId !== 'all') queryParams.categoryId = categoryId;
     if (isActive !== 'all') queryParams.isActive = isActive === 'true';
 
-    // React Query Hooks
-    const { data: productsDataRes, isLoading: productsLoading, refetch: refetchProducts } = useQuery({
-        queryKey: ['products', queryParams],
-        queryFn: () => fetchProducts(queryParams),
-    });
-    const { data: inventoryDataRes, isLoading: inventoryLoading } = useQuery({
-        queryKey: ['inventory', { lowStock: false }],
-        queryFn: fetchFullInventory,
-    });
+    const loadProducts = async () => {
+        setProductsLoading(true);
+        try {
+            const data = await fetchProducts(queryParams);
+            setProductsDataRes(data);
+        } catch (error) {
+            console.error("Failed to fetch products:", error);
+        } finally {
+            setProductsLoading(false);
+        }
+    };
+
+    const loadInventory = async () => {
+        setInventoryLoading(true);
+        try {
+            const data = await fetchFullInventory();
+            setInventoryDataRes(data);
+        } catch (error) {
+            console.error("Failed to fetch inventory:", error);
+        } finally {
+            setInventoryLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadProducts();
+    }, [search, categoryId, isActive]);
+
+    useEffect(() => {
+        loadInventory();
+    }, []);
+
+    const refetchProducts = () => {
+        loadProducts();
+        loadInventory();
+    };
 
     const loading = productsLoading || inventoryLoading;
 

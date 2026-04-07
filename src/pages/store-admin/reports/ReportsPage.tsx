@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReportsHeader from "@/components/store-admin/Reports/ReportsHeader";
 import StatsCards from "@/components/global-components/StatsCards";
 import ReportsCharts from "@/components/store-admin/Reports/ReportsCharts";
 import TopPerformingProducts from "@/components/store-admin/Reports/TopPerformingProducts";
 import InventoryReportTables from "@/components/store-admin/Reports/InventoryReportTables";
-import { useQuery } from "@tanstack/react-query";
 import * as reportsApi from "@/api/reports.api";
 import { AlertTriangle, FileText } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
@@ -12,6 +11,14 @@ import { formatCurrency } from "@/utils/format";
 const ReportsPage = () => {
     const [activeTab, setActiveTab] = useState<'sales' | 'inventory'>('sales');
     const [dateRangeFilter, setDateRangeFilter] = useState('This Week');
+
+    const [salesReportData, setSalesReportData] = useState<any>(null);
+    const [salesLoading, setSalesLoading] = useState(false);
+    const [salesError, setSalesError] = useState<string | null>(null);
+
+    const [inventoryReportData, setInventoryReportData] = useState<any>(null);
+    const [inventoryLoading, setInventoryLoading] = useState(false);
+    const [inventoryError, setInventoryError] = useState<string | null>(null);
 
     const calculateDateRange = (range: string) => {
         const end = new Date();
@@ -33,21 +40,46 @@ const ReportsPage = () => {
         };
     };
 
-    const dateParams = calculateDateRange(dateRangeFilter);
+    const loadSalesData = async (params: any) => {
+        setSalesLoading(true);
+        setSalesError(null);
+        try {
+            const res = await reportsApi.getStoreDashboardData(params);
+            setSalesReportData(res);
+        } catch (err: any) {
+            console.error("Failed to load sales report:", err);
+            setSalesError(err.message || "Failed to load sales report");
+        } finally {
+            setSalesLoading(false);
+        }
+    };
 
-    // React Query Hooks
-    const salesReportQuery = useQuery({
-        queryKey: ['reports-dashboard', dateParams],
-        queryFn: () => reportsApi.getStoreDashboardData(dateParams),
-    });
-    const inventoryReportQuery = useQuery({
-        queryKey: ['reports-inventory'],
-        queryFn: reportsApi.getInventoryReport,
-    });
+    const loadInventoryData = async () => {
+        setInventoryLoading(true);
+        setInventoryError(null);
+        try {
+            const res = await reportsApi.getInventoryReport();
+            setInventoryReportData(res);
+        } catch (err: any) {
+            console.error("Failed to load inventory report:", err);
+            setInventoryError(err.message || "Failed to load inventory report");
+        } finally {
+            setInventoryLoading(false);
+        }
+    };
 
-    const loading = activeTab === 'sales' ? salesReportQuery.isLoading : inventoryReportQuery.isLoading;
-    const error = activeTab === 'sales' ? (salesReportQuery.error as any)?.message : (inventoryReportQuery.error as any)?.message;
-    const reportRes = activeTab === 'sales' ? salesReportQuery.data : inventoryReportQuery.data;
+    useEffect(() => {
+        const dateParams = calculateDateRange(dateRangeFilter);
+        if (activeTab === 'sales') {
+            loadSalesData(dateParams);
+        } else {
+            loadInventoryData();
+        }
+    }, [activeTab, dateRangeFilter]);
+
+    const loading = activeTab === 'sales' ? salesLoading : inventoryLoading;
+    const error = activeTab === 'sales' ? salesError : inventoryError;
+    const reportRes = activeTab === 'sales' ? salesReportData : inventoryReportData;
 
     const data = (reportRes as any)?.data || reportRes || null;
 

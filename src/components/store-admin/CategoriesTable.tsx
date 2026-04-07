@@ -48,18 +48,18 @@ const CategoriesTable = ({ categories, loading, searchQuery }: Props) => {
       <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden animate-fade-in hover:shadow-md transition-all duration-300">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[2px] text-slate-400 w-32">
+            <thead className="bg-white dark:bg-slate-900 border-t-4 border-black">
+              <tr className="border-b-4 border-black">
+                <th className="px-6 py-6 text-[11px] font-black uppercase tracking-[3px] text-slate-400 w-32">
                   ID
                 </th>
-                <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[2px] text-slate-400">
+                <th className="px-6 py-6 text-[11px] font-black uppercase tracking-[3px] text-slate-400">
                   Category
                 </th>
-                <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[2px] text-slate-400">
+                <th className="px-6 py-6 text-[11px] font-black uppercase tracking-[3px] text-slate-400">
                   Sub Category
                 </th>
-                <th className="px-6 py-6 text-[10px] font-black uppercase tracking-[2px] text-slate-400">
+                <th className="px-6 py-6 text-[11px] font-black uppercase tracking-[3px] text-slate-400">
                   Assigned Items
                 </th>
               </tr>

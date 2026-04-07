@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AlertCircle } from 'lucide-react';
 import DashboardGrid from './components/DashboardGrid';
-import ChartAreaAxes from '@/components/global-components/chart-line-dots';
-import BarChartLabelCustom from '@/components/global-components/BarChartLabelCustom';
+import MonthlyActivityChart from '@/components/global-components/monthly-activity-chart';
 import StatsCards from '@/components/global-components/StatsCards';
 
 import CategoryPieChart from './components/CategoryPieChart';
@@ -11,7 +10,6 @@ import TopProductsTable from './components/TopProductsTable';
 
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/format';
-import { useQuery } from '@tanstack/react-query';
 import { getDashboardSummary, getInventory } from '@/api/dashboard.api';
 import * as deviceApi from '@/api/devices.api';
 
@@ -26,6 +24,18 @@ interface DashboardView {
 
 export default function StoreAdminDashboard() {
   const [dateRange, setDateRange] = useState('7D'); // 7D, 30D, Today
+
+  const [dashRes, setDashRes] = useState<any>(null);
+  const [dashLoading, setDashLoading] = useState(true);
+  const [dashError, setDashError] = useState<any>(null);
+
+  const [devicesRes, setDevicesRes] = useState<any>(null);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+  const [devicesError, setDevicesError] = useState<any>(null);
+
+  const [invRes, setInvRes] = useState<any>(null);
+  const [invLoading, setInvLoading] = useState(true);
+  const [invError, setInvError] = useState<any>(null);
 
   const calculateDateRange = (range: string) => {
     const end = new Date();
@@ -45,22 +55,55 @@ export default function StoreAdminDashboard() {
     };
   };
 
-  const { startDate, endDate } = calculateDateRange(dateRange);
-  const { data: dashRes, isLoading: dashLoading, error: dashError } = useQuery({
-    queryKey: ['dashboard', 'summary', { startDate, endDate }],
-    queryFn: () => getDashboardSummary({ startDate, endDate }),
-  });
-  const { data: devicesRes, isLoading: devicesLoading } = useQuery({
-    queryKey: ['devices'],
-    queryFn: () => deviceApi.fetchDevices(),
-  });
-  const { data: invRes, isLoading: invLoading } = useQuery({
-    queryKey: ['inventory-all'],
-    queryFn: () => getInventory(),
-  });
+  const loadDashboardData = async () => {
+    const { startDate, endDate } = calculateDateRange(dateRange);
+    
+    // Summary
+    setDashLoading(true);
+    setDashError(null);
+    try {
+      const res = await getDashboardSummary({ startDate, endDate });
+      setDashRes(res);
+    } catch (err) {
+      setDashError(err);
+    } finally {
+      setDashLoading(false);
+    }
+
+    // Devices (only if not loaded or periodic) - for now just reload
+    setDevicesLoading(true);
+    setDevicesError(null);
+    try {
+      const res = await deviceApi.fetchDevices();
+      setDevicesRes(res);
+    } catch (err) {
+      setDevicesError(err);
+    } finally {
+      setDevicesLoading(false);
+    }
+
+    // Inventory
+    setInvLoading(true);
+    setInvError(null);
+    try {
+      const res = await getInventory();
+      setInvRes(res);
+    } catch (err) {
+      setInvError(err);
+    } finally {
+      setInvLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [dateRange]);
 
   const loading = dashLoading || devicesLoading || invLoading;
-  const error = dashError ? (dashError as any).message : null;
+  const isConnectionError = [dashError, devicesError, invError].some((e: any) => e && !e.response);
+  const error = dashError || devicesError || invError 
+    ? (isConnectionError ? 'System connection failed. Is the backend running?' : 'Failed to synchronize analytics.') 
+    : null;
 
   const raw = (dashRes as any)?.data ?? null;
   const deviceData = (devicesRes as any)?.data ?? [];
@@ -89,7 +132,7 @@ export default function StoreAdminDashboard() {
         { value: s.totalRevenue ?? 0 },
         { value: s.totalTransactions ?? 0 },
         { value: (inv.lowStockCount ?? 0) + (inv.outOfStockCount ?? 0) },
-        { value: s.totalTransactions ?? 0 },
+        { value: s.totalRefunds ?? 0 },
         { value: s.totalDiscount ?? 0 },
       ],
       dailySales: revByDate.map((d: { date?: string; revenue?: number }) => ({ date: d.date ?? '', sales: d.revenue ?? 0 })),
@@ -165,23 +208,23 @@ export default function StoreAdminDashboard() {
     },
     {
       name: "Active Sales",
-      stat: `${data.metrics?.[1]?.value ?? 0}`,
+      stat: `${Number(data.metrics?.[1]?.value ?? 0).toLocaleString()}`,
       change: "+5.1%",
       changeType: "positive" as const,
       linkTo: "/store-admin/sales"
     },
     {
       name: "Inventory Alerts",
-      stat: `${data.metrics?.[2]?.value ?? 0}`,
+      stat: `${Number(data.metrics?.[2]?.value ?? 0).toLocaleString()}`,
       change: "0%",
       changeType: "positive" as const,
       linkTo: "/store-admin/inventory/stocks"
     },
     {
-      name: "Total Orders",
+      name: "Total Refunds",
       stat: `${Number(data.metrics?.[3]?.value ?? 0).toLocaleString()}`,
-      change: "+8.4%",
-      changeType: "positive" as const,
+      change: "-2.1%",
+      changeType: "negative" as const,
       linkTo: "/store-admin/sales"
     },
     {
@@ -223,59 +266,44 @@ export default function StoreAdminDashboard() {
           <StatsCards data={statsData} />
         </div>
 
-        {/* Row 1: Charts & Pie Chart */}
+        {/* Unified Activity Chart */}
         <div className="xl:col-span-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full">
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm h-full flex flex-col group transition-all duration-500 hover:shadow-xl dark:hover:shadow-none">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Daily Sales Revenue</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Daily trend in period</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm shadow-blue-100 dark:shadow-none"></span>
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Revenue</span>
-                </div>
-              </div>
-              <div className="flex-1 min-h-[220px]">
-                <ChartAreaAxes
-                  data={data?.dailySales.map(d => ({ date: d.date, sales: d.sales })) ?? []}
-                  className="h-[220px]"
-                  noWrapper
-                />
-              </div>
-            </div>
+          <MonthlyActivityChart
+            title="Revenue Performance"
+            subtitle={`Consolidated data for ${dateRange}`}
+            data={(() => {
+              // Get last 6 months for a continuous X-axis
+              interface MonthPoint { month: string; monthIndex: number; year: number; activity: number; }
+              const months: MonthPoint[] = [];
+              const now = new Date();
+              for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push({ 
+                  month: d.toLocaleDateString('en-US', { month: 'short' }),
+                  monthIndex: d.getMonth(),
+                  year: d.getFullYear(),
+                  activity: 0 
+                });
+              }
 
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm h-full flex flex-col group transition-all duration-500 hover:shadow-xl dark:hover:shadow-none">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">Revenue Trend</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Comparative performance</p>
-                </div>
-                <div className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full border border-blue-100 dark:border-blue-800 shadow-sm">
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Bar View</span>
-                </div>
-              </div>
-              {data?.weeklyRevenue && data.weeklyRevenue.length > 0 ? (
-                <BarChartLabelCustom
-                  data={data.weeklyRevenue.map((d: { week: string; revenue: number }) => ({
-                    label: new Date(d.week).toLocaleDateString('en-US', { weekday: 'short' }),
-                    value: d.revenue
-                  }))}
-                  dataKey="value"
-                  labelKey="label"
-                  config={{ value: { label: "Revenue", color: "#262255" } }}
-                  noWrapper
-                  height="min-h-[220px]"
-                />
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center">
-                  <p className="font-inter text-slate-400 font-bold text-sm">No revenue data found</p>
-                </div>
-              )}
-            </div>
-          </div>
+              // Merge from backend weekly Revenue (aggregated by month)
+              data?.weeklyRevenue.forEach(d => {
+                const date = new Date(d.week);
+                const match = months.find(m => m.monthIndex === date.getMonth() && m.year === date.getFullYear());
+                if (match) {
+                  match.activity += d.revenue;
+                }
+              });
+
+              return months.map(({ month, activity }) => ({ month, activity }));
+            })()}
+            isLoading={dashLoading}
+            height={260}
+            isCurrency={true}
+            unit="PKR"
+          />
         </div>
+
         <div className="xl:col-span-4">
           <CategoryPieChart data={data?.categories ?? []} />
         </div>
