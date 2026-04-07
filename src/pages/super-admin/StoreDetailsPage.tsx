@@ -10,14 +10,14 @@ import InputField from '../../components/shared/admin/InputField';
 import PasswordInput from '../../components/shared/admin/PasswordInput';
 import SubmitButton from '../../components/shared/admin/SubmitButton';
 import ToggleSwitch from '../../components/shared/admin/ToggleSwitch';
-import { 
-    ArrowLeft, 
-    Settings, 
-    Users, 
-    Monitor, 
-    Save, 
-    UserPlus, 
-    CheckCircle2, 
+import {
+    ArrowLeft,
+    Settings,
+    Users,
+    Monitor,
+    Save,
+    UserPlus,
+    CheckCircle2,
     XCircle,
     Activity
 } from 'lucide-react';
@@ -25,22 +25,23 @@ import { showToast } from '../../utils/admin-toast';
 import Pagination from '../../components/shared/admin/Pagination';
 
 const storeUpdateSchema = yup.object().shape({
-  name: yup.string().required('Store name is required'),
-  address: yup.string().required('Address is required'),
-  phone: yup.string().optional(),
-  email: yup.string().email('Invalid email').optional(),
-  city: yup.string().optional(),
-  state: yup.string().optional(),
+    name: yup.string().required('Store name is required'),
+    address: yup.string().required('Address is required'),
+    phone: yup.string().optional(),
+    email: yup.string().email('Invalid email').optional(),
+    city: yup.string().optional(),
+    state: yup.string().optional(),
+    zipCode: yup.string().required('Zip code is required'),
 });
 
 const addUserSchema = yup.object().shape({
-  name: yup.string().required('Name is required'),
-  email: yup.string().email('Invalid email').required('Email is required'),
-  password: yup.string()
-    .min(8, 'Min 8 characters')
-    .matches(/[A-Z]/, 'Uppercase required')
-    .matches(/[0-9]/, 'Number required')
-    .required('Password is required'),
+    name: yup.string().required('Name is required'),
+    email: yup.string().email('Invalid email').required('Email is required'),
+    password: yup.string()
+        .min(8, 'Min 8 characters')
+        .matches(/[A-Z]/, 'Uppercase required')
+        .matches(/[0-9]/, 'Number required')
+        .required('Password is required'),
 });
 
 const StoreDetailsPage: React.FC = () => {
@@ -48,7 +49,7 @@ const StoreDetailsPage: React.FC = () => {
     const navigate = useNavigate();
     const { currentStore, fetchStoreById, updateStore, isLoading: isStoreLoading } = useStoreStore();
     const { users, fetchUsers, createUser, toggleUserStatus } = useUserStore();
-    
+
     const [activeTab, setActiveTab] = useState<'details' | 'users' | 'devices'>('details');
     const [userPage, setUserPage] = useState(1);
     const itemsPerPage = 5;
@@ -79,6 +80,7 @@ const StoreDetailsPage: React.FC = () => {
                 email: currentStore.email || '',
                 city: currentStore.city || '',
                 state: currentStore.state || '',
+                zipCode: currentStore.zipCode || '',
             });
         }
     }, [currentStore, resetStore]);
@@ -136,7 +138,7 @@ const StoreDetailsPage: React.FC = () => {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
             {/* Header with Navigation */}
             <div className="flex items-center gap-5">
-                <button 
+                <button
                     onClick={() => navigate('/super-admin/stores')}
                     className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 rounded-xl transition-all shadow-sm active:scale-95"
                 >
@@ -168,7 +170,16 @@ const StoreDetailsPage: React.FC = () => {
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Administrators</p>
-                            <span className="text-xs font-bold text-slate-700">{users.length} Active Users</span>
+                            <span className="text-xs font-bold text-slate-700">{currentStore?._count?.users || 0} Registered</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-4 px-6 border-r border-slate-100">
+                        <div className="p-2 bg-slate-50 text-slate-400 rounded-lg">
+                            <Package size={18} />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Inventory Items</p>
+                            <span className="text-xs font-bold text-slate-700">{currentStore?._count?.products || 0} Products</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4 px-6">
@@ -182,8 +193,8 @@ const StoreDetailsPage: React.FC = () => {
                     </div>
                 </div>
                 <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm flex items-center justify-center">
-                    <ToggleSwitch 
-                        label="Store Active" 
+                    <ToggleSwitch
+                        label="Store Active"
                         checked={currentStore?.isActive || false}
                         onChange={onToggleStoreActive}
                     />
@@ -192,19 +203,17 @@ const StoreDetailsPage: React.FC = () => {
 
             {/* Tabs Navigation */}
             <div className="flex gap-2 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-200/60 w-fit">
-                <button 
+                <button
                     onClick={() => setActiveTab('details')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${
-                        activeTab === 'details' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${activeTab === 'details' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                        }`}
                 >
                     <Settings size={14} /> Store Details
                 </button>
-                <button 
+                <button
                     onClick={() => setActiveTab('users')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${
-                        activeTab === 'users' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                    }`}
+                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+                        }`}
                 >
                     <Users size={14} /> Administrators
                 </button>
@@ -226,7 +235,7 @@ const StoreDetailsPage: React.FC = () => {
                                     registration={regStore('address')}
                                     error={storeErrors.address?.message}
                                 />
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-3 gap-6">
                                     <InputField
                                         label="City"
                                         registration={regStore('city')}
@@ -236,6 +245,11 @@ const StoreDetailsPage: React.FC = () => {
                                         label="State / Province"
                                         registration={regStore('state')}
                                         error={storeErrors.state?.message}
+                                    />
+                                    <InputField
+                                        label="Zip Code"
+                                        registration={regStore('zipCode')}
+                                        error={storeErrors.zipCode?.message}
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-6">
@@ -292,20 +306,18 @@ const StoreDetailsPage: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-5 text-center">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                                                        u.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-                                                    }`}>
+                                                    <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${u.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
+                                                        }`}>
                                                         {u.isActive ? 'Active' : 'Suspended'}
                                                     </span>
                                                 </td>
                                                 <td className="px-8 py-5 text-right">
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleToggleUser(u.id, u.isActive)}
-                                                        className={`p-2 rounded-xl transition-all shadow-sm border ${
-                                                            u.isActive 
-                                                                ? 'text-rose-500 bg-rose-50 border-rose-100 hover:bg-rose-100' 
-                                                                : 'text-emerald-500 bg-emerald-50 border-emerald-100 hover:bg-emerald-100'
-                                                        }`}
+                                                        className={`p-2 rounded-xl transition-all shadow-sm border ${u.isActive
+                                                            ? 'text-rose-500 bg-rose-50 border-rose-100 hover:bg-rose-100'
+                                                            : 'text-emerald-500 bg-emerald-50 border-emerald-100 hover:bg-emerald-100'
+                                                            }`}
                                                         title={u.isActive ? "Deactivate User" : "Activate User"}
                                                     >
                                                         {u.isActive ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
@@ -315,7 +327,7 @@ const StoreDetailsPage: React.FC = () => {
                                         ))}
                                     </tbody>
                                 </table>
-                                <Pagination 
+                                <Pagination
                                     currentPage={userPage}
                                     totalPages={Math.ceil(users.length / itemsPerPage)}
                                     onPageChange={setUserPage}
@@ -343,8 +355,8 @@ const StoreDetailsPage: React.FC = () => {
                                         error={userErrors.password?.message}
                                     />
                                     <div className="pt-4">
-                                        <SubmitButton 
-                                            isLoading={isUserSubmitting} 
+                                        <SubmitButton
+                                            isLoading={isUserSubmitting}
                                             icon={<UserPlus size={18} />}
                                         >
                                             Create Admin
