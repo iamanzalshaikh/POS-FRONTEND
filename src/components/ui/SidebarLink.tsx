@@ -1,63 +1,50 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { useSidebar } from './sidebar';
 
-interface SidebarContextValue {
-  collapsed: boolean
-  setCollapsed: (v: boolean) => void
-  isMobileOpen: boolean
-  setIsMobileOpen: (v: boolean) => void
-  toggle: () => void
-  openMobile: () => void
-  closeMobile: () => void
+interface SidebarLinkProps {
+  to: string;
+  icon: React.ReactNode;
+  label: string;
+  variant?: 'indigo' | 'emerald' | 'amber' | 'rose' | 'slate';
 }
 
-const SidebarContext = createContext<SidebarContextValue | null>(null)
+const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, label, variant = 'indigo' }) => {
+  const { collapsed } = useSidebar();
 
-export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    try {
-      return localStorage.getItem('superadmin_sidebar_collapsed') === 'true'
-    } catch (e) {
-      return false
-    }
-  })
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
-
-  useEffect(() => {
-    try { localStorage.setItem('superadmin_sidebar_collapsed', String(collapsed)) } catch (e) {}
-  }, [collapsed])
-
-  const toggle = () => setCollapsed(prev => !prev)
-  const openMobile = () => setIsMobileOpen(true)
-  const closeMobile = () => setIsMobileOpen(false)
+  const variantMap = {
+    indigo: 'text-indigo-400 bg-indigo-50/10 border-r-2 border-indigo-500',
+    emerald: 'text-emerald-400 bg-emerald-50/10 border-r-2 border-emerald-500',
+    amber: 'text-amber-400 bg-amber-50/10 border-r-2 border-amber-500',
+    rose: 'text-rose-400 bg-rose-50/10 border-r-2 border-rose-500',
+    slate: 'text-slate-400 bg-slate-50/10 border-r-2 border-slate-500',
+  };
 
   return (
-    <SidebarContext.Provider value={{ collapsed, setCollapsed, isMobileOpen, setIsMobileOpen, toggle, openMobile, closeMobile }}>
-      {children}
-    </SidebarContext.Provider>
-  )
-}
+    <NavLink
+      to={to}
+      end
+      className={({ isActive }) =>
+        `flex items-center gap-3 px-3 py-3 transition-all duration-300 group relative ${
+          isActive 
+            ? variantMap[variant] 
+            : 'text-slate-400 hover:text-white hover:bg-white/5'
+        }`
+      }
+    >
+      <div className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110">{icon}</div>
+      {!collapsed && (
+        <span className="font-bold text-sm tracking-tight truncate animate-in fade-in slide-in-from-left-2 duration-300">
+          {label}
+        </span>
+      )}
+      {collapsed && (
+        <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-[100] shadow-xl border border-white/5 pointer-events-none">
+          {label}
+        </div>
+      )}
+    </NavLink>
+  );
+};
 
-export const useSidebar = () => {
-  const ctx = useContext(SidebarContext)
-  if (!ctx) throw new Error('useSidebar must be used within SidebarProvider')
-  return ctx
-}
-
-export const SidebarTrigger: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = (props) => {
-  const { toggle, openMobile } = useSidebar()
-  const onClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    // On narrow screens, open mobile drawer instead
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      openMobile()
-    } else {
-      toggle()
-    }
-    props.onClick?.(e)
-  }
-
-  return (
-    <button {...props} onClick={onClick} aria-label="Toggle sidebar">
-      {props.children}
-    </button>
-  )
-}
+export default SidebarLink;

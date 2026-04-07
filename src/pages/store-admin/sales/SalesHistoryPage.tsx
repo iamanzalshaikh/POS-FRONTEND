@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Download, Plus } from "lucide-react";
 import SalesFilters from "@/components/store-admin/SalesFilters";
 import SalesTable from "@/components/store-admin/SalesTable";
 import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
 import ChartAreaAxes from "@/components/global-components/chart-line-dots";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDashboardSummary } from "@/api/dashboard.api";
 import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api";
 
@@ -23,6 +22,11 @@ const SalesHistoryPage = () => {
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
 
+    const [salesDataRes, setSalesDataRes] = useState<any>(null);
+    const [salesLoading, setSalesLoading] = useState(true);
+    const [dashboardDataRes, setDashboardDataRes] = useState<any>(null);
+    const [summaryLoading, setSummaryLoading] = useState(true);
+
     const params: any = {
         page,
         limit,
@@ -34,20 +38,40 @@ const SalesHistoryPage = () => {
     if (status !== 'All Status') params.paymentStatus = status;
     if (paymentMethod !== 'All Methods') params.paymentMethod = paymentMethod;
 
-    const queryClient = useQueryClient();
+    const loadSales = async () => {
+        setSalesLoading(true);
+        try {
+            const data = await getSalesTransactions(params);
+            setSalesDataRes(data);
+        } catch (error) {
+            console.error("Failed to fetch sales history:", error);
+        } finally {
+            setSalesLoading(false);
+        }
+    };
 
-    // React Query Hooks
-    const { data: salesDataRes, isLoading: salesLoading } = useQuery({
-        queryKey: ['sales', params],
-        queryFn: () => getSalesTransactions(params),
-    });
-    const { data: dashboardDataRes, isLoading: summaryLoading } = useQuery({
-        queryKey: ['dashboard', 'summary', { startDate: dateRange.start, endDate: dateRange.end }],
-        queryFn: () => getDashboardSummary({
-            startDate: dateRange.start,
-            endDate: dateRange.end
-        }),
-    });
+    const loadSummary = async () => {
+        setSummaryLoading(true);
+        try {
+            const data = await getDashboardSummary({
+                startDate: dateRange.start,
+                endDate: dateRange.end
+            });
+            setDashboardDataRes(data);
+        } catch (error) {
+            console.error("Failed to fetch dashboard summary:", error);
+        } finally {
+            setSummaryLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadSales();
+    }, [page, search, status, paymentMethod, dateRange]);
+
+    useEffect(() => {
+        loadSummary();
+    }, [dateRange]);
 
     const transactions = salesDataRes?.data || (Array.isArray(salesDataRes) ? salesDataRes : []);
     const total = salesDataRes?.total || transactions.length;
@@ -142,13 +166,13 @@ const SalesHistoryPage = () => {
                     onCancel={async (id) => {
                         if (window.confirm("Cancel this sale?")) {
                             await cancelSale(id, "Cancelled by admin");
-                            queryClient.invalidateQueries({ queryKey: ['sales'] });
+                            await loadSales();
                         }
                     }}
                     onRefund={async (id) => {
                         if (window.confirm("Refund this sale?")) {
                             await refundSale(id, "Refunded by admin");
-                            queryClient.invalidateQueries({ queryKey: ['sales'] });
+                            await loadSales();
                         }
                     }}
                 />

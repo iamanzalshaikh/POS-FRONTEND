@@ -23,7 +23,6 @@ const initialForm: FormData = {
   printerType: 'None',
 };
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import * as deviceApi from '@/api/devices.api';
 
 export default function RegisterDevicePage() {
@@ -31,15 +30,9 @@ export default function RegisterDevicePage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>(initialForm);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const queryClient = useQueryClient();
-  const { mutate: register, isPending: loading, error: mutationError } = useMutation({
-    mutationFn: deviceApi.registerDevice,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['devices'] });
-    },
-  });
-  const error = localError || (mutationError as any)?.message;
+  const error = localError;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -69,18 +62,21 @@ export default function RegisterDevicePage() {
       userAgent: window.navigator.userAgent,
     };
 
-    register(payload, {
-      onSuccess: (res) => {
+    setLoading(true);
+    deviceApi.registerDevice(payload)
+      .then((res) => {
         if (res.data?.success || res.success) {
           navigate('/store-admin/devices');
         } else {
           setLocalError(res.data?.message || res.message || 'Registration failed');
         }
-      },
-      onError: (err: any) => {
+      })
+      .catch((err: any) => {
         setLocalError(err.response?.data?.message || 'An error occurred during registration');
-      }
-    });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   };
 
   const inputCls =

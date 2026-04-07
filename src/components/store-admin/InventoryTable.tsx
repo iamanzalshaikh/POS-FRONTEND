@@ -4,9 +4,13 @@ import type { InventoryMovement } from "@/pages/store-admin/inventory/InventoryM
 interface Props {
   movements: InventoryMovement[]
   loading: boolean
+  currentPage: number
+  totalCount: number
+  itemsPerPage: number
+  onPageChange: (page: number) => void
 }
 
-const InventoryTable = ({ movements, loading }: Props) => {
+const InventoryTable = ({ movements, loading, currentPage, totalCount, itemsPerPage, onPageChange }: Props) => {
   if (loading) {
     return (
       <div className="bg-white rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 shadow-sm transition-all duration-300">
@@ -30,45 +34,65 @@ const InventoryTable = ({ movements, loading }: Props) => {
     )
   }
 
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const startEntry = (currentPage - 1) * itemsPerPage + 1;
+  const endEntry = Math.min(currentPage * itemsPerPage, totalCount);
+
   return (
     <div className="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden animate-fade-in hover:shadow-lg transition-all duration-300">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50/50 border-b border-slate-100">
-            <tr>
-              <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-12">ID</th>
-              <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Product Details</th>
-              <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Movement</th>
-              <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Status</th>
-              <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Ref #</th>
-              <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Operator</th>
-              <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap">Timestamp</th>
-              <th className="px-6 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 whitespace-nowrap w-24">Action</th>
+        <table className="w-full text-sm min-w-[800px]">
+          <thead className="bg-white dark:bg-slate-900 border-t-4 border-black">
+            <tr className="border-b-4 border-black">
+              <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 w-12">ID</th>
+              <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 whitespace-nowrap">Product Details</th>
+              <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 whitespace-nowrap">Movement</th>
+              <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 whitespace-nowrap shrink-0">Status</th>
+              <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 whitespace-nowrap">Operator</th>
+              <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 whitespace-nowrap">Timestamp</th>
+              <th className="px-6 py-5 text-right text-[11px] font-black uppercase tracking-[3px] text-indigo-600 whitespace-nowrap w-24">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
             {movements.map((movement, idx) => (
-              <InventoryRow key={movement.id} movement={movement} index={idx + 1} />
+              <InventoryRow key={movement.id} movement={movement} index={startEntry + idx} />
             ))}
           </tbody>
         </table>
       </div>
       
-      <div className="px-8 py-6 border-t border-slate-50 flex items-center justify-between">
-        <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-          Showing <span className="text-slate-900 font-bold">1</span> to <span className="text-slate-900">{Math.min(5, movements.length)}</span> of <span className="text-slate-900">{movements.length}</span> entries
+      <div className="px-8 py-6 border-t border-slate-50 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Showing <span className="text-indigo-600 font-black px-2 bg-indigo-50 border border-indigo-100 rounded-lg mx-1">{startEntry}–{endEntry}</span> of <span className="text-slate-900 font-black mx-1">{totalCount}</span> entries
         </p>
         <div className="flex items-center gap-1.5">
-          <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-300 hover:text-[#2563EB] hover:bg-[#2563EB]/5 transition-all active:scale-90 disabled:opacity-30">
+          <button 
+            onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
+            className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+          >
             &lt;
           </button>
-          <button className="w-10 h-10 rounded-xl bg-indigo-900 text-white font-bold text-[10px] shadow-md shadow-indigo-900/20 border border-indigo-900/20">
-            1
-          </button>
-          <button className="w-10 h-10 rounded-xl bg-white border border-slate-100 text-slate-400 text-[10px] font-bold hover:bg-slate-50">
-            2
-          </button>
-          <button className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-[#2563EB] hover:bg-[#2563EB]/5 transition-all active:scale-90">
+          
+          {[...Array(totalPages)].map((_, i) => (
+            <button
+              key={i}
+              onClick={() => onPageChange(i + 1)}
+              className={`w-10 h-10 rounded-xl font-black text-[10px] transition-all ${
+                currentPage === i + 1 
+                  ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20 border border-slate-900" 
+                  : "bg-white border border-slate-100 text-slate-400 hover:bg-slate-50"
+              }`}
+            >
+              {i + 1}
+            </button>
+          ))}
+
+          <button 
+            onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
+            className="p-2.5 bg-white border border-slate-100 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-90 disabled:opacity-30 disabled:cursor-not-allowed shadow-sm"
+          >
             &gt;
           </button>
         </div>

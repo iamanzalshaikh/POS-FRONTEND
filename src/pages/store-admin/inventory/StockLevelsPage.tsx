@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import StockOverviewCards from '@/components/store-admin/StockOverviewCards';
 import StockTable from '@/components/store-admin/StockTable';
-import { useQuery } from '@tanstack/react-query';
 import { fetchProducts } from '@/api/products.api';
 import { fetchFullInventory } from '@/api/inventory.api';
 import { Search, Download, Plus } from 'lucide-react';
@@ -10,15 +9,32 @@ const StockLevelsPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
 
-    // React Query Hooks
-    const { data: productsDataRes, isLoading: productsLoading } = useQuery({
-        queryKey: ['products'],
-        queryFn: () => fetchProducts(),
-    });
-    const { data: inventoryDataRes, isLoading: inventoryLoading } = useQuery({
-        queryKey: ['inventory', { lowStock: false }],
-        queryFn: fetchFullInventory,
-    });
+    const [productsDataRes, setProductsDataRes] = useState<any>(null);
+    const [productsLoading, setProductsLoading] = useState(true);
+    const [inventoryDataRes, setInventoryDataRes] = useState<any>(null);
+    const [inventoryLoading, setInventoryLoading] = useState(true);
+
+    const loadData = async () => {
+        setProductsLoading(true);
+        setInventoryLoading(true);
+        try {
+            const [products, inventory] = await Promise.all([
+                fetchProducts(),
+                fetchFullInventory()
+            ]);
+            setProductsDataRes(products);
+            setInventoryDataRes(inventory);
+        } catch (error) {
+            console.error("Failed to load stock data:", error);
+        } finally {
+            setProductsLoading(false);
+            setInventoryLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
 
     const loading = productsLoading || inventoryLoading;
 
@@ -41,7 +57,7 @@ const StockLevelsPage = () => {
             currentStock: stock,
             reorderLevel: item.reorderLevel || 10,
             category: typeof item.category === 'object' ? item.category?.name : item.category || 'General',
-            image: item.image || item.imageUrl
+            image: (item.image || item.imageUrl) ? `http://localhost:3005${item.image || item.imageUrl}` : null
         };
     });
 
@@ -133,8 +149,10 @@ const StockLevelsPage = () => {
                     </div>
                 </div>
 
-                {/* Table */}
-                <StockTable items={filteredInventory} loading={loading} />
+                {/* Table Area with Premium Header */}
+                <div className="border-t-4 border-black">
+                    <StockTable items={filteredInventory} loading={loading} />
+                </div>
             </div>
         </div>
     );

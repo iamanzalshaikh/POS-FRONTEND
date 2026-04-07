@@ -1,5 +1,4 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useMemo } from 'react';
 import { reportsApi } from '../../service/api';
 import {
     RefreshCcw,
@@ -30,21 +29,51 @@ const subscriptionConfig = {
 } satisfies ChartConfig;
 
 const SuperAdminDashboard: React.FC = () => {
-    const { data: overviewRes, isLoading: isOverviewLoading, isError: isOverviewError, refetch: refetchOverview, isRefetching: isOverviewRefetching } = useQuery({
-        queryKey: ['superadmin-overview'],
-        queryFn: () => reportsApi.getSuperAdminOverview(),
-    });
+    const [overviewRes, setOverviewRes] = useState<any>(null);
+    const [isOverviewLoading, setIsOverviewLoading] = useState(true);
+    const [isOverviewError, setIsOverviewError] = useState(false);
+    const [isOverviewRefetching, setIsOverviewRefetching] = useState(false);
 
-    useQuery({
-        queryKey: ['superadmin-health'],
-        queryFn: () => reportsApi.getHealth(),
-        refetchInterval: 60000, // Refresh every minute
-    });
+    const [storesRes, setStoresRes] = useState<any>(null);
+    const [isStoresLoading, setIsStoresLoading] = useState(true);
 
-    const { data: storesRes, isLoading: isStoresLoading } = useQuery({
-        queryKey: ['superadmin-all-stores'],
-        queryFn: () => storesApi.getAll(),
-    });
+    const refetchOverview = async () => {
+        setIsOverviewRefetching(true);
+        setIsOverviewError(false);
+        try {
+            const res = await reportsApi.getSuperAdminOverview();
+            setOverviewRes(res);
+        } catch (error) {
+            console.error("Failed to fetch overview:", error);
+            setIsOverviewError(true);
+        } finally {
+            setIsOverviewLoading(false);
+            setIsOverviewRefetching(false);
+        }
+    };
+
+    const loadStores = async () => {
+        setIsStoresLoading(true);
+        try {
+            const res = await storesApi.getAll();
+            setStoresRes(res);
+        } catch (error) {
+            console.error("Failed to fetch stores:", error);
+        } finally {
+            setIsStoresLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        refetchOverview();
+        loadStores();
+
+        const healthInterval = setInterval(() => {
+            reportsApi.getHealth().catch(() => {});
+        }, 60000);
+
+        return () => clearInterval(healthInterval);
+    }, []);
 
     const statsRaw = overviewRes?.data?.data || overviewRes?.data || {};
 

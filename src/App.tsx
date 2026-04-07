@@ -31,7 +31,7 @@ const SettingsPage = lazy(() => import('@/pages/store-admin/settings/SettingsPag
 const StockAdjustmentPage = lazy(() => import('@/pages/store-admin/inventory/StockAdjustmentPage'));
 const ReportsPage = lazy(() => import('@/pages/store-admin/reports/ReportsPage'));
 const StaffDetailPage = lazy(() => import('@/pages/store-admin/staff-management/StaffDetailPage'));
-const ActivityLogsPage = lazy(() => import('@/pages/store-admin/ActivityLogsPage'));
+
 
 // Super Admin Revised Panel
 const SuperAdminLayout = lazy(() => import('@/components/layout/SuperAdminLayout'));
@@ -81,7 +81,7 @@ const App: React.FC = () => {
               <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
               <Route path="/store-admin/categories" element={<ProductCategories />} />
               <Route path="/store-admin/reports" element={<ReportsPage />} />
-              <Route path="/store-admin/activity-logs" element={<ActivityLogsPage />} />
+
               <Route path="/store-admin" element={<Navigate to="/store-admin/dashboard" replace />} />
             </Route>
           </Route>
