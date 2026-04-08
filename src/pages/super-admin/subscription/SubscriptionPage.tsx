@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Zap, Check, Edit3, Trash2 } from 'lucide-react';
+import { Zap, Check, Pencil, Trash2, Users, Building } from 'lucide-react';
 import { formatPKR } from '@/utils/format';
 
 interface Plan {
@@ -12,7 +12,7 @@ interface Plan {
     popular?: boolean;
     duration: string;
     custom?: boolean;
-    students: number;
+    devices: number;
     staffCapacity: number;
     users?: string;
 }
@@ -26,7 +26,7 @@ const initialPlans: Plan[] = [
         features: ['Up to 2 Devices', 'Unlimited Products', 'Basic Reports', 'Email Support'],
         current: false,
         duration: 'monthly',
-        students: 50,
+        devices: 50,
         staffCapacity: 10,
     },
     {
@@ -38,7 +38,7 @@ const initialPlans: Plan[] = [
         current: true,
         popular: true,
         duration: 'monthly',
-        students: 200,
+        devices: 200,
         staffCapacity: 45,
     },
     {
@@ -49,14 +49,11 @@ const initialPlans: Plan[] = [
         features: ['Unlimited Devices', 'Multi-store Support', 'Custom Integrations', '24/7 Dedicated Support', 'API Access'],
         current: false,
         duration: 'monthly',
-        students: 999,
+        devices: 999,
         staffCapacity: 200,
     },
 ];
 
-const getButtonLabel = (plan: Plan) => {
-    return plan.current ? 'Current Plan' : 'Select Plan';
-};
 
 const getDurationLabel = (duration: string) => {
     if (duration === 'yearly') return '/ year';
@@ -69,14 +66,14 @@ const SuperAdminSubscriptionPage = () => {
     const [customName, setCustomName] = useState('');
     const [customSlug, setCustomSlug] = useState('');
     const [customPrice, setCustomPrice] = useState('');
-    const [customStudents, setCustomStudents] = useState('');
+    const [customDevices, setCustomDevices] = useState('');
     const [customStaff, setCustomStaff] = useState('');
     const [customUsers, setCustomUsers] = useState('');
     const [editingPlanSlug, setEditingPlanSlug] = useState<string | null>(null);
 
     const handleActivatePlan = (planName: string) => {
-        setPlans((prevPlans) =>
-            prevPlans.map((plan) => ({
+        setPlans((prevPlans: Plan[]) =>
+            prevPlans.map((plan: Plan) => ({
                 ...plan,
                 current: plan.name === planName,
             }))
@@ -89,16 +86,16 @@ const SuperAdminSubscriptionPage = () => {
         setCustomName(plan.name);
         setCustomSlug(plan.slug);
         setCustomPrice(plan.price.toString());
-        setCustomStudents(plan.students.toString());
+        setCustomDevices(plan.devices.toString());
         setCustomStaff(plan.staffCapacity.toString());
         setCustomUsers(plan.users || '');
     };
 
     const handleDeletePlan = (planSlug: string) => {
-        setPlans((prevPlans) => {
-            const remaining = prevPlans.filter((plan) => plan.slug !== planSlug);
-            if (!remaining.some((plan) => plan.current) && remaining.length > 0) {
-                return remaining.map((plan, index) => ({
+        setPlans((prevPlans: Plan[]) => {
+            const remaining = prevPlans.filter((plan: Plan) => plan.slug !== planSlug);
+            if (!remaining.some((plan: Plan) => plan.current) && remaining.length > 0) {
+                return remaining.map((plan: Plan, index: number) => ({
                     ...plan,
                     current: index === 0,
                 }));
@@ -109,17 +106,17 @@ const SuperAdminSubscriptionPage = () => {
 
     const handleCreateCustomPlan = () => {
         const priceValue = Number(customPrice.replace(/[^0-9.]/g, ''));
-        const studentsValue = Number(customStudents.replace(/\D/g, ''));
+        const devicesValue = Number(customDevices.replace(/\D/g, ''));
         const staffValue = Number(customStaff.replace(/\D/g, ''));
 
         if (
             !customName.trim() ||
             !customSlug.trim() ||
             !customPrice.trim() ||
-            !customStudents.trim() ||
+            !customDevices.trim() ||
             !customStaff.trim() ||
             Number.isNaN(priceValue) ||
-            Number.isNaN(studentsValue) ||
+            Number.isNaN(devicesValue) ||
             Number.isNaN(staffValue)
         ) {
             return;
@@ -134,14 +131,14 @@ const SuperAdminSubscriptionPage = () => {
             current: false,
             duration: 'monthly',
             custom: true,
-            students: studentsValue,
+            devices: devicesValue,
             staffCapacity: staffValue,
             users: customUsers.trim() || undefined,
         };
 
-        setPlans((prevPlans) => {
+        setPlans((prevPlans: Plan[]) => {
             if (editingPlanSlug) {
-                return prevPlans.map((plan) =>
+                return prevPlans.map((plan: Plan) =>
                     plan.slug === editingPlanSlug ? { ...plan, ...nextPlan } : plan
                 );
             }
@@ -152,171 +149,185 @@ const SuperAdminSubscriptionPage = () => {
         setCustomName('');
         setCustomSlug('');
         setCustomPrice('');
-        setCustomStudents('');
+        setCustomDevices('');
         setCustomStaff('');
         setCustomUsers('');
     };
 
     return (
-        <div className="animate-fade-in space-y-10">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Subscription Plan Page</h1>
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Show current active plan and available subscription tiers.</p>
-                </div>
-                <div className="bg-indigo-600/10 border border-indigo-600/20 px-6 py-3 rounded-2xl flex items-center gap-3">
-                    <Zap className="text-indigo-600" size={20} />
-                    <div>
-                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Active Plan</p>
-                        <p className="text-sm font-bold text-indigo-900 dark:text-indigo-200">{plans.find((plan) => plan.current)?.name || 'Professional'}</p>
-                    </div>
-                </div>
+        <div className="p-8 bg-slate-50 dark:bg-slate-950 min-h-screen font-jakarta animate-fade-in">
+            {/* Header Area */}
+            <div className="mb-10">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Subscription Plans</h1>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">PRICING • SCHOOL PLANS AND LIMITS</p>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-                {plans.map((plan) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {/* Standard and Custom Plans */}
+                {plans.map((plan: Plan, index: number) => (
                     <div
-                        key={plan.slug}
-                        className={`min-h-[620px] h-full flex flex-col rounded-[32px] p-8 transition-all ${plan.current ? 'border border-indigo-500/40 bg-indigo-50/80 shadow-[0_20px_60px_-25px_rgba(99,102,241,0.6)] dark:bg-slate-900 dark:border-indigo-400' : 'border border-slate-200 bg-white shadow-sm hover:shadow-md dark:bg-slate-950 dark:border-slate-700'}`}
+                        key={index}
+                        className={`bg-white dark:bg-slate-900 border ${plan.current ? 'border-blue-500 ring-2 ring-blue-500/10 shadow-xl' : 'border-slate-200 dark:border-slate-800 shadow-sm'} rounded-xl p-6 flex flex-col justify-between transition-all hover:shadow-md relative overflow-hidden h-full min-h-[500px]`}
                     >
-                        <div className="flex items-start justify-between gap-4">
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">{plan.name}</p>
-                                <h3 className="mt-5 text-4xl font-black text-slate-900 dark:text-slate-100">{formatPKR(plan.price)}</h3>
-                                <p className="text-sm font-bold uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400 mt-2">{getDurationLabel(plan.duration)}</p>
+                        {plan.popular && (
+                            <div className="absolute top-4 right-16 px-3 py-1 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full">
+                                MOST POPULAR
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    disabled={!plan.custom}
-                                    onClick={() => handleEditPlan(plan)}
-                                    className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl transition-all ${plan.custom ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700' : 'bg-slate-100/50 text-slate-400 cursor-not-allowed dark:bg-slate-900/50 dark:text-slate-500'}`}
-                                >
-                                    <Edit3 size={16} />
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={!plan.custom}
-                                    onClick={() => plan.custom && handleDeletePlan(plan.slug)}
-                                    className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl transition-all ${plan.custom ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700' : 'bg-slate-100/50 text-slate-400 cursor-not-allowed dark:bg-slate-900/50 dark:text-slate-500'}`}
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
+                        )}
 
-                        <div className="mt-8">
-                            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Core Limits</p>
-                            <div className="mt-4 grid gap-3">
-                                <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                                    <p className="text-xs font-bold uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Categories</p>
-                                    <p className="mt-2 text-lg font-black text-slate-900 dark:text-slate-100">{plan.students}</p>
+                        <div className="flex flex-col gap-6">
+                            {/* Header Row */}
+                            <div className="flex justify-between items-start">
+                                <div className={`p-2.5 rounded-lg border ${plan.name === 'Basic' ? 'bg-slate-50 text-slate-400' : plan.name === 'Silver' ? 'bg-blue-50 text-blue-500' : plan.name === 'Gold' ? 'bg-amber-50 text-amber-500' : 'bg-indigo-50 text-indigo-500'}`}>
+                                    {plan.name === 'Basic' && <Zap size={18} />}
+                                    {plan.name === 'Silver' && <Check size={18} />}
+                                    {plan.name === 'Gold' && <Building size={18} />}
+                                    {plan.name === 'Premium' && <Users size={18} />}
+                                    {plan.custom && <Zap size={18} />}
                                 </div>
-                                <div className="rounded-3xl bg-slate-50 p-4 dark:bg-slate-900">
-                                    <p className="text-xs font-bold uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Staff Capacity</p>
-                                    <p className="mt-2 text-lg font-black text-slate-900 dark:text-slate-100">{plan.staffCapacity}</p>
+                                <div className="flex gap-2 text-slate-300">
+                                    <button
+                                        type="button"
+                                        disabled={!plan.custom}
+                                        onClick={() => handleEditPlan(plan)}
+                                        className={`transition-colors ${plan.custom ? 'hover:text-blue-600' : 'cursor-not-allowed text-slate-200'}`}
+                                    >
+                                        <Pencil size={14} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={!plan.custom}
+                                        onClick={() => plan.custom && handleDeletePlan(plan.slug)}
+                                        className={`transition-colors ${plan.custom ? 'hover:text-rose-600' : 'cursor-not-allowed text-slate-200'}`}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="mt-8 grow">
-                            <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Included Features</p>
-                            <ul className="mt-4 space-y-3">
-                                {plan.features.map((feature, fIdx) => (
-                                    <li key={fIdx} className="flex items-start gap-3 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 dark:bg-emerald-500/10">
-                                            <Check size={12} strokeWidth={3} />
+                            {/* Plan Name & Price */}
+                            <div className="space-y-4">
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h3>
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-2xl font-bold text-slate-900 dark:text-white">
+                                        {formatPKR(plan.price).split('/')[0]}
+                                    </span>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                        {getDurationLabel(plan.duration)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Core Limits */}
+                            <div className="space-y-3">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    CORE LIMITS
+                                </p>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 px-3 py-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-2">
+                                            <Users size={14} className="text-blue-500" />
+                                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Devices</span>
                                         </div>
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
-                            </ul>
+                                        <span className="text-xs font-bold text-slate-900 dark:text-white">{plan.devices.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/30 px-3 py-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+                                        <div className="flex items-center gap-2">
+                                            <Building size={14} className="text-blue-500" />
+                                            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Staff Capacity</span>
+                                        </div>
+                                        <span className="text-xs font-bold text-slate-900 dark:text-white">{plan.staffCapacity}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Included Features */}
+                            <div className="space-y-3">
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    INCLUDED FEATURES
+                                </p>
+                                {/* Feature list omitted for brevity as per screenshot focus on limits */}
+                            </div>
                         </div>
 
+                        {/* Select Button */}
                         <button
-                            type="button"
                             onClick={() => !plan.current && handleActivatePlan(plan.name)}
                             disabled={plan.current}
-                            className={`mt-8 w-full rounded-2xl py-4 font-black text-[10px] uppercase tracking-widest transition-all ${plan.current ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                            className={`mt-8 w-full rounded-lg py-2.5 text-[10px] font-bold uppercase tracking-widest border transition-all
+                                ${plan.current
+                                    ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700'
+                                    : 'border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white dark:border-slate-100 dark:text-slate-100 dark:hover:bg-slate-100 dark:hover:text-slate-900'
+                                }`}
                         >
-                            {getButtonLabel(plan)}
+                            {plan.current ? 'ACTIVE PLAN' : 'SELECT PLAN'}
                         </button>
                     </div>
                 ))}
 
-                <div className="min-h-[620px] h-full rounded-[32px] border border-dashed border-slate-300 bg-white p-8 shadow-sm dark:border-slate-600 dark:bg-slate-950 flex flex-col justify-between">
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Create Custom Plan</p>
-                        <h2 className="mt-5 text-2xl font-black text-slate-900 dark:text-slate-100">Custom Plan</h2>
-                        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Add a tailored plan with categories and staff capacity limits.</p>
-                    </div>
+                {/* Create Custom Plan Card */}
+                <div className="bg-white dark:bg-slate-900 border-2 border-dashed border-blue-200 dark:border-blue-900/50 rounded-xl p-8 flex flex-col justify-between h-full min-h-[500px]">
+                    <div className="space-y-8">
+                        <div className="flex items-center gap-2 text-blue-500">
+                            <Zap size={18} fill="currentColor" />
+                            <h3 className="font-bold text-lg">
+                                {editingPlanSlug ? 'Update Custom Plan' : 'Create Custom Plan'}
+                            </h3>
+                        </div>
 
-                    <div className="mt-8 space-y-4">
-                        <div className="grid grid-cols-1 gap-4">
-                            <label className="block text-sm text-slate-600 dark:text-slate-300">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Plan Name</span>
+                        <div className="space-y-4">
+                            <input
+                                type="text"
+                                value={customName}
+                                onChange={(e) => setCustomName(e.target.value)}
+                                placeholder="Plan name (e.g. Custom 1)"
+                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg px-4 py-3 text-sm font-medium outline-none focus:border-blue-500 transition-all"
+                            />
+                            <input
+                                type="text"
+                                value={customSlug}
+                                onChange={(e) => setCustomSlug(e.target.value)}
+                                placeholder="Slug (e.g. custom-1)"
+                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg px-4 py-3 text-sm font-medium outline-none focus:border-blue-500 transition-all font-mono"
+                            />
+                            <div className="grid grid-cols-3 gap-2">
                                 <input
-                                    value={customName}
-                                    onChange={(e) => setCustomName(e.target.value)}
-                                    placeholder="Custom Growth Plan"
-                                    className="mt-3 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                                />
-                            </label>
-                            <label className="block text-sm text-slate-600 dark:text-slate-300">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Slug</span>
-                                <input
-                                    value={customSlug}
-                                    onChange={(e) => setCustomSlug(e.target.value)}
-                                    placeholder="custom-growth"
-                                    className="mt-3 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                                />
-                            </label>
-                            <label className="block text-sm text-slate-600 dark:text-slate-300">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Price (PKR)</span>
-                                <input
+                                    type="number"
                                     value={customPrice}
                                     onChange={(e) => setCustomPrice(e.target.value)}
-                                    placeholder="5000"
-                                    className="mt-3 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                    placeholder="Price"
+                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg px-4 py-3 text-sm font-medium outline-none focus:border-blue-500 transition-all"
                                 />
-                            </label>
-                            <label className="block text-sm text-slate-600 dark:text-slate-300">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Categories limit</span>
                                 <input
-                                    value={customStudents}
-                                    onChange={(e) => setCustomStudents(e.target.value)}
-                                    placeholder="250"
-                                    className="mt-3 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                    type="number"
+                                    value={customDevices}
+                                    onChange={(e) => setCustomDevices(e.target.value)}
+                                    placeholder="Devices"
+                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg px-4 py-3 text-sm font-medium outline-none focus:border-blue-500 transition-all"
                                 />
-                            </label>
-                            <label className="block text-sm text-slate-600 dark:text-slate-300">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Staff Capacity</span>
                                 <input
+                                    type="number"
                                     value={customStaff}
                                     onChange={(e) => setCustomStaff(e.target.value)}
-                                    placeholder="50"
-                                    className="mt-3 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                                    placeholder="Staff"
+                                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg px-4 py-3 text-sm font-medium outline-none focus:border-blue-500 transition-all"
                                 />
-                            </label>
-                            <label className="block text-sm text-slate-600 dark:text-slate-300">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Users (optional)</span>
-                                <input
-                                    value={customUsers}
-                                    onChange={(e) => setCustomUsers(e.target.value)}
-                                    placeholder="Admins, managers, etc."
-                                    className="mt-3 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-colors dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                                />
-                            </label>
+                            </div>
+                            <input
+                                type="text"
+                                value={customUsers}
+                                onChange={(e) => setCustomUsers(e.target.value)}
+                                placeholder="Users (officer tokens)"
+                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-lg px-4 py-3 text-sm font-medium outline-none focus:border-blue-500 transition-all"
+                            />
                         </div>
                     </div>
 
                     <button
-                        type="button"
                         onClick={handleCreateCustomPlan}
-                        className="mt-8 w-full rounded-2xl bg-indigo-600 py-4 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-indigo-700"
+                        className="mt-8 w-full bg-blue-600 text-white rounded-lg py-3 text-sm font-bold hover:bg-blue-700 transition-all active:scale-[0.98]"
                     >
-                        {editingPlanSlug ? 'Update Custom Plan' : 'Save Custom Plan'}
+                        {editingPlanSlug ? 'Update Plan' : 'Save Plan'}
                     </button>
                 </div>
             </div>

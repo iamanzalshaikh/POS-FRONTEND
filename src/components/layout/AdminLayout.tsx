@@ -1,54 +1,26 @@
-import React, { useState } from 'react';
-import Sidebar from './Sidebar';
-import { Menu, X } from 'lucide-react';
+import React from 'react';
+import { Menu } from 'lucide-react';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import AppSidebar from '@/components/app-sidebar';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-            {/* Sidebar - Desktop */}
-            <div className="hidden lg:block">
-                <Sidebar />
-            </div>
+        <SidebarProvider>
+          <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
+            <AppSidebar />
 
-            {/* Sidebar - Mobile Overlay */}
-            {isSidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[60] lg:hidden"
-                    onClick={() => setIsSidebarOpen(false)}
-                />
-            )}
-
-            {/* Sidebar - Mobile Content */}
-            <div className={`
-        fixed inset-y-0 left-0 w-[240px] bg-white z-[70] transform transition-transform duration-300 ease-in-out lg:hidden
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-                <Sidebar />
-                <button
-                    onClick={() => setIsSidebarOpen(false)}
-                    className="absolute top-6 right-4 p-2 text-slate-400 hover:text-slate-900"
-                >
-                    <X size={20} />
-                </button>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col lg:pl-[240px]">
-                {/* Top Navbar for Mobile & Desktop Utility */}
+            <div className="flex-1 flex flex-col transition-all duration-300">
                 <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-40 bg-white/80 backdrop-blur-md">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setIsSidebarOpen(true)}
-                            className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg lg:hidden"
-                        >
+                        <div>
+                          <SidebarTrigger className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg lg:hidden">
                             <Menu size={24} />
-                        </button>
+                          </SidebarTrigger>
+                        </div>
                         <div className="hidden lg:block">
                             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Global Terminal</span>
                         </div>
@@ -68,11 +40,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </div>
                 </header>
 
-                {/* Content Area */}
                 <main className="flex-1">
                     {children}
                 </main>
             </div>
-        </div>
-    );
+          </div>
+        </SidebarProvider>
+    )
 }

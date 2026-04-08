@@ -1,0 +1,23 @@
+*   [33ma150bce[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32misha-features[m[33m, [m[1;31morigin/isha-features[m[33m)[m resolved conflicts by keeping main changes
+[31m|[m[32m\[m  
+[31m|[m *   [33mb11d745[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m updated the forms and tables as per requirement with improved ui
+[31m|[m [33m|[m[34m\[m  
+[31m|[m [33m|[m *   [33m11fd1f9[m Merge branch 'main' into isha-feature
+[31m|[m [33m|[m [35m|[m[33m\[m  
+[31m|[m [33m|[m [35m|[m[33m/[m  
+[31m|[m [33m|[m[33m/[m[35m|[m   
+[31m|[m * [35m|[m   [33m0e9557e[m[33m ([m[1;31manzal/main[m[33m, [m[1;31manzal/HEAD[m[33m)[m Merge pull request #10 from ishaimran029-design/isha-feature
+[31m|[m [1;31m|[m[1;32m\[m [35m\[m  
+[31m|[m * [1;32m\[m [35m\[m   [33m84a6129[m Merge pull request #9 from iamanzalshaikh/isha-feature
+[31m|[m [1;33m|[m[1;34m\[m [1;32m\[m [35m\[m  
+[31m|[m [1;33m|[m [1;34m|[m [1;32m|[m *   [33mab8bae8[m[33m ([m[1;31manzal/isha-feature[m[33m)[m Merge branch 'iamanzalshaikh:isha-feature' into isha-feature
+[31m|[m [1;33m|[m [1;34m|[m [1;32m|[m [1;35m|[m[1;36m\[m  
+[31m|[m [1;33m|[m [1;34m|[m [1;32m|[m [1;35m|[m * [33me37a5c0[m updated super admin with 3 new pages and ui setup
+[31m|[m [1;33m|[m [1;34m|[m [1;32m|[m[1;34m_[m[1;35m|[m[1;34m/[m[32m|[m 
+[31m|[m [1;33m|[m [1;34m|[m[1;34m/[m[1;32m|[m [1;35m|[m [32m|[m 
+[31m|[m [1;33m|[m * [1;32m|[m [1;35m|[m [32m|[m   [33m3cbe999[m Merge pull request #8 from ishaimran029-design/isha-feature
+[31m|[m [1;33m|[m [33m|[m[34m\[m [1;32m\[m [1;35m\[m [32m\[m  
+[31m|[m [1;33m|[m [33m|[m [34m|[m [1;32m|[m * [32m|[m [33ma87c617[m[33m ([m[1;31morigin/isha-feature[m[33m, [m[1;32misha-feature[m[33m)[m added tables and charts as per requirement and improved ui using tanstack
+[31m|[m [1;33m|[m [33m|[m [34m|[m [1;32m|[m [32m|[m[32m/[m  
+[31m|[m [1;33m|[m [33m|[m [34m|[m [1;32m|[m * [33m02613fd[m added new pages super admin working on ui and subscription plan
+[31m|[m [1;33m|[m [33m|[m [34m|[m [1;32m|[m[1;32m/[m  

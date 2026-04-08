@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Store, Mail, MapPin, Loader2, AlertCircle } from 'lucide-react';
 import { storesApi } from '../../service/api';
@@ -21,27 +20,37 @@ const EditStorePage: React.FC = () => {
     isActive: true,
   });
 
-  const { data: storeRes, isLoading: initialLoading } = useQuery({
-    queryKey: ['store', id],
-    queryFn: () => storesApi.getById(id!),
-    enabled: !!id,
-  });
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+
+  const loadStore = async () => {
+    if (!id) return;
+    setInitialLoading(true);
+    try {
+      const res = await storesApi.getById(id);
+      if (res.data?.success) {
+        const store = res.data.data;
+        setFormData({
+          name: store.name || '',
+          email: store.email || '',
+          phone: store.phone || '',
+          address: store.address || '',
+          city: store.city || '',
+          state: store.state || '',
+          zipCode: store.zipCode || '',
+          isActive: store.isActive !== undefined ? store.isActive : true,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load store:", error);
+    } finally {
+      setInitialLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (storeRes?.data?.success) {
-      const store = storeRes.data.data;
-      setFormData({
-        name: store.name || '',
-        email: store.email || '',
-        phone: store.phone || '',
-        address: store.address || '',
-        city: store.city || '',
-        state: store.state || '',
-        zipCode: store.zipCode || '',
-        isActive: store.isActive !== undefined ? store.isActive : true,
-      });
-    }
-  }, [storeRes]);
+    loadStore();
+  }, [id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -51,25 +60,23 @@ const EditStorePage: React.FC = () => {
     }));
   };
 
-  const { mutate: updateStore, isPending: loading } = useMutation({
-    mutationFn: (data: any) => storesApi.update(id!, data),
-    onSuccess: (response) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await storesApi.update(id, formData);
       if (response.data.success) {
         navigate('/super-admin/stores');
       } else {
         setError(response.data.message || 'Failed to update store');
       }
-    },
-    onError: (err: any) => {
+    } catch (err: any) {
       setError(err.response?.data?.message || 'Error occurred during update');
+    } finally {
+      setLoading(false);
     }
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
-    setError(null);
-    updateStore(formData);
   };
 
   if (initialLoading) {

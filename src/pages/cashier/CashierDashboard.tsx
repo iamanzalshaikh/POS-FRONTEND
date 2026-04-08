@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ShoppingCart, Scan, Package, RotateCcw } from 'lucide-react';
+import { ShoppingCart, Scan, Package, RotateCcw, Clock } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import SidebarLink from '../../components/ui/SidebarLink';
 import DeviceAccessGate from '../../components/cashier/DeviceAccessGate';
@@ -14,6 +14,7 @@ import InventoryCheckPage from './InventoryCheckPage';
 import CashierProfilePage from './CashierProfilePage';
 import ProductsListPage from './ProductsListPage';
 import ReturnRefundPage from './ReturnRefundPage';
+import OfflineSalesPage from './OfflineSalesPage';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -49,6 +50,12 @@ const CashierDashboard: React.FC = () => {
           to="/cashier/terminal"
           icon={<ShoppingCart size={20} />}
           label="POS Terminal"
+          variant="emerald"
+        />
+        <SidebarLink
+          to="/cashier/offline-sales"
+          icon={<Clock size={20} />}
+          label="Offline Sales"
           variant="emerald"
         />
         <SidebarLink
@@ -90,6 +97,7 @@ const CashierDashboard: React.FC = () => {
           />
           <Route path="/devices" element={deviceId ? <Navigate to="/cashier/terminal" replace /> : <DeviceSelection />} />
           <Route path="/terminal" element={<><POSInterface /><ShiftTools /></>} />
+          <Route path="/offline-sales" element={<OfflineSalesPage />} />
           <Route path="/products" element={<ProductsListPage />} />
           <Route path="/receipt/:saleId" element={<ReceiptPage />} />
           <Route path="/receipt/offline/:saleId" element={<ReceiptPage />} />

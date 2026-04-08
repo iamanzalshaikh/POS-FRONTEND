@@ -1,17 +1,14 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import SalesHeader from "@/components/store-admin/SalesHeader"
 import SalesFilters from "@/components/store-admin/SalesFilters"
 import SalesTable from "@/components/store-admin/SalesTable"
 import Sidebar from '@/components/store-admin/Sidebar'
 import TopNavbar from '@/components/store-admin/TopNavbar'
 
-import { useQueryClient } from "@tanstack/react-query"
 import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api"
-import { useQuery } from "@tanstack/react-query";
 
 const SalesTransactionsPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const queryClient = useQueryClient();
 
   // Filters state
   const [search, setSearch] = useState("")
@@ -24,6 +21,21 @@ const SalesTransactionsPage = () => {
   const [page, setPage] = useState(1)
   const [limit] = useState(10)
 
+  const [salesRes, setSalesRes] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadSales = async (queryParams: any) => {
+    setLoading(true);
+    try {
+      const data = await getSalesTransactions(queryParams);
+      setSalesRes(data);
+    } catch (error) {
+      console.error("Failed to fetch sales transactions:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const params: any = { page, limit }
   if (search) params.search = search
   if (startDate) params.startDate = startDate
@@ -35,10 +47,9 @@ const SalesTransactionsPage = () => {
     if (paymentStatus === "Refunded") params.paymentStatus = "REFUNDED"
   }
 
-  const { data: salesRes, isLoading: loading } = useQuery({
-    queryKey: ['sales', params],
-    queryFn: () => getSalesTransactions(params),
-  });
+  useEffect(() => {
+    loadSales(params);
+  }, [page, search, startDate, endDate, paymentStatus, paymentMethod]);
 
   const transactions = salesRes?.data || (Array.isArray(salesRes) ? salesRes : []);
   const total = salesRes?.total || transactions.length;
@@ -47,7 +58,7 @@ const SalesTransactionsPage = () => {
     if (!window.confirm("Are you sure you want to cancel this sale?")) return;
     try {
       await cancelSale(id, "Cancelled by admin")
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      await loadSales(params);
     } catch (err) {
       console.error("Failed to cancel sale", err)
       alert("Failed to cancel sale")
@@ -58,7 +69,7 @@ const SalesTransactionsPage = () => {
     if (!window.confirm("Are you sure you want to refund this sale?")) return;
     try {
       await refundSale(id, "Refunded by admin")
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      await loadSales(params);
     } catch (err) {
       console.error("Failed to refund sale", err)
       alert("Failed to refund sale")

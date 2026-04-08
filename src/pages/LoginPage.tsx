@@ -78,13 +78,16 @@ const LoginPage: React.FC = () => {
         }
 
         setAuth(user, accessToken);
-
+        console.log(`[LOGIN] User Role: "${user.role}"`);
+        
         switch (user.role) {
-          case 'SUPER_ADMIN': navigate('/admin/dashboard'); break;
-          case 'STORE_ADMIN': navigate('/store-admin'); break;
+          case 'SUPER_ADMIN': navigate('/super-admin/dashboard'); break;
+          case 'STORE_ADMIN': navigate('/store-admin/dashboard'); break;
           case 'CASHIER': navigate('/cashier'); break;
           case 'ACCOUNTANT': navigate('/accountant'); break;
-          default: navigate('/unauthorized');
+          default: 
+            console.warn(`[LOGIN] UNKNOWN ROLE: "${user.role}"`);
+            navigate('/unauthorized');
         }
       } else {
         setError(response.data.message || 'Login failed');

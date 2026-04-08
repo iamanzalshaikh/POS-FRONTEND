@@ -13,12 +13,10 @@ export const formatCurrency = (amount: number | string): string => {
     
     if (isNaN(value)) return '₨ 0.00';
 
-    return new Intl.NumberFormat('en-PK', {
-        style: 'currency',
-        currency: 'PKR',
+    return `₨ ${value.toLocaleString('en-PK', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-    }).format(value).replace('PKR', '₨');
+    })}`;
 };
 
 export const formatPKR = (amount: number | string): string => {

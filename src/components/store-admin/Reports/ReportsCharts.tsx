@@ -1,6 +1,6 @@
 import React from 'react';
 import ChartLineDots from '@/components/global-components/chart-line-dots';
-import BarChartLabelCustom from '@/components/global-components/BarChartLabelCustom';
+import GlobalPieChart from '@/components/global-components/PieChart';
 
 interface ReportsChartsProps {
   charts: any;
@@ -16,9 +16,17 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ charts }) => {
   }));
 
   const paymentData = payBreakdown.map((p: any) => ({
-    label: p.paymentMethod ?? 'Other',
+    name: p.paymentMethod ?? 'Other',
     value: p.revenue ?? 0,
+    fill: p.paymentMethod === 'CASH' ? '#4f46e5' : p.paymentMethod === 'CARD' ? '#818cf8' : '#c7d2fe'
   }));
+
+  const pieConfig = {
+    value: { label: "Revenue" },
+    CASH: { label: "Cash", color: "#4f46e5" },
+    CARD: { label: "Card", color: "#818cf8" },
+    OTHER: { label: "Other", color: "#c7d2fe" },
+  };
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mt-10">
@@ -58,14 +66,18 @@ const ReportsCharts: React.FC<ReportsChartsProps> = ({ charts }) => {
         </div>
         <div className="flex-1 min-h-[280px]">
           {paymentData.length > 0 ? (
-            <BarChartLabelCustom
-              data={paymentData}
-              dataKey="value"
-              labelKey="label"
-              config={{ value: { label: "Revenue", color: "#262255" } }}
-              noWrapper
-              height="min-h-[260px]"
-            />
+            <div className="h-[260px] w-full">
+              <GlobalPieChart
+                data={paymentData}
+                config={pieConfig} 
+                dataKey="value"
+                nameKey="name"
+                noWrapper
+                compact
+                innerRadius={60}
+                outerRadius={80}
+              />
+            </div>
           ) : (
             <div className="h-full flex flex-col items-center justify-center">
               <p className="font-inter text-slate-400 text-sm font-medium">No payment data available</p>

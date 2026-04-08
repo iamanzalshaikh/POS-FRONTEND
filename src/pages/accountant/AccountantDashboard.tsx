@@ -6,6 +6,12 @@ import SidebarLink from '../../components/ui/SidebarLink';
 import StatCard from '../../components/ui/StatCard';
 import FinancialOverview from './FinancialOverview';
 import ExpenseTracker from './ExpenseTracker';
+import ExpensesPage from './ExpensesPage';
+import TaxManagement from './TaxManagement';
+import ProfitLossReport from './ProfitLossReport';
+import ExportData from './ExportData';
+import MonthlyCloseReport from './MonthlyCloseReport';
+import AllTransactions from './AllTransactions';
 
 const AccountantDashboard: React.FC = () => {
   const sidebar = (
@@ -21,19 +27,20 @@ const AccountantDashboard: React.FC = () => {
           <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mt-1">Financial</div>
         </div>
       </div>
-      
+
       <nav className="flex-1 space-y-1">
         <SidebarLink to="/accountant" icon={<BarChart3 size={20} />} label="Summary" variant="amber" />
         <SidebarLink to="/accountant/expenses" icon={<Calculator size={20} />} label="Expenses" variant="amber" />
         <SidebarLink to="/accountant/tax" icon={<FileText size={20} />} label="Tax" variant="amber" />
         <SidebarLink to="/accountant/pl" icon={<PieChart size={20} />} label="P&L" variant="amber" />
+        <SidebarLink to="/accountant/monthly-close" icon={<FileText size={20} />} label="Monthly Close" variant="amber" />
         <SidebarLink to="/accountant/export" icon={<Download size={20} />} label="Export" variant="amber" />
       </nav>
     </>
   );
 
   return (
-    <DashboardLayout 
+    <DashboardLayout
       sidebarContent={sidebar}
       title="Financial Controller"
       subtitle="Review ledger, expenses and financial health"
@@ -56,9 +63,12 @@ const AccountantDashboard: React.FC = () => {
             </div>
           </>
         } />
-        <Route path="/expenses" element={<ExpenseTracker />} />
-        <Route path="/pl" element={<FinancialOverview />} />
-        {/* Placeholder routes for others */}
+        <Route path="/expenses" element={<ExpensesPage />} />
+        <Route path="/transactions" element={<AllTransactions />} />
+        <Route path="/tax" element={<TaxManagement />} />
+        <Route path="/pl" element={<ProfitLossReport />} />
+        <Route path="/monthly-close" element={<MonthlyCloseReport />} />
+        <Route path="/export" element={<ExportData />} />
         <Route path="*" element={<Navigate to="/accountant" replace />} />
       </Routes>
     </DashboardLayout>

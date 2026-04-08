@@ -16,14 +16,17 @@ import {
   WifiOff,
   AlertCircle,
   Search,
-  Package,
-  Banknote,
+  CheckCircle,
+  IndianRupee,
 } from 'lucide-react';
 import { fetchProducts, getProductByBarcode, searchProducts } from '../../api/products.api';
 import { createSale } from '../../api/sales.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
-import { formatCurrency } from '@/utils/format';
+import { offlineStorage } from '../../services/offline-storage.service';
+import type { OfflineSale } from '../../services/offline-storage.service';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { formatPKR } from '@/utils/format';
 
 type CartItem = {
   id: string;
@@ -56,13 +59,14 @@ type DiscountMode = 'amount' | 'percent';
 
 const TAX_RATE = 0.18; // 18% GST placeholder – can be wired to backend later
 
-const OFFLINE_SALES_KEY = 'cashier-offline-sales';
-
 const POSInterface: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { deviceId } = useDeviceStore();
   const displayTerminalName = user?.assignedTerminals?.[0]?.deviceName ?? null;
+  
+  // Use online status hook with auto-sync
+  const { isOnline, syncProgress, pendingCount, triggerSync } = useOnlineStatus();
 
   const [barcodeInput, setBarcodeInput] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -71,7 +75,6 @@ const POSInterface: React.FC = () => {
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
-  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [productModalOpen, setProductModalOpen] = useState(false);
@@ -82,6 +85,7 @@ const POSInterface: React.FC = () => {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(new Date());
+  const [receivedAmount, setReceivedAmount] = useState<string>('');
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000 * 30);
     return () => clearInterval(timer);
@@ -126,20 +130,6 @@ const POSInterface: React.FC = () => {
     loadProducts();
   }, []);
 
-  // Online / offline detection
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
   // Totals
   const subtotal = useMemo(
     () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -163,6 +153,13 @@ const POSInterface: React.FC = () => {
   const taxableBase = Math.max(subtotal - discountAmount, 0);
   const tax = taxableBase * TAX_RATE;
   const total = taxableBase + tax;
+
+  // Change calculation logic (frontend only)
+  const receivedAmountNum = parseFloat(receivedAmount) || 0;
+  const changeAmount = receivedAmountNum - total;
+  const hasInsufficientAmount = receivedAmount && receivedAmountNum < total;
+  const hasExactAmount = receivedAmount && receivedAmountNum === total;
+  const hasChange = receivedAmount && receivedAmountNum > total;
 
   const canCompleteSale = cart.length > 0 && !!paymentMethod && !!deviceId;
 
@@ -250,8 +247,12 @@ const POSInterface: React.FC = () => {
   };
 
   const handleClearCart = () => {
-    if (!cart.length) return;
+    if (!cart.length && !paymentMethod && !discountValue && !notes) {
+      console.log('[POSInterface] Cart is already empty, nothing to clear');
+      return;
+    }
     if (!window.confirm('Clear all items from cart?')) return;
+    console.log('[POSInterface] Clearing cart...');
     setCart([]);
     setDiscountValue(0);
     setPaymentMethod(null);
@@ -297,10 +298,16 @@ const POSInterface: React.FC = () => {
     console.log('🔵 [POSInterface] deviceId:', deviceId);
     console.log('🔵 [POSInterface] cart.length:', cart.length);
     console.log('🔵 [POSInterface] paymentMethod:', paymentMethod);
-    
+
+    // Check individual requirements
+    const missingRequirements = [];
+    if (!cart || cart.length === 0) missingRequirements.push('cart is empty');
+    if (!paymentMethod) missingRequirements.push('no payment method selected');
+    if (!deviceId) missingRequirements.push('no device connected');
+
     if (!canCompleteSale || !deviceId) {
-      console.error('❌ [POSInterface] Sale blocked - missing requirements');
-      setError('Please select a payment method and ensure you are connected to a POS terminal.');
+      console.error('❌ [POSInterface] Sale blocked - missing requirements:', missingRequirements.join(', '));
+      setError('Cannot complete sale: ' + missingRequirements.join(', ') + '. Please add items, select payment method, and connect to terminal.');
       return;
     }
 
@@ -392,10 +399,10 @@ const POSInterface: React.FC = () => {
 
     try {
       if (isOnline) {
-        console.log('📡 [POSInterface] Sending POST /sales request...');
+        console.log('📡 [POSInterface] Sending POST /sales request (online mode)...');
         const res = await createSale(payload, idempotencyKey);
         console.log('✅ [POSInterface] Sale created successfully:', res.data);
-        
+
         if (res.data?.success && res.data.data) {
           const sale = res.data.data;
           // Clear cart before navigating
@@ -403,39 +410,75 @@ const POSInterface: React.FC = () => {
           setDiscountValue(0);
           setPaymentMethod(null);
           setNotes('');
+          // Navigate to receipt page with sale data for auto-print
           navigate(`/cashier/receipt/${sale.id}`, {
-            state: { sale, status: 'COMPLETED' },
+            state: { sale, status: 'COMPLETED', autoPrint: true },
           });
         } else {
           console.error('❌ [POSInterface] Sale response missing data:', res.data);
           setError(res.data?.message || 'Unable to complete sale');
         }
       } else {
-        const offlineId = `OFF-${Date.now()}`;
-        const existingRaw = localStorage.getItem(OFFLINE_SALES_KEY);
-        const existing = existingRaw ? JSON.parse(existingRaw) : [];
-        const offlineSale = {
-          tempId: offlineId,
-          createdAt: new Date().toISOString(),
+        // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
+        console.log('🔴 [POSInterface] OFFLINE MODE - Saving sale locally...');
+
+        const tempId = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        const invoiceNumber = `OFF-${Date.now()}`;
+
+        const offlineSale: OfflineSale = {
+          tempId,
+          invoiceNumber,
           deviceId,
           paymentMethod,
           discountAmount: numericDiscountAmount,
           notes: notes || undefined,
           items: payload.items,
           totals: { subtotal, tax, total },
+          createdAt: new Date().toISOString(),
+          syncStatus: 'PENDING',
+          retryCount: 0,
         };
-        localStorage.setItem(
-          OFFLINE_SALES_KEY,
-          JSON.stringify([...existing, offlineSale])
-        );
 
+        // Save to IndexedDB
+        await offlineStorage.saveSale(offlineSale);
+        console.log('✅ [OfflineStorage] Sale saved locally:', tempId);
+
+        // Clear cart
         setCart([]);
         setDiscountValue(0);
         setPaymentMethod(null);
         setNotes('');
 
-        navigate(`/cashier/receipt/offline/${offlineId}`, {
-          state: { sale: offlineSale, status: 'PENDING_SYNC' },
+        // Store sale in sessionStorage for instant access
+        sessionStorage.setItem(`offline-sale-${tempId}`, JSON.stringify(offlineSale));
+
+        // Navigate to receipt page with offline sale data for auto-print
+        navigate(`/cashier/receipt/offline/${tempId}`, {
+          state: {
+            sale: {
+              id: tempId,
+              tempId,
+              invoiceNumber,
+              deviceId,
+              paymentMethod,
+              discountAmount: numericDiscountAmount,
+              notes: notes || undefined,
+              saleItems: payload.items.map((item: any) => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                price: item.price,
+                unitPrice: item.unitPrice,
+                subtotal: item.totalPrice,
+              })),
+              subtotal,
+              totalTax: tax,
+              totalAmount: total,
+              createdAt: new Date().toISOString(),
+              syncStatus: 'PENDING',
+            },
+            status: 'PENDING_SYNC',
+            autoPrint: true,
+          },
         });
       }
     } catch (err: any) {
@@ -446,9 +489,30 @@ const POSInterface: React.FC = () => {
         statusText: err.response?.statusText,
         data: err.response?.data,
       });
-      const msg = err.response?.data?.message || err.response?.data?.error || 'Failed to complete sale';
+      
+      // Log the full backend response for debugging
+      console.log('🔍 [POSInterface] Backend response:', JSON.stringify(err.response?.data, null, 2));
+      
+      // Extract error message from backend response
+      let msg = 'Failed to complete sale';
+      if (err.response?.data) {
+        const backendData = err.response.data;
+        console.log('📝 [POSInterface] Backend data type:', typeof backendData);
+        console.log('📝 [POSInterface] Backend data keys:', Object.keys(backendData));
+        
+        // Try multiple possible error message fields
+        msg = backendData.message 
+           || backendData.error 
+           || backendData.msg
+           || backendData.errorMessage
+           || (typeof backendData === 'string' ? backendData : null)
+           || msg;
+      }
+      
+      console.log('💬 [POSInterface] Displaying error message:', msg);
+      
+      // Display the error to user
       setError(msg);
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -483,7 +547,59 @@ const POSInterface: React.FC = () => {
   }, [modalQuery, productModalOpen]);
 
   return (
-    <div className="flex flex-col h-full overflow-hidden bg-white border border-slate-200 rounded-3xl">
+    <>
+      {/* Hold Orders Section - Top of Page */}
+      {holdOrders.length > 0 && (
+        <div className="w-full bg-amber-50 border-b border-amber-200 px-6 py-4">
+          <div className="max-w-7xl mx-auto">
+            <h3 className="text-sm font-black uppercase tracking-widest text-amber-800 flex items-center space-x-2 mb-3">
+              <Clock size={16} className="text-amber-600" />
+              <span>Hold Orders ({holdOrders.length})</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {holdOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="p-4 rounded-xl border-2 border-amber-200 bg-white hover:border-amber-300 hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold text-amber-900">{order.id}</span>
+                    <span className="text-xs font-semibold text-amber-700">
+                      {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-slate-600">
+                      {order.timestamp.toLocaleTimeString()}
+                    </span>
+                    <span className="text-lg font-bold text-amber-900">
+                      {formatPKR(order.total)}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => handleResumeOrder(order.id)}
+                      className="flex-1 rounded-lg bg-amber-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all"
+                    >
+                      Resume
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteHoldOrder(order.id)}
+                      className="rounded-lg border-2 border-red-300 bg-red-50 text-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col h-full overflow-hidden bg-white border border-slate-200 rounded-3xl">
       {/* Top Bar */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/60">
         <div>
@@ -509,6 +625,17 @@ const POSInterface: React.FC = () => {
               {isOnline ? 'Online' : 'Offline'}
             </span>
           </div>
+          {pendingCount > 0 && isOnline && (
+            <button
+              type="button"
+              onClick={triggerSync}
+              className="ml-2 inline-flex items-center space-x-1 rounded-lg bg-blue-600 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-blue-700 transition-all"
+              title="Sync pending offline sales"
+            >
+              <Clock size={12} />
+              <span>Sync {pendingCount}</span>
+            </button>
+          )}
           <div className="h-6 w-px bg-slate-200" />
           <div className="flex items-center space-x-2">
             <UserCircle2 size={18} className="text-slate-500" />
@@ -525,14 +652,79 @@ const POSInterface: React.FC = () => {
           </div>
         </div>
       </header>
-    
 
+      {/* Offline Banner */}
       {isOnline === false && (
-        <div className="flex items-center space-x-3 px-6 py-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-sm font-medium">
-          <WifiOff size={16} className="text-amber-500" />
-          <span>
-            OFFLINE MODE – Sales will be saved and synced when back online.
-          </span>
+        <div className="flex items-center justify-between px-6 py-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-sm font-medium">
+          <div className="flex items-center space-x-3">
+            <WifiOff size={16} className="text-amber-500" />
+            <span className="font-semibold">
+              YOU ARE OFFLINE
+            </span>
+            <span className="text-amber-700">
+              – Sales will be saved locally and synced when back online.
+            </span>
+          </div>
+          {pendingCount > 0 && (
+            <div className="flex items-center space-x-2 text-xs">
+              <Clock size={14} className="text-amber-600" />
+              <span className="font-bold">{pendingCount} pending sync</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sync Progress Banner */}
+      {syncProgress && syncProgress.status === 'syncing' && (
+        <div className="flex items-center justify-between px-6 py-3 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm font-medium">
+          <div className="flex items-center space-x-3">
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="font-semibold">
+              SYNCING OFFLINE SALES
+            </span>
+            <span className="text-blue-700">
+              {syncProgress.completed}/{syncProgress.total} completed
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-32 h-2 bg-blue-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 transition-all duration-300"
+                style={{ width: `${(syncProgress.completed / syncProgress.total) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs font-bold">{Math.round((syncProgress.completed / syncProgress.total) * 100)}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Complete Banner */}
+      {syncProgress && syncProgress.status === 'completed' && (
+        <div className="flex items-center justify-between px-6 py-3 bg-emerald-50 border-b border-emerald-200 text-emerald-900 text-sm font-medium">
+          <div className="flex items-center space-x-3">
+            <CheckCircle size={16} className="text-emerald-500" />
+            <span className="font-semibold">
+              SYNC COMPLETED
+            </span>
+            <span className="text-emerald-700">
+              {syncProgress.message}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Sync Error Banner */}
+      {syncProgress && syncProgress.status === 'error' && (
+        <div className="flex items-center justify-between px-6 py-3 bg-red-50 border-b border-red-200 text-red-900 text-sm font-medium">
+          <div className="flex items-center space-x-3">
+            <AlertCircle size={16} className="text-red-500" />
+            <span className="font-semibold">
+              SYNC FAILED
+            </span>
+            <span className="text-red-700">
+              {syncProgress.message}
+            </span>
+          </div>
         </div>
       )}
 
@@ -623,7 +815,7 @@ const POSInterface: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className="font-bold text-emerald-600 text-[12px]">
-                              {formatCurrency(price)}
+                              {formatPKR(price)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -711,7 +903,7 @@ const POSInterface: React.FC = () => {
                       <div className="mb-2">
                         <span className="text-[10px] text-slate-600">Price:</span>
                         <div className="text-xs font-bold text-emerald-600">
-                          {formatCurrency(item.price)}
+                          {formatPKR(item.price)}
                         </div>
                       </div>
 
@@ -740,7 +932,7 @@ const POSInterface: React.FC = () => {
                       <div className="mb-2 text-center">
                         <span className="text-[9px] text-slate-600">Subtotal:</span>
                         <div className="text-xs font-bold text-emerald-700">
-                          {formatCurrency(item.price * item.quantity)}
+                          {formatPKR(item.price * item.quantity)}
                         </div>
                       </div>
 
@@ -808,10 +1000,10 @@ const POSInterface: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-semibold text-slate-700">
-                          {formatCurrency(item.price)}
+                          {formatPKR(item.price)}
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-bold text-slate-900">
-                          {formatCurrency(item.price * item.quantity)}
+                          {formatPKR(item.price * item.quantity)}
                         </td>
                         <td className="px-2 py-2 text-center">
                           <button
@@ -841,19 +1033,19 @@ const POSInterface: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-semibold text-slate-800">
-                  {formatCurrency(subtotal)}
+                  {formatPKR(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Tax (GST)</span>
                 <span className="font-semibold text-slate-800">
-                  {formatCurrency(tax)}
+                  {formatPKR(tax)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Discount</span>
                 <span className="font-semibold text-emerald-600">
-                  -{formatCurrency(discountAmount)}
+                  -{formatPKR(discountAmount)}
                 </span>
               </div>
               <hr className="my-2 border-dashed border-slate-200" />
@@ -863,7 +1055,7 @@ const POSInterface: React.FC = () => {
                   <span>Total</span>
                 </span>
                 <span className="text-emerald-500 text-xl font-bold">
-                  {formatCurrency(total)}
+                  {formatPKR(total)}
                 </span>
               </div>
             </div>
@@ -913,8 +1105,8 @@ const POSInterface: React.FC = () => {
                 <div className="text-[11px] text-emerald-700 font-medium">
                   Applied discount:{' '}
                   {discountMode === 'amount'
-                    ? formatCurrency(discountAmount)
-                    : `${discountValue}% (${formatCurrency(discountAmount)})`}
+                    ? formatPKR(discountAmount)
+                    : `${discountValue}% (${formatPKR(discountAmount)})`}
                 </div>
               )}
             </div>
@@ -925,19 +1117,22 @@ const POSInterface: React.FC = () => {
                 Payment Method
               </div>
               <div className="grid grid-cols-2 gap-2">
-                {['CASH', 'CARD', 'UPI', 'CHEQUE', 'DIGITAL_WALLET', 'OTHER'].map(
-                  (method) => (
+                {[
+                  { label: 'CASH', value: 'CASH' },
+                  { label: 'CARD/BANK', value: 'CARD' },
+                ].map(
+                  ({ label, value }) => (
                     <button
-                      key={method}
+                      key={value}
                       type="button"
-                      onClick={() => setPaymentMethod(method)}
+                      onClick={() => setPaymentMethod(value)}
                       className={`rounded-lg px-2 py-1.5 text-[11px] font-bold uppercase tracking-widest border ${
-                        paymentMethod === method
+                        paymentMethod === value
                           ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                       }`}
                     >
-                      {method.replace('_', ' ')}
+                      {label.replace('_', ' ')}
                     </button>
                   )
                 )}
@@ -957,6 +1152,112 @@ const POSInterface: React.FC = () => {
                 />
               </div>
             </div>
+
+            {/* Received Amount & Change Calculation */}
+            {paymentMethod === 'CASH' && cart.length > 0 && (
+              <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50/50">
+                <div className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center space-x-2">
+                  <IndianRupee size={14} />
+                  <span>Payment Details</span>
+                </div>
+                
+                {/* Received Amount Input */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 mb-1 block">
+                    Amount Received (₨)
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={receivedAmount}
+                    onChange={(e) => setReceivedAmount(e.target.value)}
+                    placeholder="Enter amount received"
+                    className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400"
+                  />
+                </div>
+
+                {/* Change Display */}
+                {receivedAmount && (
+                  <div className={`rounded-lg p-3 border-2 ${
+                    hasInsufficientAmount
+                      ? 'bg-red-50 border-red-200'
+                      : hasExactAmount
+                      ? 'bg-blue-50 border-blue-200'
+                      : hasChange
+                      ? 'bg-emerald-50 border-emerald-200'
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        Bill Total
+                      </span>
+                      <span className="text-sm font-bold text-slate-700">
+                        {formatPKR(total)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        Received
+                      </span>
+                      <span className="text-sm font-bold text-slate-700">
+                        {formatPKR(receivedAmountNum)}
+                      </span>
+                    </div>
+                    <hr className={`my-2 border-dashed ${
+                      hasInsufficientAmount
+                        ? 'border-red-200'
+                        : hasExactAmount
+                        ? 'border-blue-200'
+                        : hasChange
+                        ? 'border-emerald-200'
+                        : 'border-slate-200'
+                    }`} />
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                        {hasInsufficientAmount ? 'Shortage' : hasExactAmount ? 'Status' : 'Change'}
+                      </span>
+                      <span className={`text-lg font-black ${
+                        hasInsufficientAmount
+                          ? 'text-red-600'
+                          : hasExactAmount
+                          ? 'text-blue-600'
+                          : hasChange
+                          ? 'text-emerald-600'
+                          : 'text-slate-400'
+                      }`}>
+                        {hasInsufficientAmount
+                          ? formatPKR(Math.abs(changeAmount))
+                          : hasExactAmount
+                          ? 'No Change'
+                          : hasChange
+                          ? formatPKR(changeAmount)
+                          : formatPKR(0)
+                        }
+                      </span>
+                    </div>
+                    {hasInsufficientAmount && (
+                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-red-600 font-bold">
+                        <AlertCircle size={12} />
+                        <span>Insufficient amount received</span>
+                      </div>
+                    )}
+                    {hasExactAmount && (
+                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-blue-600 font-bold">
+                        <CheckCircle size={12} />
+                        <span>Exact amount paid</span>
+                      </div>
+                    )}
+                    {hasChange && (
+                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-emerald-600 font-bold">
+                        <CheckCircle size={12} />
+                        <span>Return to customer</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Hold Order Button */}
             <div className="p-4 border-t border-slate-200 space-y-2">
@@ -980,38 +1281,31 @@ const POSInterface: React.FC = () => {
                   <span>Ready</span>
                 </span>
               </div>
-              <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="grid grid-cols-2 gap-2 mb-3">
                 <button
                   type="button"
                   onClick={handleClearCart}
                   className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-100 flex items-center justify-center space-x-1"
                 >
                   <Trash2 size={14} />
-                  <span>Clear Cart</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/cashier/inventory')}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-100 flex items-center justify-center space-x-1"
-                >
-                  <Scan size={14} />
-                  <span>Inventory Check</span>
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button
-                  type="button"
-                  onClick={() => navigate('/cashier/profile')}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-100 flex items-center justify-center space-x-1"
-                >
-                  <UserCircle2 size={14} />
-                  <span>Profile</span>
+                  <span>CLEAR CARD</span>
                 </button>
                 <button
                   type="button"
                   disabled={!canCompleteSale || isSubmitting}
-                  onClick={handleCompleteSale}
-                  className="rounded-xl bg-emerald-600 px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-900 shadow-lg shadow-emerald-600/30 flex items-center justify-center space-x-2 disabled:bg-emerald-400 disabled:shadow-none"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await handleCompleteSale();
+                  }}
+                  title={!canCompleteSale ?
+                    `${!cart.length ? 'Add items to cart. ' : ''}${!paymentMethod ? 'Select payment method. ' : ''}${!deviceId ? 'Connect to terminal. ' : ''}`.trim()
+                    : ''}
+                  className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 transition-all ${
+                    !canCompleteSale || isSubmitting
+                      ? 'bg-emerald-400 cursor-not-allowed'
+                      : 'bg-emerald-600 text-slate-900 shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 cursor-pointer'
+                  }`}
                 >
                   {isSubmitting ? (
                     <>
@@ -1021,7 +1315,7 @@ const POSInterface: React.FC = () => {
                   ) : (
                     <>
                       <CreditCard size={14} />
-                      <span>Complete Sale</span>
+                      <span>COMPLETE SALE</span>
                     </>
                   )}
                 </button>
@@ -1041,55 +1335,6 @@ const POSInterface: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Hold Orders Section */}
-            {holdOrders.length > 0 && (
-              <div className="p-4 border-t border-slate-200 space-y-3">
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center space-x-2">
-                  <Clock size={16} className="text-amber-600" />
-                  <span>Hold Orders ({holdOrders.length})</span>
-                </h3>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {holdOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="p-3 rounded-lg border border-amber-200 bg-amber-50 space-y-2 hover:bg-amber-100 transition-colors"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-amber-900">{order.id}</span>
-                        <span className="text-xs font-semibold text-amber-700">
-                          {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-slate-600">
-                          {order.timestamp.toLocaleTimeString()}
-                        </span>
-                        <span className="text-sm font-bold text-amber-900">
-                          {formatCurrency(order.total)}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={() => handleResumeOrder(order.id)}
-                          className="flex-1 rounded-lg bg-amber-600 text-white px-2 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all"
-                        >
-                          Resume
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteHoldOrder(order.id)}
-                          className="rounded-lg border border-red-300 bg-red-50 text-red-600 px-2 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </aside>
         </div>
       </div>
@@ -1163,7 +1408,7 @@ const POSInterface: React.FC = () => {
                             {p.sku || p.barcode || '-'}
                           </td>
                           <td className="px-3 py-2 text-right font-semibold text-slate-800">
-                            {formatCurrency((p as any).sellingPrice ?? (p as any).price ?? 0)}
+                            {formatPKR((p as any).sellingPrice ?? (p as any).price ?? 0)}
                           </td>
                           <td className="px-3 py-2 text-right">
                             <button
@@ -1188,7 +1433,7 @@ const POSInterface: React.FC = () => {
         </div>
       )}
     </div>
-
+</>
   );
 };
 

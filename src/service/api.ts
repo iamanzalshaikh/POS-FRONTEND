@@ -22,7 +22,7 @@ api.interceptors.request.use((config) => {
       console.error('Error parsing auth-storage', e);
     }
   }
-  
+
   // Log all API requests for debugging
   if (config.url?.includes('/sales') || config.url?.includes('/products')) {
     console.log('🌐 [API Interceptor] Outgoing request:', {
@@ -35,17 +35,24 @@ api.interceptors.request.use((config) => {
       data: config.data,
     });
   }
-  
+
   return config;
 });
 
-// Response Interceptor for Token Refresh
+// Response Interceptor for Token Refresh and Error Mapping
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // 1. Handle Network/Connection Errors specifically
+    if (!error.response && error.code === 'ERR_NETWORK') {
+      console.error('🌐 [API] Connection Refused! Is the backend running?');
+      error.message = 'System is temporarily offline. Please ensure the backend server is running.';
+      return Promise.reject(error);
+    }
+
     const originalRequest = error.config;
 
-    // If 401 and not already retried
+    // 2. Handle Token Expiration (401)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -76,16 +83,13 @@ api.interceptors.response.use(
               }
               return api(originalRequest);
             }
-          } else {
-            console.warn('[API] No refresh token available');
           }
         }
       } catch (refreshError: any) {
-        console.error('[API] ❌ Refresh token failed:', refreshError.response?.data?.message || refreshError.message);
+        console.error('[API] ❌ Refresh token failed');
         // Clear auth state on refresh failure
         localStorage.removeItem('auth-storage');
         localStorage.removeItem('refresh-token');
-        // Optionally redirect to login
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }
@@ -145,16 +149,17 @@ export const reportsApi = {
   getSuperAdminOverview: () => api.get('/reports/superadmin/overview'),
   getSalesReport: (params: { startDate: string; endDate: string }) =>
     api.get('/reports/sales', { params }),
-  getAuditLogs: (params: { 
-    entity?: string; 
-    action?: string; 
-    limit?: number; 
-    page?: number; 
-    startDate?: string; 
-    endDate?: string; 
+  getAuditLogs: (params: {
+    entity?: string;
+    action?: string;
+    limit?: number;
+    page?: number;
+    startDate?: string;
+    endDate?: string;
     storeId?: string;
     userId?: string;
   }) => api.get('/reports/audit-logs', { params }),
+  getHealth: () => api.get('/health'),
 };
 
 export default api;

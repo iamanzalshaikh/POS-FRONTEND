@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GlobalPieChart from '@/components/global-components/PieChart';
 import StatsCards from "@/components/global-components/StatsCards";
 import {
@@ -18,17 +18,27 @@ import {
     Tooltip,
     ResponsiveContainer
 } from 'recharts';
-import { useQuery } from '@tanstack/react-query';
 import { getSuperAdminOverview } from '@/api/dashboard.api';
 
 export default function Dashboard() {
-    const today = new Date().toISOString().split('T')[0];
+    const [dashboardRes, setDashboardRes] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // React Query Hook
-    const { data: dashboardRes, isLoading } = useQuery({
-        queryKey: ['superadmin', 'overview'],
-        queryFn: () => getSuperAdminOverview(),
-    });
+    const loadDashboard = async () => {
+        setIsLoading(true);
+        try {
+            const res = await getSuperAdminOverview();
+            setDashboardRes(res);
+        } catch (error) {
+            console.error("Failed to fetch dashboard overview:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadDashboard();
+    }, []);
 
     const statsRaw = dashboardRes?.data || dashboardRes;
     const stats = statsRaw;
@@ -47,7 +57,7 @@ export default function Dashboard() {
 
     const statsData = [
         { name: "Total Stores", stat: stats?.totalStores?.toLocaleString() || "0", change: "+12.5%", changeType: "positive" as const },
-        { name: "Total Revenue", stat: `Rs ${stats?.totalRevenue?.toLocaleString() || "0"}`, change: "+8.2%", changeType: "positive" as const },
+        { name: "Total Revenue", stat: `₨ ${stats?.totalRevenue?.toLocaleString() || "0"}`, change: "+8.2%", changeType: "positive" as const },
         { name: "Active Devices", stat: stats?.activeDevices?.toLocaleString() || "0", change: "+4.1%", changeType: "positive" as const },
         { name: "Active Trials", stat: stats?.activeTrials?.toLocaleString() || "0", change: "-2.4%", changeType: "negative" as const },
     ];
@@ -90,8 +100,8 @@ export default function Dashboard() {
                                     <h3 className="text-xl font-extrabold text-slate-900">Revenue by Top Stores</h3>
                                     <p className="text-sm text-slate-500 font-medium">Top performing branches globally</p>
                                 </div>
-                                <button className="text-slate-400 hover:text-slate-600">
-                                    <MoreVertical size={20} />
+                                <button className="text-black hover:text-slate-600 group">
+                                    <MoreVertical size={24} strokeWidth={3} className="group-hover:scale-110 transition-transform" />
                                 </button>
                             </div>
                             <div className="h-[300px] w-full">
@@ -137,7 +147,6 @@ export default function Dashboard() {
                                 nameKey="name"
                                 innerRadius={60}
                                 outerRadius={80}
-                                showLabels={false}
                             />
                         </div>
                     </div>
