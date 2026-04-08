@@ -113,7 +113,7 @@ const ExpenseReport: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold flex items-center gap-3">
-              <FileSpreadsheet className="w-6 h-6 text-amber-500" />
+              <FileSpreadsheet className="w-6 h-6 text-blue-500" />
               Expense Report
             </h2>
             <p className="text-sm text-slate-500 mt-1">Generate and export expense reports</p>
@@ -121,7 +121,7 @@ const ExpenseReport: React.FC = () => {
           <button
             onClick={handleExportCSV}
             disabled={!fetched || expenses.length === 0}
-            className="flex items-center gap-2 px-6 py-3 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
             Export CSV
@@ -165,7 +165,7 @@ const ExpenseReport: React.FC = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
             >
               <option value="ALL">All Categories</option>
               {EXPENSE_CATEGORIES.map(cat => (
@@ -177,7 +177,7 @@ const ExpenseReport: React.FC = () => {
             <button
               onClick={fetchReport}
               disabled={loading}
-              className="w-full px-6 py-3 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition-all disabled:opacity-50"
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
             >
               {loading ? 'Loading...' : 'Generate Report'}
             </button>
@@ -263,7 +263,7 @@ const ExpenseReport: React.FC = () => {
                     <tr key={expense.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 text-sm font-medium text-slate-900">{formatDate(expense.date)}</td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-amber-50 text-amber-700">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-blue-50 text-blue-700">
                           {expense.category}
                         </span>
                       </td>

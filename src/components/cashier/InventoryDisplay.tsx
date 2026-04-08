@@ -27,10 +27,10 @@ interface InventoryDisplayProps {
 
 /**
  * InventoryDisplay Component
- * 
+ *
  * Displays inventory items fetched from the API with proper loading and error states.
  * Supports filtering for low stock and out of stock items.
- * 
+ *
  * Features:
  * - Automatic data fetching on mount
  * - Loading skeleton state
@@ -55,13 +55,22 @@ const InventoryDisplay: React.FC<InventoryDisplayProps> = ({
       // Use appropriate API endpoint based on filters
       const fetchFn = showLowStockOnly ? fetchLowStockInventory : fetchFullInventory;
       const res = await fetchFn();
-      
-      if (res.data?.success) {
-        const items = Array.isArray(res.data.data) ? res.data.data : res.data.data?.items || [];
-        setInventory(items);
-      } else {
-        setError('Failed to load inventory');
+      console.log('📦 InventoryDisplay - Raw response:', res);
+
+      // fetchFullInventory/fetchLowStockInventory returns res.data which is { success, data: [...], message }
+      let items: InventoryItem[] = [];
+      if (res?.success && Array.isArray(res.data)) {
+        items = res.data;
+      } else if (res?.data?.data && Array.isArray(res.data.data)) {
+        items = res.data.data;
+      } else if (res?.data && Array.isArray(res.data)) {
+        items = res.data;
+      } else if (Array.isArray(res)) {
+        items = res;
       }
+
+      console.log('📦 InventoryDisplay - Parsed', items.length, 'items');
+      setInventory(items);
     } catch (err: any) {
       console.error('[InventoryDisplay] Error:', err);
       setError(err.response?.data?.message || 'Error loading inventory');

@@ -47,7 +47,7 @@ const ProfitLossReport: React.FC = () => {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
             <div className="text-sm font-bold text-slate-500">Loading P&L statement...</div>
           </div>
         </div>
@@ -94,7 +94,7 @@ const ProfitLossReport: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
-              <PieChart className="w-6 h-6 text-amber-500" />
+              <PieChart className="w-6 h-6 text-blue-500" />
               Profit & Loss Statement
             </h2>
             <p className="text-sm text-slate-500 mt-1">Comprehensive financial performance report</p>
@@ -136,10 +136,10 @@ const ProfitLossReport: React.FC = () => {
 
         <div className="p-6 bg-white border border-slate-200 rounded-3xl">
           <div className="flex items-center justify-between mb-4">
-            <DollarSign size={24} className="text-amber-400" />
+            <DollarSign size={24} className="text-blue-400" />
             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Net Profit</span>
           </div>
-          <div className="text-3xl font-black text-amber-600">{formatCurrency(data.netProfit)}</div>
+          <div className="text-3xl font-black text-blue-600">{formatCurrency(data.netProfit)}</div>
           <div className="text-[10px] text-slate-500 font-black uppercase mt-2">{getPeriodLabel()}</div>
         </div>
 
@@ -267,14 +267,14 @@ const ProfitLossReport: React.FC = () => {
               <span className="text-sm font-bold text-slate-700">Operating Expenses</span>
               <span className="text-lg font-black text-red-600">-{formatCurrency(data.operatingExpenses)}</span>
             </div>
-            <div className="flex justify-between items-center bg-gradient-to-r from-amber-50 to-orange-50 px-6 py-4 rounded-2xl border-2 border-amber-200">
+            <div className="flex justify-between items-center bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 rounded-2xl border-2 border-blue-200">
               <div>
-                <span className="text-base font-black uppercase text-amber-900 tracking-widest">Net Profit</span>
-                <div className="text-[10px] font-bold text-amber-700 mt-1">
+                <span className="text-base font-black uppercase text-blue-900 tracking-widest">Net Profit</span>
+                <div className="text-[10px] font-bold text-blue-700 mt-1">
                   {data.netMargin.toFixed(1)}% net margin
                 </div>
               </div>
-              <span className="text-3xl font-black text-amber-600">{formatCurrency(data.netProfit)}</span>
+              <span className="text-3xl font-black text-blue-600">{formatCurrency(data.netProfit)}</span>
             </div>
           </div>
         </div>

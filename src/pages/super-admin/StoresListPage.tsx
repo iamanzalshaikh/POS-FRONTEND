@@ -8,7 +8,8 @@ import {
     Edit2,
     Trash2,
     Power,
-    MapPin
+    MapPin,
+    Shield
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -129,11 +130,11 @@ const StoresListPage: React.FC = () => {
                 <div className="flex justify-center">
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-12 w-12 p-0 hover:bg-slate-100 rounded-full transition-all active:scale-95 group">
-                                <MoreVertical className="h-6 w-6 text-black group-hover:scale-110 transition-transform" strokeWidth={3} />
+                            <Button variant="ghost" className="h-10 w-10 p-0 hover:bg-slate-100 rounded-full transition-all active:scale-90">
+                                <MoreVertical className="h-5 w-5 text-black" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-[180px] rounded-2xl border-slate-900 shadow-2xl p-2 bg-white ring-1 ring-black/5">
+                        <DropdownMenuContent align="end" className="w-[180px] rounded-2xl border-slate-900 shadow-2xl p-2 bg-white ring-1 ring-black/5">
                         <DropdownMenuItem 
                             onClick={() => navigate(`/super-admin/stores/${row.original.id}`)}
                             className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer"
@@ -165,8 +166,8 @@ const StoresListPage: React.FC = () => {
                 </DropdownMenu>
             </div>
         )
-        }
-    ], [toggleStoreStatus, navigate]);
+    }
+], [toggleStoreStatus, navigate]);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">

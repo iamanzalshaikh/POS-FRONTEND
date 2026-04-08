@@ -183,7 +183,7 @@ const MonthlyCloseReport: React.FC = () => {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
             <div className="text-sm font-bold text-slate-500">Loading monthly close report...</div>
           </div>
         </div>
@@ -219,7 +219,7 @@ const MonthlyCloseReport: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-              <FileText size={28} className="text-amber-400" />
+              <FileText size={28} className="text-blue-400" />
               Monthly Close Report
             </h2>
             <p className="text-sm font-bold text-slate-500 mt-2">
@@ -232,16 +232,16 @@ const MonthlyCloseReport: React.FC = () => {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
             />
           </div>
         </div>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-          <h3 className="text-lg font-black text-amber-900 mb-2">
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+          <h3 className="text-lg font-black text-blue-900 mb-2">
             {getMonthName(selectedMonth)}
           </h3>
-          <p className="text-xs font-bold text-amber-700 uppercase tracking-widest">
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">
             {data.period.startDate} to {data.period.endDate}
           </p>
         </div>
@@ -289,16 +289,16 @@ const MonthlyCloseReport: React.FC = () => {
         {/* Gross Profit */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-amber-50 rounded-xl">
-              <TrendingUp size={24} className="text-amber-400" />
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <TrendingUp size={24} className="text-blue-400" />
             </div>
             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Gross Profit</span>
           </div>
-          <div className="text-3xl font-black text-amber-600">
+          <div className="text-3xl font-black text-blue-600">
             {formatCurrency(data.profit.grossProfit)}
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-bold text-amber-600">
+            <span className="text-xs font-bold text-blue-600">
               {data.profit.grossMargin.toFixed(1)}% margin
             </span>
           </div>
@@ -394,7 +394,7 @@ const MonthlyCloseReport: React.FC = () => {
             </div>
             <div className="flex justify-between items-center py-3 border-b border-slate-100">
               <span className="text-sm font-bold text-slate-600">Low Stock Items</span>
-              <span className="text-sm font-black text-amber-600">{data.inventory.lowStockCount}</span>
+              <span className="text-sm font-black text-blue-600">{data.inventory.lowStockCount}</span>
             </div>
             <div className="flex justify-between items-center py-3 border-b border-slate-100">
               <span className="text-sm font-bold text-slate-600">Out of Stock Items</span>
@@ -408,7 +408,7 @@ const MonthlyCloseReport: React.FC = () => {
                   <span className="text-sm font-black">Excellent</span>
                 </span>
               ) : (
-                <span className="flex items-center gap-2 text-amber-600">
+                <span className="flex items-center gap-2 text-blue-600">
                   <AlertCircle size={16} />
                   <span className="text-sm font-black">Needs Attention</span>
                 </span>
@@ -421,7 +421,7 @@ const MonthlyCloseReport: React.FC = () => {
       {/* Profit Summary */}
       <div className="bg-white border border-slate-200 rounded-3xl p-8">
         <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
-          <TrendingUp size={20} className="text-amber-400" />
+          <TrendingUp size={20} className="text-blue-400" />
           Profit Summary
         </h3>
         <div className="space-y-4">
@@ -433,22 +433,22 @@ const MonthlyCloseReport: React.FC = () => {
             <span className="text-base font-bold text-slate-700">Total Expenses</span>
             <span className="text-xl font-black text-red-600">-{formatCurrency(data.expenses.total)}</span>
           </div>
-          <div className="flex justify-between items-center py-6 px-6 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border-2 border-amber-200 mt-4">
+          <div className="flex justify-between items-center py-6 px-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 mt-4">
             <div>
-              <span className="text-base font-black uppercase text-amber-900 tracking-widest">Net Profit</span>
-              <div className="text-[10px] font-bold text-amber-700 mt-1">
+              <span className="text-base font-black uppercase text-blue-900 tracking-widest">Net Profit</span>
+              <div className="text-[10px] font-bold text-blue-700 mt-1">
                 {data.profit.netMargin.toFixed(1)}% margin
               </div>
             </div>
-            <span className="text-3xl font-black text-amber-600">{formatCurrency(data.profit.netProfit)}</span>
+            <span className="text-3xl font-black text-blue-600">{formatCurrency(data.profit.netProfit)}</span>
           </div>
         </div>
       </div>
 
       {/* Action Items */}
       {(data.inventory.lowStockCount > 0 || data.inventory.outOfStockCount > 0) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6">
-          <h3 className="text-lg font-black text-amber-900 mb-4 flex items-center gap-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-3xl p-6">
+          <h3 className="text-lg font-black text-blue-900 mb-4 flex items-center gap-3">
             <AlertCircle size={20} />
             Action Required
           </h3>

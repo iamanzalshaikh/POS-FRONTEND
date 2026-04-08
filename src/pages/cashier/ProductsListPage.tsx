@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Package, Search, RefreshCcw, AlertCircle } from 'lucide-react';
 import { fetchProducts } from '../../api/products.api';
+import { formatCurrency } from '../../utils/expense-utils';
 
 /**
  * Product type matching the backend response from GET /products
@@ -39,14 +40,22 @@ const ProductsListPage: React.FC = () => {
     setError(null);
     try {
       const res = await fetchProducts();
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        setProducts(res.data.data);
-        // Log the raw API response for debugging
-        console.log('📦 Products API Response:', res.data.data);
-      } else {
-        setProducts([]);
-        console.log('📦 No products found in API response');
+      console.log('📦 ProductsListPage - Raw response:', res);
+
+      // fetchProducts returns { success, data: [...], message }
+      let productList: Product[] = [];
+      if (res?.success && Array.isArray(res.data)) {
+        productList = res.data;
+      } else if (res?.data?.data && Array.isArray(res.data.data)) {
+        productList = res.data.data;
+      } else if (res?.data && Array.isArray(res.data)) {
+        productList = res.data;
+      } else if (Array.isArray(res)) {
+        productList = res;
       }
+
+      console.log('📦 ProductsListPage - Parsed', productList.length, 'products');
+      setProducts(productList);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || err.message || 'Failed to load products';
       setError(errorMessage);

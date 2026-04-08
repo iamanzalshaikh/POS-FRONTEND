@@ -6,6 +6,7 @@ import { offlineStorage } from '../../services/offline-storage.service';
 import { offlineSync } from '../../services/offline-sync.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useAuthStore } from '../../store/useAuthStore';
+import { formatCurrency } from '../../utils/expense-utils';
 
 type ReceiptStatus = 'COMPLETED' | 'PENDING_SYNC';
 type SaleData = {
@@ -59,7 +60,7 @@ const ReceiptPage: React.FC = () => {
   const [status, setStatus] = React.useState<ReceiptStatus>(
     (location.state as LocationState)?.status || 'COMPLETED'
   );
-  const [shouldAutoPrint, setShouldAutoPrint] = React.useState(
+  const [shouldAutoPrint] = React.useState(
     (location.state as LocationState)?.autoPrint === true
   );
   const [autoPrintTriggered, setAutoPrintTriggered] = React.useState(false);
@@ -95,15 +96,20 @@ const ReceiptPage: React.FC = () => {
         try {
           console.log('📡 [ReceiptPage] Fetching from API (online-first):', saleId);
           const res = await getSaleById(saleId);
-          
-          if (res.data?.success && res.data.data) {
-            console.log('✅ [ReceiptPage] Loaded from API:', res.data.data);
-            setSale(res.data.data);
+          console.log('📦 [ReceiptPage] Raw API response:', res);
+
+          // getSaleById returns res.data which is { success, data: {sale}, message }
+          // or sometimes the sale object directly
+          const saleData = res?.data?.data || res?.data || res;
+
+          if (saleData?.id) {
+            console.log('✅ [ReceiptPage] Loaded from API:', saleData);
+            setSale(saleData);
             setStatus('COMPLETED');
             setIsLoading(false);
             return;
           } else {
-            console.warn('⚠️ [ReceiptPage] API returned no data:', res.data);
+            console.warn('⚠️ [ReceiptPage] API returned no data:', res);
           }
         } catch (error: any) {
           console.error('❌ [ReceiptPage] API fetch failed:', error.message);
@@ -115,7 +121,7 @@ const ReceiptPage: React.FC = () => {
 
       // OFFLINE FALLBACK: Try local storage sources
       console.log('🔍 [ReceiptPage] Trying fallback sources...');
-      
+
       // Priority 1: location.state
       if (location.state?.sale) {
         console.log('📦 [ReceiptPage] Using location.state fallback');
@@ -145,7 +151,7 @@ const ReceiptPage: React.FC = () => {
       try {
         console.log('📦 [ReceiptPage] Checking IndexedDB:', saleId);
         const offlineSale = await offlineStorage.getSale(saleId);
-        
+
         if (offlineSale) {
           console.log('✅ [ReceiptPage] Loaded from IndexedDB');
           setSale(offlineSale);
@@ -164,7 +170,7 @@ const ReceiptPage: React.FC = () => {
       } else if (!isOfflineSale) {
         setLoadError('Sale not found');
       }
-      
+
       setIsLoading(false);
     };
 
@@ -174,13 +180,13 @@ const ReceiptPage: React.FC = () => {
   // Background sync for offline sales - runs after receipt loads
   React.useEffect(() => {
     // Only sync if: online, has sale, is offline sale (OFF-*), status is PENDING_SYNC
-    const shouldSyncInBackground = 
-      isOnline && 
-      sale && 
-      saleId?.startsWith('OFF-') && 
+    const shouldSyncInBackground =
+      isOnline &&
+      sale &&
+      saleId?.startsWith('OFF-') &&
       status === 'PENDING_SYNC';
 
-    if (!shouldSyncInBackground) return;
+    if (!shouldSyncInBackground || !saleId) return;
 
     const syncInBackground = async () => {
       console.log('🔄 [ReceiptPage] Background sync starting for:', saleId);
@@ -210,26 +216,38 @@ const ReceiptPage: React.FC = () => {
     // 4. Not already triggered
     if (!shouldAutoPrint || !sale || isDataReady || hasPrinted || autoPrintTriggered) return;
 
-    // Check what data we have
-    const hasItems = !!(sale.saleItems && Array.isArray(sale.saleItems) && sale.saleItems.length > 0);
+    // Check what data we have - be more lenient
+    const hasItems = sale.saleItems && Array.isArray(sale.saleItems) && sale.saleItems.length > 0;
     const hasSubtotal = sale.subtotal !== undefined && sale.subtotal !== null;
     const hasTotal = sale.totalAmount !== undefined && sale.totalAmount !== null;
-    const hasInvoiceNumber = !!(sale.invoiceNumber || sale.id || sale.tempId);
+    const hasInvoiceNumber = sale.invoiceNumber || sale.id || sale.tempId;
+
+    console.log('🖨️ [ReceiptPage] Auto-print check:', {
+      shouldAutoPrint,
+      hasSale: !!sale,
+      hasItems,
+      hasSubtotal,
+      hasTotal,
+      hasInvoiceNumber,
+      isDataReady,
+      hasPrinted,
+      autoPrintTriggered,
+    });
 
     const allDataReady = hasItems && hasSubtotal && hasTotal && hasInvoiceNumber;
 
     if (allDataReady) {
       console.log('✅ [ReceiptPage] Receipt data ready + autoPrint flag = true, triggering print...');
       setIsDataReady(true);
-      
-      // Minimal delay (300ms) to ensure DOM is rendered
+
+      // Minimal delay (500ms) to ensure DOM is fully rendered
       const printTimer = setTimeout(() => {
         console.log('🖨️ [ReceiptPage] Auto-printing receipt...');
         window.print();
         setHasPrinted(true);
         setAutoPrintTriggered(true);
-      }, 300);
-      
+      }, 500);
+
       return () => clearTimeout(printTimer);
     }
   }, [shouldAutoPrint, sale, isDataReady, hasPrinted, autoPrintTriggered]);
@@ -237,12 +255,12 @@ const ReceiptPage: React.FC = () => {
   // Auto-navigate back to POS terminal after printing
   React.useEffect(() => {
     if (!hasPrinted) return;
-    
+
     console.log('🔙 [ReceiptPage] Print completed, navigating back to POS...');
     const navigateTimer = setTimeout(() => {
       navigate('/cashier/terminal', { replace: true });
-    }, 1000);
-    
+    }, 1500);
+
     return () => clearTimeout(navigateTimer);
   }, [hasPrinted, navigate]);
 
@@ -282,7 +300,6 @@ const ReceiptPage: React.FC = () => {
 
   // Backend returns saleItems with product info
   const items = sale?.saleItems || sale?.items || [];
-  const totals = sale?.totals || {};
 
   // Show loading state while data is being fetched
   if (isLoading) {
@@ -387,7 +404,6 @@ const ReceiptPage: React.FC = () => {
                   const success = await offlineSync.syncSingleSale(saleId!);
                   if (success) {
                     setStatus('COMPLETED');
-                    setOfflineSale(null);
                   }
                 } catch (error) {
                   console.error('Manual sync failed:', error);
@@ -424,33 +440,8 @@ const ReceiptPage: React.FC = () => {
         <section className="md:col-span-2 border-r border-slate-200 p-6 print:p-4 print:col-span-3 print:border-0 receipt-content">
           {/* Store Info Header - For Print */}
           <div className="mb-6 pb-4 border-b-2 border-slate-300 print:block">
-            {sale?.store ? (
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Building2 size={20} className="text-slate-700" />
-                  <h2 className="text-xl font-bold text-slate-900">{sale.store.name}</h2>
-                </div>
-                {sale.store.address && (
-                  <div className="flex items-start space-x-2 mb-1">
-                    <MapPin size={16} className="text-slate-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{sale.store.address}</p>
-                  </div>
-                )}
-                {sale.store.phone && (
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Phone size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">Phone: {sale.store.phone}</p>
-                  </div>
-                )}
-                {sale.store.email && (
-                  <div className="flex items-center space-x-2 mb-1">
-                    <Mail size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">Email: {sale.store.email}</p>
-                  </div>
-                )}
-              </div>
-            ) : user?.store ? (
-              // Fallback to user's store info (for offline sales)
+            {user?.store ? (
+              // Use auth store info as primary source
               <div>
                 <div className="flex items-center space-x-2 mb-2">
                   <Building2 size={20} className="text-slate-700" />
@@ -472,6 +463,32 @@ const ReceiptPage: React.FC = () => {
                   <div className="flex items-center space-x-2 mb-1">
                     <Mail size={16} className="text-slate-500 flex-shrink-0" />
                     <p className="text-sm text-slate-700">Email: {user.store.email}</p>
+                  </div>
+                )}
+              </div>
+            ) : sale?.store ? (
+              // Fallback to sale's store info
+              <div>
+                <div className="flex items-center space-x-2 mb-2">
+                  <Building2 size={20} className="text-slate-700" />
+                  <h2 className="text-xl font-bold text-slate-900">{sale.store.name}</h2>
+                </div>
+                {sale.store.address && (
+                  <div className="flex items-start space-x-2 mb-1">
+                    <MapPin size={16} className="text-slate-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-slate-700">{sale.store.address}</p>
+                  </div>
+                )}
+                {sale.store.phone && (
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Phone size={16} className="text-slate-500 flex-shrink-0" />
+                    <p className="text-sm text-slate-700">Phone: {sale.store.phone}</p>
+                  </div>
+                )}
+                {sale.store.email && (
+                  <div className="flex items-center space-x-2 mb-1">
+                    <Mail size={16} className="text-slate-500 flex-shrink-0" />
+                    <p className="text-sm text-slate-700">Email: {sale.store.email}</p>
                   </div>
                 )}
               </div>

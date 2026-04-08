@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Tooltip, ResponsiveContainer } from "recharts"
+import { Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { cn } from "../../lib/utils"
 
 export interface ChartConfig {
@@ -103,6 +103,31 @@ export function ChartTooltipContent({
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// Re-export Legend as ChartLegend
+export const ChartLegend = Legend
+
+export function ChartLegendContent({
+  payload,
+  className,
+  iconType = "circle",
+}: any) {
+  if (!payload || !payload.length) return null
+
+  return (
+    <div className={cn("flex items-center justify-center gap-4 mt-4", className)}>
+      {payload.map((item: any, index: number) => (
+        <div key={index} className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+          <div
+            className={iconType === "circle" ? "h-2.5 w-2.5 rounded-full" : "h-2.5 w-2.5"}
+            style={{ backgroundColor: item.color }}
+          />
+          <span>{item.value}</span>
+        </div>
+      ))}
     </div>
   )
 }

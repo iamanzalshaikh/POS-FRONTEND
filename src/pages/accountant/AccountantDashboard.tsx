@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { BarChart3, PieChart, FileText, Download, Calculator, FileSpreadsheet, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { BarChart3, PieChart, FileText, Download, Calculator, FileSpreadsheet, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Users, Wallet } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import SidebarLink from '../../components/ui/SidebarLink';
 import { getSalesReport } from '../../api/finance.api';
@@ -14,6 +14,8 @@ import ProfitLossReport from './ProfitLossReport';
 import ExportData from './ExportData';
 import MonthlyCloseReport from './MonthlyCloseReport';
 import AllTransactions from './AllTransactions';
+import StaffManagementPage from './StaffManagementPage';
+import PayrollManagementPage from './PayrollManagementPage';
 
 const AccountantDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -95,6 +97,8 @@ const AccountantDashboard: React.FC = () => {
         <SidebarLink to="/accountant" icon={<BarChart3 size={20} />} label="Summary" variant="navy" />
         <SidebarLink to="/accountant/expenses" icon={<Calculator size={20} />} label="Expenses" variant="navy" />
         <SidebarLink to="/accountant/expense-report" icon={<FileSpreadsheet size={20} />} label="Expense Report" variant="navy" />
+        <SidebarLink to="/accountant/staff" icon={<Users size={20} />} label="Staff" variant="navy" />
+        <SidebarLink to="/accountant/payroll" icon={<Wallet size={20} />} label="Payroll" variant="navy" />
         <SidebarLink to="/accountant/tax" icon={<FileText size={20} />} label="Tax" variant="navy" />
         <SidebarLink to="/accountant/pl" icon={<PieChart size={20} />} label="P&L" variant="navy" />
         <SidebarLink to="/accountant/monthly-close" icon={<FileText size={20} />} label="Monthly Close" variant="navy" />
@@ -108,7 +112,7 @@ const AccountantDashboard: React.FC = () => {
       <div className="absolute top-0 right-0 w-20 h-20 bg-slate-50/50 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform"></div>
       <div className="flex items-center justify-between relative z-10">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-indigo-50 text-[#1E1B4B]">
+          <div className="p-2 rounded-xl bg-blue-50 text-[#1E1B4B]">
             <Icon size={18} strokeWidth={2} />
           </div>
           <div>
@@ -188,6 +192,8 @@ const AccountantDashboard: React.FC = () => {
         } />
         <Route path="/expenses" element={<ExpensesPage />} />
         <Route path="/expense-report" element={<ExpenseReport />} />
+        <Route path="/staff" element={<StaffManagementPage />} />
+        <Route path="/payroll" element={<PayrollManagementPage />} />
         <Route path="/transactions" element={<AllTransactions />} />
         <Route path="/tax" element={<TaxManagement />} />
         <Route path="/pl" element={<ProfitLossReport />} />

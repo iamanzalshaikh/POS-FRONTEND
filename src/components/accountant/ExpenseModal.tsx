@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES } from '../../utils/expense-utils';
+import { getExpenseCategories, type ExpenseCategory } from '../../api/expenses.api';
 
 interface ExpenseModalProps {
   isOpen: boolean;
@@ -33,8 +34,26 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customCategories, setCustomCategories] = useState<ExpenseCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    if (isOpen) {
+      setCategoriesLoading(true);
+      getExpenseCategories()
+        .then((res) => {
+          // Only keep custom categories (not defaults, not "Other")
+          const custom = res.data.filter(
+            (c) => !c.isDefault && c.name.toLowerCase() !== 'other'
+          );
+          setCustomCategories(custom);
+        })
+        .catch(() => {})
+        .finally(() => setCategoriesLoading(false));
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (editingExpense) {
       setFormData({
         category: editingExpense.category,
@@ -116,12 +135,18 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 required
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all cursor-pointer"
+                disabled={categoriesLoading}
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <option value="">Select category</option>
                 {EXPENSE_CATEGORIES.map((cat) => (
                   <option key={cat.value} value={cat.value}>
                     {cat.label}
+                  </option>
+                ))}
+                {customCategories.map((cat) => (
+                  <option key={cat.id} value={cat.name}>
+                    {cat.name}
                   </option>
                 ))}
               </select>
@@ -138,7 +163,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 required
                 placeholder="e.g., Office supplies purchase"
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
               />
             </div>
 
@@ -156,7 +181,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                   min="0"
                   step="0.01"
                   placeholder="0.00"
-                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                 />
               </div>
               <div>
@@ -168,7 +193,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                   required
-                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
                 />
               </div>
             </div>
@@ -183,7 +208,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
                 placeholder="Additional details..."
-                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none transition-all resize-none"
+                className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all resize-none"
               />
             </div>
           </div>
@@ -201,7 +226,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-amber-500/20"
+              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
             >
               {loading ? 'Saving...' : editingExpense ? 'Update' : 'Create'}
             </button>

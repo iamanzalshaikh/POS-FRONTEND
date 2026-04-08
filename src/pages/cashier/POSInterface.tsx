@@ -23,10 +23,10 @@ import { fetchProducts, getProductByBarcode, searchProducts } from '../../api/pr
 import { createSale } from '../../api/sales.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
+import { formatCurrency } from '../../utils/expense-utils';
 import { offlineStorage } from '../../services/offline-storage.service';
 import type { OfflineSale } from '../../services/offline-storage.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { formatPKR } from '@/utils/format';
 
 type CartItem = {
   id: string;
@@ -103,14 +103,17 @@ const POSInterface: React.FC = () => {
         // Extract products from response
         let products: Product[] = [];
         
-        if (res.data?.data && Array.isArray(res.data.data)) {
-          products = res.data.data;
-        } else if (Array.isArray(res.data)) {
+        if (res?.success && Array.isArray(res.data)) {
           products = res.data;
-        } else {
-          console.warn('⚠️ [POS] Unexpected response format:', res.data);
-          products = [];
+        } else if (res?.data?.data && Array.isArray(res.data.data)) {
+          products = res.data.data;
+        } else if (res?.data && Array.isArray(res.data)) {
+          products = res.data;
+        } else if (Array.isArray(res)) {
+          products = res;
         }
+
+        console.log('📦 [POS] Parsed', products.length, 'products');
         
         // Filter active products
         const activeProducts = products.filter((p: any) => p.isActive !== false);
@@ -375,7 +378,7 @@ const POSInterface: React.FC = () => {
     
     payload.items.forEach((item: any, idx: number) => {
       if (!item.productId) validationErrors.push(`items[${idx}].productId is missing`);
-      if (!item.price || item.price < 0) validationErrors.push(`items[${idx}].price must be >= 0`);
+      if (item.price === undefined || item.price === null || item.price < 0) validationErrors.push(`items[${idx}].price must be >= 0`);
       if (!item.quantity || item.quantity <= 0) validationErrors.push(`items[${idx}].quantity must be > 0`);
     });
 
@@ -401,10 +404,15 @@ const POSInterface: React.FC = () => {
       if (isOnline) {
         console.log('📡 [POSInterface] Sending POST /sales request (online mode)...');
         const res = await createSale(payload, idempotencyKey);
-        console.log('✅ [POSInterface] Sale created successfully:', res.data);
+        console.log('✅ [POSInterface] Sale created response:', JSON.stringify(res, null, 2));
 
-        if (res.data?.success && res.data.data) {
-          const sale = res.data.data;
+        // createSale returns res.data which is { success, data: {sale}, message }
+        // The actual sale object is in res.data
+        const saleData = res?.data || res;
+
+        if (saleData) {
+          const sale = saleData;
+          console.log('✅ [POSInterface] Sale created successfully:', sale);
           // Clear cart before navigating
           setCart([]);
           setDiscountValue(0);
@@ -415,8 +423,8 @@ const POSInterface: React.FC = () => {
             state: { sale, status: 'COMPLETED', autoPrint: true },
           });
         } else {
-          console.error('❌ [POSInterface] Sale response missing data:', res.data);
-          setError(res.data?.message || 'Unable to complete sale');
+          console.error('❌ [POSInterface] Sale response missing data:', res);
+          setError(res?.message || 'Unable to complete sale');
         }
       } else {
         // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
@@ -573,7 +581,7 @@ const POSInterface: React.FC = () => {
                       {order.timestamp.toLocaleTimeString()}
                     </span>
                     <span className="text-lg font-bold text-amber-900">
-                      {formatPKR(order.total)}
+                      {formatCurrency(order.total)}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -815,7 +823,7 @@ const POSInterface: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className="font-bold text-emerald-600 text-[12px]">
-                              {formatPKR(price)}
+                              {formatCurrency(price)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -844,21 +852,6 @@ const POSInterface: React.FC = () => {
                               >
                                 <Plus size={12} />
                                 <span>Add</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('⏸️ Hold clicked:', product.name);
-                                  handleAddProductToCart(product);
-                                  setTimeout(() => handleHoldOrder(), 0);
-                                }}
-                                disabled={isOutOfStock}
-                                className="inline-flex items-center space-x-1 rounded-lg border-2 border-amber-500 bg-amber-50 text-amber-700 px-2 py-1 text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
-                              >
-                                <Clock size={12} />
-                                <span>Hold</span>
                               </button>
                             </div>
                           </td>
@@ -903,7 +896,7 @@ const POSInterface: React.FC = () => {
                       <div className="mb-2">
                         <span className="text-[10px] text-slate-600">Price:</span>
                         <div className="text-xs font-bold text-emerald-600">
-                          {formatPKR(item.price)}
+                          {formatCurrency(item.price)}
                         </div>
                       </div>
 
@@ -932,7 +925,7 @@ const POSInterface: React.FC = () => {
                       <div className="mb-2 text-center">
                         <span className="text-[9px] text-slate-600">Subtotal:</span>
                         <div className="text-xs font-bold text-emerald-700">
-                          {formatPKR(item.price * item.quantity)}
+                          {formatCurrency(item.price * item.quantity)}
                         </div>
                       </div>
 
@@ -1000,10 +993,10 @@ const POSInterface: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-semibold text-slate-700">
-                          {formatPKR(item.price)}
+                          {formatCurrency(item.price)}
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-bold text-slate-900">
-                          {formatPKR(item.price * item.quantity)}
+                          {formatCurrency(item.price * item.quantity)}
                         </td>
                         <td className="px-2 py-2 text-center">
                           <button
@@ -1033,19 +1026,19 @@ const POSInterface: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-semibold text-slate-800">
-                  {formatPKR(subtotal)}
+                  {formatCurrency(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Tax (GST)</span>
                 <span className="font-semibold text-slate-800">
-                  {formatPKR(tax)}
+                  {formatCurrency(tax)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Discount</span>
                 <span className="font-semibold text-emerald-600">
-                  -{formatPKR(discountAmount)}
+                  -{formatCurrency(discountAmount)}
                 </span>
               </div>
               <hr className="my-2 border-dashed border-slate-200" />
@@ -1055,7 +1048,7 @@ const POSInterface: React.FC = () => {
                   <span>Total</span>
                 </span>
                 <span className="text-emerald-500 text-xl font-bold">
-                  {formatPKR(total)}
+                  {formatCurrency(total)}
                 </span>
               </div>
             </div>
@@ -1105,8 +1098,8 @@ const POSInterface: React.FC = () => {
                 <div className="text-[11px] text-emerald-700 font-medium">
                   Applied discount:{' '}
                   {discountMode === 'amount'
-                    ? formatPKR(discountAmount)
-                    : `${discountValue}% (${formatPKR(discountAmount)})`}
+                    ? formatCurrency(discountAmount)
+                    : `${discountValue}% (${formatCurrency(discountAmount)})`}
                 </div>
               )}
             </div>
@@ -1156,15 +1149,14 @@ const POSInterface: React.FC = () => {
             {/* Received Amount & Change Calculation */}
             {paymentMethod === 'CASH' && cart.length > 0 && (
               <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50/50">
-                <div className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center space-x-2">
-                  <IndianRupee size={14} />
+                <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">
                   <span>Payment Details</span>
                 </div>
-                
+
                 {/* Received Amount Input */}
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 mb-1 block">
-                    Amount Received (₨)
+                    Amount Received
                   </label>
                   <input
                     type="number"
@@ -1193,7 +1185,7 @@ const POSInterface: React.FC = () => {
                         Bill Total
                       </span>
                       <span className="text-sm font-bold text-slate-700">
-                        {formatPKR(total)}
+                        {formatCurrency(total)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
@@ -1201,7 +1193,7 @@ const POSInterface: React.FC = () => {
                         Received
                       </span>
                       <span className="text-sm font-bold text-slate-700">
-                        {formatPKR(receivedAmountNum)}
+                        {formatCurrency(receivedAmountNum)}
                       </span>
                     </div>
                     <hr className={`my-2 border-dashed ${
@@ -1227,12 +1219,12 @@ const POSInterface: React.FC = () => {
                           : 'text-slate-400'
                       }`}>
                         {hasInsufficientAmount
-                          ? formatPKR(Math.abs(changeAmount))
+                          ? formatCurrency(Math.abs(changeAmount))
                           : hasExactAmount
                           ? 'No Change'
                           : hasChange
-                          ? formatPKR(changeAmount)
-                          : formatPKR(0)
+                          ? formatCurrency(changeAmount)
+                          : formatCurrency(0)
                         }
                       </span>
                     </div>
@@ -1408,7 +1400,9 @@ const POSInterface: React.FC = () => {
                             {p.sku || p.barcode || '-'}
                           </td>
                           <td className="px-3 py-2 text-right font-semibold text-slate-800">
-                            {formatPKR((p as any).sellingPrice ?? (p as any).price ?? 0)}
+                            {formatCurrency(Number(
+                              (p as any).sellingPrice ?? (p as any).price ?? 0
+                            ))}
                           </td>
                           <td className="px-3 py-2 text-right">
                             <button

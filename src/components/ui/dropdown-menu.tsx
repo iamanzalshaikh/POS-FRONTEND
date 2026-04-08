@@ -24,4 +24,21 @@ export const DropdownMenuCheckboxItem: React.FC<{
   </label>
 )
 
+export const DropdownMenuItem: React.FC<{
+  children?: React.ReactNode
+  className?: string
+  onClick?: () => void
+  disabled?: boolean
+}> = ({ children, className, onClick, disabled }) => (
+  <div
+    className={className}
+    onClick={onClick}
+    role="menuitem"
+    tabIndex={disabled ? undefined : 0}
+    style={{ padding: '8px 12px', borderRadius: '8px', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1 }}
+  >
+    {children}
+  </div>
+)
+
 export default DropdownMenu

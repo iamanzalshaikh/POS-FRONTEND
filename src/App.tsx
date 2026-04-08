@@ -41,7 +41,7 @@ const SuperAdminSettings = lazy(() => import('@/pages/super-admin/SuperAdminSett
 const StoreDetailsPage = lazy(() => import('@/pages/super-admin/StoreDetailsPage'));
 
 const App: React.FC = () => {
-  const { hydrate, isLoading } = useAuthStore();
+  const { hydrate, isLoading, isAuthenticated, user } = useAuthStore();
 
   useEffect(() => {
     hydrate();
@@ -51,12 +51,27 @@ const App: React.FC = () => {
     return <PageLoader />;
   }
 
+  // Redirect authenticated users away from login
+  const getDashboardRoute = (role?: string) => {
+    switch (role) {
+      case 'SUPER_ADMIN': return '/super-admin/dashboard';
+      case 'STORE_ADMIN': return '/store-admin/dashboard';
+      case 'CASHIER': return '/cashier';
+      case 'ACCOUNTANT': return '/accountant';
+      default: return '/';
+    }
+  };
+
   return (
     <Router>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public Routes */}
-          <Route path="/login" element={<LoginPage />} />
+          <Route path="/login" element={
+            isAuthenticated && user
+              ? <Navigate to={getDashboardRoute(user.role)} replace />
+              : <LoginPage />
+          } />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
           {/* Role-Specific Protected Routes */}
