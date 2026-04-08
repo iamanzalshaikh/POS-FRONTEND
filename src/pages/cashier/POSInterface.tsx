@@ -16,15 +16,17 @@ import {
   WifiOff,
   AlertCircle,
   Search,
-  Package,
   CheckCircle,
+  IndianRupee,
 } from 'lucide-react';
 import { fetchProducts, getProductByBarcode, searchProducts } from '../../api/products.api';
 import { createSale } from '../../api/sales.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { offlineStorage } from '../../services/offline-storage.service';
+import type { OfflineSale } from '../../services/offline-storage.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { formatPKR } from '@/utils/format';
 
 type CartItem = {
   id: string;
@@ -571,7 +573,7 @@ const POSInterface: React.FC = () => {
                       {order.timestamp.toLocaleTimeString()}
                     </span>
                     <span className="text-lg font-bold text-amber-900">
-                      ₹{order.total.toFixed(2)}
+                      {formatPKR(order.total)}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -813,7 +815,7 @@ const POSInterface: React.FC = () => {
                           </td>
                           <td className="px-4 py-3 text-right">
                             <span className="font-bold text-emerald-600 text-[12px]">
-                              {formatCurrency(price)}
+                              {formatPKR(price)}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -901,7 +903,7 @@ const POSInterface: React.FC = () => {
                       <div className="mb-2">
                         <span className="text-[10px] text-slate-600">Price:</span>
                         <div className="text-xs font-bold text-emerald-600">
-                          {formatCurrency(item.price)}
+                          {formatPKR(item.price)}
                         </div>
                       </div>
 
@@ -930,7 +932,7 @@ const POSInterface: React.FC = () => {
                       <div className="mb-2 text-center">
                         <span className="text-[9px] text-slate-600">Subtotal:</span>
                         <div className="text-xs font-bold text-emerald-700">
-                          {formatCurrency(item.price * item.quantity)}
+                          {formatPKR(item.price * item.quantity)}
                         </div>
                       </div>
 
@@ -998,10 +1000,10 @@ const POSInterface: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-semibold text-slate-700">
-                          {formatCurrency(item.price)}
+                          {formatPKR(item.price)}
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-bold text-slate-900">
-                          {formatCurrency(item.price * item.quantity)}
+                          {formatPKR(item.price * item.quantity)}
                         </td>
                         <td className="px-2 py-2 text-center">
                           <button
@@ -1031,19 +1033,19 @@ const POSInterface: React.FC = () => {
               <div className="flex justify-between">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-semibold text-slate-800">
-                  {formatCurrency(subtotal)}
+                  {formatPKR(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Tax (GST)</span>
                 <span className="font-semibold text-slate-800">
-                  {formatCurrency(tax)}
+                  {formatPKR(tax)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Discount</span>
                 <span className="font-semibold text-emerald-600">
-                  -{formatCurrency(discountAmount)}
+                  -{formatPKR(discountAmount)}
                 </span>
               </div>
               <hr className="my-2 border-dashed border-slate-200" />
@@ -1053,7 +1055,7 @@ const POSInterface: React.FC = () => {
                   <span>Total</span>
                 </span>
                 <span className="text-emerald-500 text-xl font-bold">
-                  {formatCurrency(total)}
+                  {formatPKR(total)}
                 </span>
               </div>
             </div>
@@ -1103,8 +1105,8 @@ const POSInterface: React.FC = () => {
                 <div className="text-[11px] text-emerald-700 font-medium">
                   Applied discount:{' '}
                   {discountMode === 'amount'
-                    ? formatCurrency(discountAmount)
-                    : `${discountValue}% (${formatCurrency(discountAmount)})`}
+                    ? formatPKR(discountAmount)
+                    : `${discountValue}% (${formatPKR(discountAmount)})`}
                 </div>
               )}
             </div>
@@ -1162,7 +1164,7 @@ const POSInterface: React.FC = () => {
                 {/* Received Amount Input */}
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 mb-1 block">
-                    Amount Received (₹)
+                    Amount Received (₨)
                   </label>
                   <input
                     type="number"
@@ -1191,7 +1193,7 @@ const POSInterface: React.FC = () => {
                         Bill Total
                       </span>
                       <span className="text-sm font-bold text-slate-700">
-                        ₹{total.toFixed(2)}
+                        {formatPKR(total)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
@@ -1199,7 +1201,7 @@ const POSInterface: React.FC = () => {
                         Received
                       </span>
                       <span className="text-sm font-bold text-slate-700">
-                        ₹{receivedAmountNum.toFixed(2)}
+                        {formatPKR(receivedAmountNum)}
                       </span>
                     </div>
                     <hr className={`my-2 border-dashed ${
@@ -1225,12 +1227,12 @@ const POSInterface: React.FC = () => {
                           : 'text-slate-400'
                       }`}>
                         {hasInsufficientAmount
-                          ? `₹${Math.abs(changeAmount).toFixed(2)}`
+                          ? formatPKR(Math.abs(changeAmount))
                           : hasExactAmount
                           ? 'No Change'
                           : hasChange
-                          ? `₹${changeAmount.toFixed(2)}`
-                          : '₹0.00'
+                          ? formatPKR(changeAmount)
+                          : formatPKR(0)
                         }
                       </span>
                     </div>
@@ -1406,9 +1408,7 @@ const POSInterface: React.FC = () => {
                             {p.sku || p.barcode || '-'}
                           </td>
                           <td className="px-3 py-2 text-right font-semibold text-slate-800">
-                            ₹{Number(
-                              (p as any).sellingPrice ?? (p as any).price ?? 0
-                            ).toFixed(2)}
+                            {formatPKR((p as any).sellingPrice ?? (p as any).price ?? 0)}
                           </td>
                           <td className="px-3 py-2 text-right">
                             <button

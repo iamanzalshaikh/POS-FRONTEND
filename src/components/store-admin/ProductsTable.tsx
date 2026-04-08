@@ -17,20 +17,21 @@ export default function ProductsTable({ data, onRefresh }: any) {
             <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead>
-                        <tr className="bg-slate-50/50 border-b border-slate-100">
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-12">ID</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Product Name</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">SKU/Code</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Barcode</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Category</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Buying</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Selling</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">In Stock</th>
-                            <th className="px-6 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-24 text-right">Actions</th>
+                        <tr className="bg-white dark:bg-slate-900 border-b-2 border-black">
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 w-12">ID</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400">Image</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400">Product Details</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400">SKU/Code</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400">Barcode</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400">Category</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400">Buying</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400">Selling</th>
+                            <th className="px-6 py-5 text-left text-[11px] font-black uppercase tracking-[3px] text-slate-400 text-center">In Stock</th>
+                            <th className="px-6 py-5 text-right text-[11px] font-black uppercase tracking-[3px] text-indigo-600 w-24">Actions</th>
                         </tr>
                     </thead>
 
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-100">
 
                         {data.length > 0 ? (
                             data.map((p: any, i: number) => (
@@ -42,7 +43,7 @@ export default function ProductsTable({ data, onRefresh }: any) {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={9} className="px-5 py-20 text-center text-slate-400 font-medium">
+                                <td colSpan={10} className="px-5 py-20 text-center text-slate-400 font-medium">
                                     No products found. Start by adding one!
                                 </td>
                             </tr>

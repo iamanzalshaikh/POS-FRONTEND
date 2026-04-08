@@ -17,8 +17,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />;
+  if (allowedRoles && user) {
+    const hasAccess = allowedRoles.includes(user.role);
+    if (!hasAccess) {
+      console.warn(`🔒 [RBAC] Access Denied for ${user.email}. Role: "${user.role}" | Allowed:`, allowedRoles);
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   return <Outlet />;

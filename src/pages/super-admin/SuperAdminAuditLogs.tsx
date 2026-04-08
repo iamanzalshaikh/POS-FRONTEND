@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { reportsApi } from '../../service/api';
 import { useStoreStore } from '../../store/useStoreStore';
 import { X } from 'lucide-react';
@@ -21,19 +20,34 @@ const SuperAdminAuditLogs: React.FC = () => {
         fetchStores();
     }, [fetchStores]);
 
-    // 2. Data Fetching
-    const { data: logsRes, isLoading, refetch, isRefetching } = useQuery({
-        queryKey: ['superadmin-audit-logs', page, entity, action, storeId, startDate, endDate],
-        queryFn: () => reportsApi.getAuditLogs({
-            page,
-            limit,
-            entity: entity || undefined,
-            action: action || undefined,
-            storeId: storeId || undefined,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined
-        }),
-    });
+    const [logsRes, setLogsRes] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefetching, setIsRefetching] = useState(false);
+
+    const fetchLogs = async () => {
+        setIsRefetching(true);
+        try {
+            const res = await reportsApi.getAuditLogs({
+                page,
+                limit,
+                entity: entity || undefined,
+                action: action || undefined,
+                storeId: storeId || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined
+            });
+            setLogsRes(res);
+        } catch (error) {
+            console.error("Failed to fetch audit logs:", error);
+        } finally {
+            setIsLoading(false);
+            setIsRefetching(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLogs();
+    }, [page, entity, action, storeId, startDate, endDate]);
 
     const logs = logsRes?.data?.data?.logs || logsRes?.data?.logs || [];
     const pagination = logsRes?.data?.data?.pagination || logsRes?.data?.pagination || { totalPages: 1 };
@@ -140,7 +154,5 @@ const SuperAdminAuditLogs: React.FC = () => {
         </div>
     );
 };
-
-export default SuperAdminAuditLogs;
 
 export default SuperAdminAuditLogs;

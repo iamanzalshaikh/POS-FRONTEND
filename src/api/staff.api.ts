@@ -6,7 +6,7 @@ export const fetchStaffMembers = () => {
 };
 
 export const fetchStaffMemberById = (id: string) => {
-    return axios.get(`/users/${id}`);
+    return api.get<StaffMember>(`/users/${id}`).then(res => res.data);
 };
 
 export const createStaffMember = (data: CreateStaffInput) => {

@@ -1,12 +1,8 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect, useMemo } from 'react';
 import { reportsApi } from '../../service/api';
 import {
     RefreshCcw,
-    Shield,
-    ChevronRight,
-    AlertTriangle,
-    TrendingUp
+    AlertTriangle
 } from 'lucide-react';
 import MonthlyActivityChart from '@/components/global-components/monthly-activity-chart';
 import ChartBarStacked from '@/components/global-components/ChartBarStacked';
@@ -33,21 +29,51 @@ const subscriptionConfig = {
 } satisfies ChartConfig;
 
 const SuperAdminDashboard: React.FC = () => {
-    const { data: overviewRes, isLoading: isOverviewLoading, isError: isOverviewError, refetch: refetchOverview, isRefetching: isOverviewRefetching } = useQuery({
-        queryKey: ['superadmin-overview'],
-        queryFn: () => reportsApi.getSuperAdminOverview(),
-    });
+    const [overviewRes, setOverviewRes] = useState<any>(null);
+    const [isOverviewLoading, setIsOverviewLoading] = useState(true);
+    const [isOverviewError, setIsOverviewError] = useState(false);
+    const [isOverviewRefetching, setIsOverviewRefetching] = useState(false);
 
-    const { data: healthRes } = useQuery({
-        queryKey: ['superadmin-health'],
-        queryFn: () => reportsApi.getHealth(),
-        refetchInterval: 60000, // Refresh every minute
-    });
+    const [storesRes, setStoresRes] = useState<any>(null);
+    const [isStoresLoading, setIsStoresLoading] = useState(true);
 
-    const { data: storesRes, isLoading: isStoresLoading } = useQuery({
-        queryKey: ['superadmin-all-stores'],
-        queryFn: () => storesApi.getAll(),
-    });
+    const refetchOverview = async () => {
+        setIsOverviewRefetching(true);
+        setIsOverviewError(false);
+        try {
+            const res = await reportsApi.getSuperAdminOverview();
+            setOverviewRes(res);
+        } catch (error) {
+            console.error("Failed to fetch overview:", error);
+            setIsOverviewError(true);
+        } finally {
+            setIsOverviewLoading(false);
+            setIsOverviewRefetching(false);
+        }
+    };
+
+    const loadStores = async () => {
+        setIsStoresLoading(true);
+        try {
+            const res = await storesApi.getAll();
+            setStoresRes(res);
+        } catch (error) {
+            console.error("Failed to fetch stores:", error);
+        } finally {
+            setIsStoresLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        refetchOverview();
+        loadStores();
+
+        const healthInterval = setInterval(() => {
+            reportsApi.getHealth().catch(() => {});
+        }, 60000);
+
+        return () => clearInterval(healthInterval);
+    }, []);
 
     const statsRaw = overviewRes?.data?.data || overviewRes?.data || {};
 
@@ -213,101 +239,64 @@ const SuperAdminDashboard: React.FC = () => {
                     isLoading={isStoresLoading}
                     title="Network Growth"
                     subtitle="New store nodes provisioned (Last 12mo)"
+                    height={300}
+                    className="h-full"
                 />
 
-                <div className="flex flex-col gap-6">
-                    <ChartBarStacked
-                        title="Subscription Distribution"
-                        subtitle="Active plans by tier (Last 6mo)"
-                        data={subscriptionData}
-                        config={subscriptionConfig}
-                        height={250}
-                    />
-
-                    {/* Subscription Distribution Table */}
-                    <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm dark:bg-slate-900 flex flex-col gap-5">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Revenue Breakdown</h3>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Current Billing Cycle Metrics</p>
-                            </div>
-                        </div>
-
-                        <div className="overflow-hidden border border-slate-100 dark:border-slate-800 rounded-2xl">
-                            <table className="w-full text-left">
-                                <thead>
-                                    <tr className="bg-slate-50 dark:bg-slate-800/50">
-                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan Tier</th>
-                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Price</th>
-                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Active</th>
-                                        <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">MRR</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                                    {subscriptionTableRows.map((row) => (
-                                        <tr key={row.name} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                            <td className="px-4 py-3 border-none flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: row.color }} />
-                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{row.name}</span>
-                                            </td>
-                                            <td className="px-4 py-3 border-none text-right font-medium text-slate-500 text-sm">{formatPKR(row.price)}</td>
-                                            <td className="px-4 py-3 border-none text-right font-bold text-slate-900 dark:text-slate-100 text-sm">{row.count}</td>
-                                            <td className="px-4 py-3 border-none text-right font-black text-indigo-600 dark:text-indigo-400 text-sm">{formatPKR(row.count * row.price)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                                <tfoot>
-                                    <tr className="bg-slate-50/50 dark:bg-slate-800/20">
-                                        <td colSpan={3} className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Projected Revenue</td>
-                                        <td className="px-4 py-3 text-right font-black text-slate-900 dark:text-white text-base">
-                                            {formatPKR(subscriptionTableRows.reduce((acc, row) => acc + (row.count * row.price), 0))}
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+                <ChartBarStacked
+                    title="Subscription Distribution"
+                    subtitle="Active plans by tier (Last 6mo)"
+                    data={subscriptionData}
+                    config={subscriptionConfig}
+                    height={300}
+                    className="h-full"
+                />
             </div>
 
-            {/* Platform Status & Expansion Protocol */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm flex flex-col gap-6 group hover:shadow-md transition-all">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                            <Shield size={24} />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Platform Master Control</h2>
-                            <p className="text-xs text-slate-400 font-medium font-bold uppercase tracking-widest mt-0.5">V4.0 Core Infrastructure</p>
-                        </div>
-                    </div>
-                    <p className="text-slate-500 font-normal leading-relaxed text-sm">
-                        Welcome to the central command unit. Monitor cross-region hardware health, provision new store nodes, and oversee the global staff registry from a single point of failure-protected interface.
-                    </p>
-                    <div className="flex gap-3 pt-2">
-                        <span className="px-4 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full text-[10px] font-bold uppercase tracking-widest">System Stable</span>
-                        <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-full text-[10px] font-bold uppercase tracking-widest">99.9% Uptime</span>
-                    </div>
-                </div>
-
-                <div className="bg-[#1e1b4b] p-8 rounded-[2rem] shadow-xl text-white flex flex-col justify-between group overflow-hidden relative min-h-[200px]">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/20 transition-all" />
+            {/* Subscription Distribution Table */}
+            <div className="bg-white p-8 rounded-[2rem] border border-slate-200/60 shadow-sm dark:bg-slate-900 flex flex-col gap-5">
+                <div className="flex items-center justify-between">
                     <div>
-                        <div className="flex items-center gap-2 text-indigo-300 mb-4">
-                            <TrendingUp size={16} />
-                            <span className="uppercase tracking-widest text-[10px] font-bold">Expansion Protocol</span>
-                        </div>
-                        <p className="text-2xl font-bold leading-tight">Expansion Protocol Active</p>
-                        <p className="text-indigo-300 font-medium text-xs mt-3 opacity-80 leading-relaxed">
-                            Predictive analytics suggest a 14% increase in retail hardware deployments across the region.
-                        </p>
-                    </div>
-                    <div className="pt-6 flex items-center gap-2 text-indigo-200 font-bold text-[10px] uppercase tracking-widest cursor-pointer hover:text-white transition-colors">
-                        View Deployment Roadmap <ChevronRight size={14} />
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Revenue Breakdown</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Current Billing Cycle Metrics</p>
                     </div>
                 </div>
+
+                <div className="overflow-hidden border border-slate-100 dark:border-slate-800 rounded-2xl">
+                    <table className="w-full text-left">
+                        <thead>
+                            <tr className="bg-slate-50 dark:bg-slate-800/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                <th className="px-6 py-4">Plan Tier</th>
+                                <th className="px-6 py-4 text-right">Price</th>
+                                <th className="px-6 py-4 text-right">Active</th>
+                                <th className="px-6 py-4 text-right">MRR</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                            {subscriptionTableRows.map((row) => (
+                                <tr key={row.name} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <td className="px-6 py-4 border-none flex items-center gap-3">
+                                        <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: row.color }} />
+                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{row.name}</span>
+                                    </td>
+                                    <td className="px-6 py-4 border-none text-right font-medium text-slate-500 text-sm">{formatPKR(row.price)}</td>
+                                    <td className="px-6 py-4 border-none text-right font-bold text-slate-900 dark:text-slate-100 text-sm">{row.count}</td>
+                                    <td className="px-6 py-4 border-none text-right font-black text-indigo-600 dark:text-indigo-400 text-sm">{formatPKR(row.count * row.price)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot>
+                            <tr className="bg-slate-50/50 dark:bg-slate-800/20">
+                                <td colSpan={3} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Projected Revenue</td>
+                                <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white text-base">
+                                    {formatPKR(subscriptionTableRows.reduce((acc, row) => acc + (row.count * row.price), 0))}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
             </div>
+
 
             {/* Recent Infrastructure Nodes Table */}
             <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm overflow-hidden transition-all hover:shadow-md">

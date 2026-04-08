@@ -1,12 +1,13 @@
 import React, { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 
 // UI Components
 import PageLoader from '@/components/ui/PageLoader';
 import HomeRedirect from '@/components/shared/HomeRedirect';
+import DashboardLayout from '@/components/layout/DashboardLayout';
 
-// Lazy loading pages 
+// Lazy loading pages
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const CreateStorePage = lazy(() => import('@/pages/super-admin/CreateStorePage'));
 
@@ -61,20 +62,23 @@ const App: React.FC = () => {
           {/* Role-Specific Protected Routes */}
 
           <Route element={<ProtectedRoute allowedRoles={['STORE_ADMIN', 'SUPER_ADMIN']} />}>
-            <Route path="/store-admin/dashboard" element={<StoreAdminDashboard />} />
-            <Route path="/store-admin/staff" element={<StaffManagementPage />} />
-            <Route path="/store-admin/staff/:id" element={<StaffDetailPage />} />
-            <Route path="/store-admin/inventory" element={<InventoryManagement />} />
-            <Route path="/store-admin/inventory/stocks" element={<StockLevelsPage />} />
-            <Route path="/store-admin/inventory/adjustments" element={<StockAdjustmentPage />} />
-            <Route path="/store-admin/inventory/products" element={<ProductsManagementPage />} />
-            <Route path="/store-admin/inventory/products/add" element={<AddProductPage />} />
-            <Route path="/store-admin/settings" element={<SettingsPage />} />
-            <Route path="/store-admin/devices" element={<DevicesManagementPage />} />
-            <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
-            <Route path="/store-admin/categories" element={<ProductCategories />} />
-            <Route path="/store-admin/reports" element={<ReportsPage />} />
-            <Route path="/store-admin" element={<Navigate to="/store-admin/dashboard" replace />} />
+            <Route element={<DashboardLayout children={<Outlet />} />}>
+              <Route path="/store-admin/dashboard" element={<StoreAdminDashboard />} />
+              <Route path="/store-admin/staff" element={<StaffManagementPage />} />
+              <Route path="/store-admin/staff/:id" element={<StaffDetailPage />} />
+              <Route path="/store-admin/inventory" element={<InventoryManagement />} />
+              <Route path="/store-admin/inventory/stocks" element={<StockLevelsPage />} />
+              <Route path="/store-admin/inventory/adjustments" element={<StockAdjustmentPage />} />
+              <Route path="/store-admin/inventory/products" element={<ProductsManagementPage />} />
+              <Route path="/store-admin/inventory/products/add" element={<AddProductPage />} />
+              <Route path="/store-admin/settings" element={<SettingsPage />} />
+              <Route path="/store-admin/devices" element={<DevicesManagementPage />} />
+              <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
+              <Route path="/store-admin/categories" element={<ProductCategories />} />
+              <Route path="/store-admin/reports" element={<ReportsPage />} />
+
+              <Route path="/store-admin" element={<Navigate to="/store-admin/dashboard" replace />} />
+            </Route>
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['CASHIER', 'STORE_ADMIN', 'SUPER_ADMIN']} />}>

@@ -66,13 +66,13 @@ export const useAuthStore = create<AuthState>()(
       
       hydrate: async () => {
         try {
-          // If already loading, don't restart to avoid flicker
           set({ isLoading: true });
           
           const currentState = get();
           const token = currentState.accessToken;
+          const authStorage = localStorage.getItem('auth-storage');
           
-          if (!token) {
+          if (!token || !authStorage) {
             console.log('[AUTH] No persisted token, user unauthenticated');
             set({ user: null, isAuthenticated: false, isLoading: false });
             return;
@@ -84,9 +84,8 @@ export const useAuthStore = create<AuthState>()(
             const response = await profileApi.getProfile();
             
             if (response.data?.success && response.data?.data) {
-              // Align with backend sendSuccess({ user: { ... } }) structure
               const userData = response.data.data.user;
-              console.log('✅ [AUTH] Session valid. User:', userData.email);
+              console.log('✅ [AUTH] Session synchronized. User:', userData.email);
               set({ 
                 user: userData, 
                 isAuthenticated: true, 
@@ -96,14 +95,23 @@ export const useAuthStore = create<AuthState>()(
               throw new Error('Malformed profile response');
             }
           } catch (error: any) {
-            console.warn('⚠️ [AUTH] Session invalid or expired:', error.response?.data?.message || error.message);
+            const isNoResponse = !error.response;
+            const status = error.response?.status;
             
-            // Critical: If it's a 401, the token is definitely dead
-            if (error.response?.status === 401) {
+            console.warn('⚠️ [AUTH] Hydration warning:', error.response?.data?.message || error.message);
+            
+            if (status === 401 || status === 403) {
+              // Token is invalid/expired
               set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
               localStorage.removeItem('refresh-token');
+              localStorage.removeItem('auth-storage');
+              window.location.href = '/login';
+            } else if (isNoResponse) {
+              // Likely ERR_CONNECTION_REFUSED
+              console.error('🚫 [AUTH] Backend unreachable during hydration');
+              // Keep local state but stop loading
+              set({ isLoading: false });
             } else {
-              // For other errors (maybe server down), keep local state but stop loading
               set({ isLoading: false });
             }
           }

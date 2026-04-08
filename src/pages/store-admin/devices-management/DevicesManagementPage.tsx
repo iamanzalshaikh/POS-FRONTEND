@@ -10,7 +10,6 @@ import DevicesTable from "@/components/store-admin/DevicesTable"
 import DevicesPagination from "@/components/store-admin/DevicesPagination"
 import StatsCards from "@/components/global-components/StatsCards"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as deviceApi from "@/api/devices.api";
 import type { Device } from "./types/device.types"
 
@@ -24,20 +23,27 @@ export default function DevicesManagementPage() {
     const [searchQuery, setSearchQuery] = useState("")
     const limit = 10
 
-    const queryClient = useQueryClient();
-    // React Query Hooks
-    const { data: terminalsDataRes, isLoading: loading, refetch: refetchTerminals } = useQuery({
-        queryKey: ['terminals'],
-        queryFn: deviceApi.listTerminals,
-    });
+    const [terminalsDataRes, setTerminalsDataRes] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<any>(null);
 
-    const updateDeviceMutation = useMutation({
-        mutationFn: ({ id, data }: { id: string; data: any }) => deviceApi.updateDevice(id, data),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['terminals'] });
-            queryClient.invalidateQueries({ queryKey: ['devices'] });
-        },
-    });
+    const refetchTerminals = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await deviceApi.listTerminals();
+            setTerminalsDataRes(data);
+        } catch (err: any) {
+            console.error("Failed to fetch terminals:", err);
+            setError(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        refetchTerminals();
+    }, []);
 
     useEffect(() => {
         if (viewFilter === "this_device") {
@@ -63,7 +69,8 @@ export default function DevicesManagementPage() {
 
     const handleDelete = async (id: string): Promise<boolean> => {
         try {
-            await updateDeviceMutation.mutateAsync({ id, data: { isActive: false } });
+            await deviceApi.updateDevice(id, { isActive: false });
+            await refetchTerminals();
             return true
         } catch (error) {
             console.error("Failed to deactivate terminal:", error)
@@ -134,19 +141,23 @@ export default function DevicesManagementPage() {
                         onSearchQueryChange={(v) => { setSearchQuery(v); setPage(1); }}
                     />
 
-                    {loading ? (
-                        <div className="bg-white rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 shadow-sm">
-                            <div className="w-12 h-12 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
-                            <p className="text-[10px] font-black text-slate-400 mt-6 uppercase tracking-[4px] animate-pulse leading-none">Scanning Hardware...</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-8 animate-fade-in">
-                            <DevicesTable data={paginated} onDelete={handleDelete} />
-                            <DevicesPagination page={page} setPage={setPage} total={total} />
-                        </div>
-                    )}
-                </main>
-            </div>
+            {loading ? (
+                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                    <div className="w-12 h-12 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 mt-6 uppercase tracking-[4px] animate-pulse leading-none">Scanning Hardware...</p>
+                </div>
+            ) : error ? (
+                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
+                    <p className="text-[10px] font-black text-rose-500 mb-2 uppercase tracking-[4px]">Connection Failure</p>
+                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{(error as any)?.message || 'Unable to reach the backend services.'}</p>
+                    <button onClick={() => refetchTerminals()} className="mt-8 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Retry Link</button>
+                </div>
+            ) : (
+                <div className="space-y-8 animate-fade-in">
+                    <DevicesTable data={paginated} onDelete={handleDelete} />
+                    <DevicesPagination page={page} setPage={setPage} total={total} />
+                </div>
+            )}
         </div>
     )
 }

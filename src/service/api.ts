@@ -39,13 +39,20 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Response Interceptor for Token Refresh
+// Response Interceptor for Token Refresh and Error Mapping
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    // 1. Handle Network/Connection Errors specifically
+    if (!error.response && error.code === 'ERR_NETWORK') {
+      console.error('🌐 [API] Connection Refused! Is the backend running?');
+      error.message = 'System is temporarily offline. Please ensure the backend server is running.';
+      return Promise.reject(error);
+    }
+
     const originalRequest = error.config;
 
-    // If 401 and not already retried
+    // 2. Handle Token Expiration (401)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -76,16 +83,13 @@ api.interceptors.response.use(
               }
               return api(originalRequest);
             }
-          } else {
-            console.warn('[API] No refresh token available');
           }
         }
       } catch (refreshError: any) {
-        console.error('[API] ❌ Refresh token failed:', refreshError.response?.data?.message || refreshError.message);
+        console.error('[API] ❌ Refresh token failed');
         // Clear auth state on refresh failure
         localStorage.removeItem('auth-storage');
         localStorage.removeItem('refresh-token');
-        // Optionally redirect to login
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';
         }

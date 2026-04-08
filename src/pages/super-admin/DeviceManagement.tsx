@@ -1,16 +1,30 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
 import { Laptop2, AlertCircle, Plus, Activity, Search } from 'lucide-react';
 import { devicesApi } from '../../service/api';
 import { DataTable } from '@/components/global-components/data-table';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const DeviceManagement: React.FC = () => {
+  const [devicesRes, setDevicesRes] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [devicesError, setDevicesError] = useState<any>(null);
 
-  const { data: devicesRes, isLoading, error: devicesError } = useQuery({
-    queryKey: ['devices', 'all'],
-    queryFn: () => devicesApi.getAll(),
-  });
+  const loadDevices = async () => {
+    setIsLoading(true);
+    try {
+      const res = await devicesApi.getAll();
+      setDevicesRes(res);
+    } catch (error) {
+      console.error("Failed to fetch devices:", error);
+      setDevicesError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDevices();
+  }, []);
 
   const devices = devicesRes?.data?.data || [];
   const error = (devicesError as any)?.response?.data?.message || (devicesError as any)?.message;

@@ -20,26 +20,24 @@ export default function Stats03({ data }: Stats03Props) {
   const gridCols = data.length === 5 ? 'lg:grid-cols-5' : data.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4';
 
   return (
-    <div className="flex items-center justify-center w-full">
+    <div className="w-full">
       <dl className={cn("grid grid-cols-1 gap-6 sm:grid-cols-2 w-full", gridCols)}>
         {data.map((item) => (
-          <Card key={item.name} className="p-6 py-4 shadow-2xs">
+          <Card key={item.name} className="p-6 rounded-[24px] border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
             <CardContent className="p-0">
-              <dt className="text-sm font-medium text-slate-500">{item.name}</dt>
-              <dd className="mt-2 flex items-baseline space-x-2.5">
-                <span className="tabular-nums text-3xl font-bold text-slate-900 tracking-tight">
+              <dt className="text-xs font-medium text-slate-500 mb-2">{item.name}</dt>
+              <dd className="flex items-baseline gap-2">
+                <span className="text-2xl font-bold text-slate-900 tracking-tight tabular-nums pb-1">
                   {item.stat}
                 </span>
                 {item.change && (
                   <span
                     className={cn(
-                      item.changeType === "positive"
-                        ? "text-green-800 dark:text-green-400"
-                        : "text-red-800 dark:text-red-400",
-                      "text-sm font-medium",
+                      "text-[10px] font-bold",
+                      item.changeType === "positive" ? "text-emerald-600" : "text-rose-600"
                     )}
                   >
-                    {item.change}
+                    {item.changeType === "positive" ? '+' : ''}{item.change}
                   </span>
                 )}
               </dd>

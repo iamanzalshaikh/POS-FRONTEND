@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Bar, BarChart, XAxis, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, XAxis } from 'recharts';
 
 import {
   type ChartConfig,
@@ -10,7 +10,14 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 
-const chartData = [
+const chartConfig = {
+  activity: {
+    label: 'Activity',
+    color: 'var(--chart-1)',
+  },
+} satisfies ChartConfig;
+
+const defaultChartData = [
   { month: 'Jan', activity: 400 },
   { month: 'Feb', activity: 300 },
   { month: 'Mar', activity: 500 },
@@ -25,37 +32,65 @@ const chartData = [
   { month: 'Dec', activity: 610 },
 ];
 
-const chartConfig = {
-  activity: {
-    label: 'Activity',
-    color: 'var(--chart-1)',
-  },
-} satisfies ChartConfig;
+interface ChartDataPoint {
+  month: string;
+  activity: number;
+}
 
-const MonthlyActivityChart: React.FC = () => {
+interface MonthlyActivityChartProps {
+  data?: ChartDataPoint[];
+  isLoading?: boolean;
+  title?: string;
+  subtitle?: string;
+  height?: number | string;
+  className?: string;
+  unit?: string;
+  isCurrency?: boolean;
+}
+
+const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
+  data,
+  isLoading = false,
+  title = "Monthly Performance",
+  subtitle = "Last 6 months",
+  height = 250,
+  className,
+  unit = "activity",
+  isCurrency = false
+}) => {
+  const displayData = data || defaultChartData;
+
+  if (isLoading) {
+    return (
+      <div className="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-800 flex flex-col items-center justify-center min-h-[280px] animate-pulse">
+        <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p className="mt-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Aggregating Growth Data...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm dark:bg-slate-950 dark:border-slate-700">
-      <div className="flex items-center justify-between mb-4">
+    <div className={`bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm dark:bg-slate-900 dark:border-slate-800 flex flex-col transition-all hover:shadow-md ${className}`}>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Monthly Activity</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Last 12 months</p>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{title}</h3>
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{subtitle}</p>
         </div>
       </div>
 
-      <div className="h-44">
+      <div style={{ height }} className="overflow-hidden">
         <ChartContainer config={chartConfig}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData}>
+            <BarChart data={displayData}>
               <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={10} />
               <Bar dataKey="activity" fill="var(--chart-1)" radius={4} />
               <ChartTooltip
                 content={
                   <ChartTooltipContent
-                    formatter={(value) => (
+                    formatter={(value: any) => (
                       <div className="flex min-w-[130px] items-center text-xs text-muted-foreground">
                         <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium text-foreground tabular-nums">
-                          {value}
-                          <span className="font-normal text-muted-foreground ml-1">activity</span>
+                          {isCurrency ? `₨ ${Number(value).toLocaleString()}` : value}
+                          <span className="font-normal text-muted-foreground ml-1">{unit}</span>
                         </div>
                       </div>
                     )}
@@ -65,7 +100,6 @@ const MonthlyActivityChart: React.FC = () => {
                 cursor={false}
               />
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
       </div>
     </div>

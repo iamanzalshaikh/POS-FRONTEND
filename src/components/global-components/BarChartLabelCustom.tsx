@@ -1,6 +1,8 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts";
+import React from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, LabelList } from "recharts";
+
 import {
   type ChartConfig,
   ChartContainer,
@@ -10,68 +12,56 @@ import {
 
 interface BarChartLabelCustomProps {
   data: any[];
+  config: ChartConfig;
   dataKey: string;
   labelKey: string;
-  config?: ChartConfig;
-  className?: string;
   noWrapper?: boolean;
   height?: string;
+  className?: string;
 }
 
-export default function BarChartLabelCustom({
+const BarChartLabelCustom: React.FC<BarChartLabelCustomProps> = ({
   data,
+  config,
   dataKey,
   labelKey,
-  config = {},
-  className = "",
   noWrapper = false,
-  height = "min-h-[300px]",
-}: BarChartLabelCustomProps) {
+  height = "h-[300px]",
+  className = "",
+}) => {
   const chartContent = (
-    <ChartContainer config={config} className={`w-full ${height}`}>
+    <ChartContainer config={config}>
       <BarChart
+        accessibilityLayer
         data={data}
-        layout="vertical"
         margin={{
-          left: 16,
-          right: 40, // Space for the value label on the right
-          top: 10,
-          bottom: 10,
+          top: 20,
+          left: 12,
+          right: 12,
         }}
-        barGap={10}
       >
-        <CartesianGrid horizontal={false} stroke="#E2E8F0" opacity={0.5} />
-        <YAxis
+        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+        <XAxis
           dataKey={labelKey}
-          type="category"
           tickLine={false}
+          tickMargin={10}
           axisLine={false}
-          hide
+          className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest"
         />
-        <XAxis type="number" hide />
         <ChartTooltip
-          cursor={{ fill: "#F8FAFC", opacity: 0.8 }}
+          cursor={false}
           content={<ChartTooltipContent hideLabel />}
         />
         <Bar
           dataKey={dataKey}
           fill={`var(--color-${dataKey})`}
-          radius={8} // Rounded bars
-          barSize={40}
+          radius={8}
         >
-          {/* Custom Labels: Left -> label (month) */}
           <LabelList
-            dataKey={labelKey}
-            position="insideLeft"
+            position="top"
             offset={12}
-            className="fill-[var(--color-label)] font-bold text-sm"
-          />
-          {/* Custom Labels: Right -> value (desktop) */}
-          <LabelList
-            dataKey={dataKey}
-            position="right"
-            offset={12}
-            className="fill-slate-900 font-black text-sm tabular-nums"
+            className="fill-slate-900 dark:fill-white font-bold text-[10px]"
+            formatter={(value: number) => value.toLocaleString()}
           />
         </Bar>
       </BarChart>
@@ -79,12 +69,18 @@ export default function BarChartLabelCustom({
   );
 
   if (noWrapper) {
-    return <div className={`w-full ${className}`}>{chartContent}</div>;
+    return (
+      <div className={`w-full ${height} ${className}`}>
+        {chartContent}
+      </div>
+    );
   }
 
   return (
-    <div className={`bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 w-full ${className}`}>
+    <div className={`bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col ${height} ${className}`}>
       {chartContent}
     </div>
   );
-}
+};
+
+export default BarChartLabelCustom;

@@ -9,9 +9,9 @@ interface SidebarLinkProps {
   variant?: 'indigo' | 'purple' | 'amber' | 'emerald' | 'navy';
 }
 
-const SidebarLink: React.FC<SidebarLinkProps> = ({ 
-  icon, 
-  label, 
+const SidebarLink: React.FC<SidebarLinkProps> = ({
+  icon,
+  label,
   to,
   onClick,
   variant: _variant = 'navy'
@@ -28,15 +28,15 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
 
   if (to) {
     return (
-      <NavLink 
-        to={to} 
+      <NavLink
+        to={to}
         onClick={onClick}
         title={label}
         end
-        className={({ isActive }) => 
+        className={({ isActive }) =>
           `${baseClasses} ${
-            isActive 
-              ? `${variantStyles.navy}` 
+            isActive
+              ? `${variantStyles.navy}`
               : 'text-slate-400 hover:text-white hover:bg-[#2A2760]'
           }`
         }
@@ -52,7 +52,7 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
   }
 
   return (
-    <div 
+    <div
       onClick={onClick}
       title={label}
       className={`${baseClasses} text-slate-400 hover:text-white hover:bg-[#2A2760]`}

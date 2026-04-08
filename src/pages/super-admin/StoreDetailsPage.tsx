@@ -19,7 +19,8 @@ import {
     UserPlus,
     CheckCircle2,
     XCircle,
-    Activity
+    Activity,
+    Package
 } from 'lucide-react';
 import { showToast } from '../../utils/admin-toast';
 import Pagination from '../../components/shared/admin/Pagination';

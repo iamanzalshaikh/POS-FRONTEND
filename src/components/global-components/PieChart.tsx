@@ -62,28 +62,28 @@ export default function GlobalPieChart({
                   content={<ChartTooltipContent hideLabel nameKey={dataKey} />}
                 />
               ) : (
-                <Tooltip 
-                  contentStyle={{ borderRadius: '24px', border: '1px solid #F1F5F9', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05)', padding: '16px', background: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(8px)' }} 
-                  itemStyle={{ fontWeight: 900, fontSize: '14px', color: '#0F172A' }} 
-                  labelStyle={{ fontWeight: 900, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: '#94A3B8', marginBottom: '8px' }} 
+                <Tooltip
+                  contentStyle={{ borderRadius: '24px', border: '1px solid #F1F5F9', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05)', padding: '16px', background: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(8px)' }}
+                  itemStyle={{ fontWeight: 900, fontSize: '14px', color: '#0F172A' }}
+                  labelStyle={{ fontWeight: 900, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: '#94A3B8', marginBottom: '8px' }}
                 />
               )}
-              <Pie 
-                data={data} 
-                cx="50%" 
-                cy="50%" 
-                innerRadius={innerRadius} 
-                outerRadius={outerRadius} 
-                paddingAngle={paddingAngle} 
+              <Pie
+                data={data}
+                cx="50%"
+                cy="50%"
+                innerRadius={innerRadius}
+                outerRadius={outerRadius}
+                paddingAngle={paddingAngle}
                 dataKey={dataKey}
-                animationBegin={500} 
+                animationBegin={500}
                 animationDuration={1500}
               >
                 {data.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={entry.color || `var(--chart-${(index % 5) + 1})`} 
-                    stroke="none" 
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.color || `var(--chart-${(index % 5) + 1})`}
+                    stroke="none"
                   />
                 ))}
                 {showLabels && (
@@ -117,8 +117,8 @@ export default function GlobalPieChart({
       <div className={`grid grid-cols-2 ${compact ? 'gap-2 mt-4' : 'gap-4 mt-8'}`}>
         {data.map((cat, idx) => (
           <div key={idx} className={`flex items-center gap-3 ${compact ? 'p-2' : 'p-3'} bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-blue-100 transition-all`}>
-            <div 
-              className="w-2.5 h-2.5 rounded-full" 
+            <div
+              className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: cat.color || `var(--chart-${(idx % 5) + 1})` }}
             ></div>
             <div className="min-w-0">
