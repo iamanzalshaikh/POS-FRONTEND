@@ -119,7 +119,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           <div className="flex items-center space-x-4">
             {headerExtra}
             <div className={`${accentStyles[accentColor]} px-3 py-1 lg:px-4 lg:py-1.5 rounded-full text-[10px] lg:text-xs tracking-wide font-bold border uppercase shadow-sm`}>
-              {role.replace('_', ' ')}
+              {(role || 'USER').replace('_', ' ')}
             </div>
             <div className={`${avatarStyles[accentColor]} w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center font-bold shadow-md shadow-${accentColor}-500/20`}>
               <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Admin'}&background=random`} alt="User avatar" className="w-full h-full object-cover rounded-full" />

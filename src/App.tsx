@@ -5,7 +5,7 @@ import { useAuthStore } from './store/useAuthStore';
 // UI Components
 import PageLoader from '@/components/ui/PageLoader';
 import HomeRedirect from '@/components/shared/HomeRedirect';
-import DashboardLayout from '@/components/layout/DashboardLayout';
+import StoreAdminLayout from '@/components/layout/StoreAdminLayout';
 
 // Lazy loading pages
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -62,7 +62,7 @@ const App: React.FC = () => {
           {/* Role-Specific Protected Routes */}
 
           <Route element={<ProtectedRoute allowedRoles={['STORE_ADMIN', 'SUPER_ADMIN']} />}>
-            <Route element={<DashboardLayout children={<Outlet />} />}>
+            <Route element={<StoreAdminLayout />}>
               <Route path="/store-admin/dashboard" element={<StoreAdminDashboard />} />
               <Route path="/store-admin/staff" element={<StaffManagementPage />} />
               <Route path="/store-admin/staff/:id" element={<StaffDetailPage />} />
