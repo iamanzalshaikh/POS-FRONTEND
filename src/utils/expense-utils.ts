@@ -12,6 +12,7 @@
 export interface Expense {
   id: string;
   category: string;
+  customCategoryId?: string | null;
   description: string;
   amount: number;
   date: string;
@@ -47,14 +48,8 @@ export const EXPENSE_CATEGORIES = [
   { value: 'UTILITIES', label: 'Utilities' },
   { value: 'RENT', label: 'Rent' },
   { value: 'SALARIES', label: 'Salaries' },
-  { value: 'SUPPLIES', label: 'Supplies' },
   { value: 'MAINTENANCE', label: 'Maintenance' },
   { value: 'MARKETING', label: 'Marketing' },
-  { value: 'INSURANCE', label: 'Insurance' },
-  { value: 'TRANSPORT', label: 'Transport' },
-  { value: 'FOOD_BEVERAGES', label: 'Food & Beverages' },
-  { value: 'EQUIPMENT', label: 'Equipment' },
-  { value: 'PROFESSIONAL_SERVICES', label: 'Professional Services' },
   { value: 'TAXES', label: 'Taxes' },
   { value: 'OTHER', label: 'Other' },
 ] as const;
@@ -246,14 +241,15 @@ export const applyFilters = (
 // ============================================================================
 
 /**
- * Format amount as currency (INR)
+ * Format amount as currency (PKR - Pakistani Rupees)
  */
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
+  return new Intl.NumberFormat('en-PK', {
     style: 'currency',
-    currency: 'INR',
+    currency: 'PKR',
     maximumFractionDigits: 0,
-  }).format(amount);
+    minimumFractionDigits: 0,
+  }).format(amount).replace('PKR', 'Rs').trim();
 };
 
 /**

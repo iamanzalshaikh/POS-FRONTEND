@@ -19,14 +19,16 @@ import {
   CheckCircle,
   IndianRupee,
 } from 'lucide-react';
-import { fetchProducts, getProductByBarcode, searchProducts } from '../../api/products.api';
+import { fetchProducts, getProductByBarcode } from '../../api/products.api';
 import { createSale } from '../../api/sales.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
+import { formatCurrency } from '../../utils/expense-utils';
 import { offlineStorage } from '../../services/offline-storage.service';
 import type { OfflineSale } from '../../services/offline-storage.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
-import { formatPKR } from '@/utils/format';
+import ProductsFilters from '../../components/cashier/ProductsFilters';
+import ProductsTable from '../../components/cashier/ProductsTable';
 
 type CartItem = {
   id: string;
@@ -70,22 +72,40 @@ const POSInterface: React.FC = () => {
 
   const [barcodeInput, setBarcodeInput] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [holdOrders, setHoldOrders] = useState<HoldOrder[]>([]);
+  const [holdOrders, setHoldOrders] = useState<HoldOrder[]>(() => {
+    // Initialize state from localStorage on first render
+    try {
+      const storedOrders = localStorage.getItem('pos-hold-orders');
+      if (storedOrders) {
+        const parsedOrders = JSON.parse(storedOrders);
+        // Convert timestamp strings back to Date objects
+        return parsedOrders.map((order: any) => ({
+          ...order,
+          timestamp: new Date(order.timestamp)
+        }));
+      }
+    } catch (error) {
+      console.error('❌ [POSInterface] Failed to load held orders from localStorage:', error);
+    }
+    return [];
+  });
   const [discountMode, setDiscountMode] = useState<DiscountMode>('amount');
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [productModalOpen, setProductModalOpen] = useState(false);
-  const [modalQuery, setModalQuery] = useState('');
-  const [modalResults, setModalResults] = useState<Product[]>([]);
-  const [modalLoading, setModalLoading] = useState(false);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
+  
+  // Filter states for products table
+  const [productSearch, setProductSearch] = useState('');
+  const [productCategory, setProductCategory] = useState('ALL');
+  const [productStockFilter, setProductStockFilter] = useState('ALL');
   const [now, setNow] = useState<Date>(new Date());
   const [receivedAmount, setReceivedAmount] = useState<string>('');
+
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000 * 30);
     return () => clearInterval(timer);
@@ -103,14 +123,17 @@ const POSInterface: React.FC = () => {
         // Extract products from response
         let products: Product[] = [];
         
-        if (res.data?.data && Array.isArray(res.data.data)) {
-          products = res.data.data;
-        } else if (Array.isArray(res.data)) {
+        if (res?.success && Array.isArray(res.data)) {
           products = res.data;
-        } else {
-          console.warn('⚠️ [POS] Unexpected response format:', res.data);
-          products = [];
+        } else if (res?.data?.data && Array.isArray(res.data.data)) {
+          products = res.data.data;
+        } else if (res?.data && Array.isArray(res.data)) {
+          products = res.data;
+        } else if (Array.isArray(res)) {
+          products = res;
         }
+
+        console.log('📦 [POS] Parsed', products.length, 'products');
         
         // Filter active products
         const activeProducts = products.filter((p: any) => p.isActive !== false);
@@ -202,15 +225,17 @@ const POSInterface: React.FC = () => {
 
     setError(null);
 
+    // Check if input looks like a barcode (numbers and dashes only, 6+ chars)
     const looksLikeBarcode = /^[0-9\-]{6,}$/.test(value);
 
     if (!looksLikeBarcode) {
-      // Open modal search
-      setProductModalOpen(true);
-      setModalQuery(value);
+      // If it doesn't look like a barcode, use it as a search query
+      setProductSearch(value);
+      setBarcodeInput('');
       return;
     }
 
+    // If it looks like a barcode, try to fetch by barcode
     try {
       const res = await getProductByBarcode(value, deviceId);
       if (res.data?.success && res.data.data) {
@@ -272,7 +297,12 @@ const POSInterface: React.FC = () => {
       timestamp: new Date(),
       total: cartTotal,
     };
+    
+    // Add to state - useEffect will save to localStorage
     setHoldOrders((prev) => [newHoldOrder, ...prev]);
+    console.log(`✅ [POSInterface] Held order created: ${newHoldOrder.id}`);
+    
+    // Clear cart
     setCart([]);
     setDiscountValue(0);
     setPaymentMethod(null);
@@ -283,14 +313,35 @@ const POSInterface: React.FC = () => {
   const handleResumeOrder = (holdOrderId: string) => {
     const holdOrder = holdOrders.find((order) => order.id === holdOrderId);
     if (!holdOrder) return;
+    
+    // Restore cart from held order
     setCart(holdOrder.items);
+    
+    // Remove from state - useEffect will update localStorage
     setHoldOrders((prev) => prev.filter((order) => order.id !== holdOrderId));
+    console.log(`✅ [POSInterface] Held order resumed: ${holdOrderId}`);
   };
 
   const handleDeleteHoldOrder = (holdOrderId: string) => {
     if (!window.confirm('Delete this hold order?')) return;
+    
+    // Remove from state - useEffect will update localStorage
     setHoldOrders((prev) => prev.filter((order) => order.id !== holdOrderId));
+    console.log(`✅ [POSInterface] Held order deleted: ${holdOrderId}`);
   };
+
+  // Sync hold orders to localStorage whenever they change
+  useEffect(() => {
+    try {
+      // Always sync to ensure localStorage is up to date
+      localStorage.setItem('pos-hold-orders', JSON.stringify(holdOrders));
+      if (holdOrders.length > 0) {
+        console.log(`💾 [POSInterface] Synced ${holdOrders.length} held orders to localStorage`);
+      }
+    } catch (error) {
+      console.error('❌ [POSInterface] Failed to save held orders to localStorage:', error);
+    }
+  }, [holdOrders]);
 
   const handleCompleteSale = async () => {
     console.log('🔴 [POSInterface] handleCompleteSale called');
@@ -375,7 +426,7 @@ const POSInterface: React.FC = () => {
     
     payload.items.forEach((item: any, idx: number) => {
       if (!item.productId) validationErrors.push(`items[${idx}].productId is missing`);
-      if (!item.price || item.price < 0) validationErrors.push(`items[${idx}].price must be >= 0`);
+      if (item.price === undefined || item.price === null || item.price < 0) validationErrors.push(`items[${idx}].price must be >= 0`);
       if (!item.quantity || item.quantity <= 0) validationErrors.push(`items[${idx}].quantity must be > 0`);
     });
 
@@ -401,22 +452,30 @@ const POSInterface: React.FC = () => {
       if (isOnline) {
         console.log('📡 [POSInterface] Sending POST /sales request (online mode)...');
         const res = await createSale(payload, idempotencyKey);
-        console.log('✅ [POSInterface] Sale created successfully:', res.data);
+        console.log('✅ [POSInterface] Sale created response:', JSON.stringify(res, null, 2));
 
-        if (res.data?.success && res.data.data) {
-          const sale = res.data.data;
-          // Clear cart before navigating
+        // createSale returns res.data which is { success, data: {sale}, message }
+        // The actual sale object is in res.data.data.sale or res.data
+        const saleData = res?.data?.sale || res?.data || res;
+
+        if (saleData && saleData.id) {
+          console.log('✅ [POSInterface] Sale created successfully:', saleData);
+          console.log('📦 [POSInterface] Sale items:', saleData.saleItems || saleData.items);
+          
+          // Clear cart
           setCart([]);
           setDiscountValue(0);
           setPaymentMethod(null);
           setNotes('');
-          // Navigate to receipt page with sale data for auto-print
-          navigate(`/cashier/receipt/${sale.id}`, {
-            state: { sale, status: 'COMPLETED', autoPrint: true },
+          
+          // Navigate to receipt page with autoPrint flag
+          console.log('🧭 [POSInterface] Navigating to receipt page with autoPrint: true');
+          navigate(`/cashier/receipt/${saleData.id}`, {
+            state: { sale: saleData, status: 'COMPLETED', autoPrint: true },
           });
         } else {
-          console.error('❌ [POSInterface] Sale response missing data:', res.data);
-          setError(res.data?.message || 'Unable to complete sale');
+          console.error('❌ [POSInterface] Sale response missing data:', res);
+          setError(res?.message || 'Unable to complete sale');
         }
       } else {
         // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
@@ -517,54 +576,81 @@ const POSInterface: React.FC = () => {
     }
   };
 
-  // Product search modal behaviour (debounced)
-  useEffect(() => {
-    if (!productModalOpen) return;
-    if (!modalQuery.trim()) {
-      setModalResults([]);
-      return;
+  // Filter products based on search, category, and stock
+  const filteredProducts = useMemo(() => {
+    let result = [...allProducts];
+
+    // Apply search filter
+    if (productSearch) {
+      const query = productSearch.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(query) ||
+          (p.sku && p.sku.toLowerCase().includes(query))
+      );
     }
 
-    const handle = setTimeout(async () => {
-      setModalLoading(true);
-      try {
-        const res = await searchProducts(modalQuery.trim());
-        if (res.data?.success && Array.isArray(res.data.data)) {
-          setModalResults(res.data.data as Product[]);
-        } else if (Array.isArray(res.data)) {
-          setModalResults(res.data as Product[]);
-        } else {
-          setModalResults([]);
-        }
-      } catch {
-        setModalResults([]);
-      } finally {
-        setModalLoading(false);
-      }
-    }, 300);
+    // Apply category filter
+    if (productCategory !== 'ALL') {
+      const category = typeof allProducts[0]?.category === 'object'
+        ? allProducts[0]?.category?.name
+        : allProducts[0]?.category;
+      
+      result = result.filter((p) => {
+        const prodCategory = typeof p.category === 'object' ? p.category?.name : p.category;
+        return prodCategory === productCategory;
+      });
+    }
 
-    return () => clearTimeout(handle);
-  }, [modalQuery, productModalOpen]);
+    // Apply stock filter
+    if (productStockFilter !== 'ALL') {
+      result = result.filter((p) => {
+        const stock = p.inventoryStock?.totalQuantity ?? p.stock ?? 0;
+        if (productStockFilter === 'IN_STOCK') return stock > 0;
+        if (productStockFilter === 'LOW_STOCK') return stock > 0 && stock <= 5;
+        if (productStockFilter === 'OUT_OF_STOCK') return stock <= 0;
+        return true;
+      });
+    }
+
+    return result;
+  }, [allProducts, productSearch, productCategory, productStockFilter]);
+
+  // Get unique categories
+  const categories = useMemo(() => {
+    const cats = new Set<string>();
+    allProducts.forEach((p) => {
+      const cat = typeof p.category === 'object' ? p.category?.name || 'N/A' : p.category || 'N/A';
+      cats.add(cat);
+    });
+    return ['ALL', ...Array.from(cats)];
+  }, [allProducts]);
+
+  const handleResetFilters = () => {
+    setProductSearch('');
+    setProductCategory('ALL');
+    setProductStockFilter('ALL');
+  };
 
   return (
     <>
       {/* Hold Orders Section - Top of Page */}
       {holdOrders.length > 0 && (
-        <div className="w-full bg-amber-50 border-b border-amber-200 px-6 py-4">
+        <div className="w-full bg-blue-50 border-b border-blue-200 px-6 py-4">
           <div className="max-w-7xl mx-auto">
-            <h3 className="text-sm font-black uppercase tracking-widest text-amber-800 flex items-center space-x-2 mb-3">
-              <Clock size={16} className="text-amber-600" />
+            <h3 className="text-sm font-black uppercase tracking-widest text-blue-800 flex items-center space-x-2 mb-3">
+              <Clock size={16} className="text-blue-600" />
               <span>Hold Orders ({holdOrders.length})</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
               {holdOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="p-4 rounded-xl border-2 border-amber-200 bg-white hover:border-amber-300 hover:shadow-md transition-all"
+                  className="p-4 rounded-xl border-2 border-blue-200 bg-white hover:border-blue-300 hover:shadow-md transition-all"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-amber-900">{order.id}</span>
-                    <span className="text-xs font-semibold text-amber-700">
+                    <span className="text-xs font-bold text-blue-900">{order.id}</span>
+                    <span className="text-xs font-semibold text-blue-700">
                       {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                     </span>
                   </div>
@@ -572,22 +658,22 @@ const POSInterface: React.FC = () => {
                     <span className="text-xs text-slate-600">
                       {order.timestamp.toLocaleTimeString()}
                     </span>
-                    <span className="text-lg font-bold text-amber-900">
-                      {formatPKR(order.total)}
+                    <span className="text-lg font-bold text-blue-900">
+                      {formatCurrency(order.total)}
                     </span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
                       type="button"
                       onClick={() => handleResumeOrder(order.id)}
-                      className="flex-1 rounded-lg bg-amber-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-amber-700 transition-all"
+                      className="flex-1 rounded-xl bg-blue-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
                     >
                       Resume
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteHoldOrder(order.id)}
-                      className="rounded-lg border-2 border-red-300 bg-red-50 text-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all"
+                      className="rounded-xl border-2 border-red-300 bg-red-50 text-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all"
                     >
                       Delete
                     </button>
@@ -655,19 +741,19 @@ const POSInterface: React.FC = () => {
 
       {/* Offline Banner */}
       {isOnline === false && (
-        <div className="flex items-center justify-between px-6 py-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-sm font-medium">
+        <div className="flex items-center justify-between px-6 py-3 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm font-medium">
           <div className="flex items-center space-x-3">
-            <WifiOff size={16} className="text-amber-500" />
+            <WifiOff size={16} className="text-blue-500" />
             <span className="font-semibold">
               YOU ARE OFFLINE
             </span>
-            <span className="text-amber-700">
+            <span className="text-blue-700">
               – Sales will be saved locally and synced when back online.
             </span>
           </div>
           {pendingCount > 0 && (
             <div className="flex items-center space-x-2 text-xs">
-              <Clock size={14} className="text-amber-600" />
+              <Clock size={14} className="text-blue-600" />
               <span className="font-bold">{pendingCount} pending sync</span>
             </div>
           )}
@@ -737,9 +823,9 @@ const POSInterface: React.FC = () => {
 
       <div className="flex flex-col overflow-hidden flex-1">
         <div className="flex overflow-hidden flex-1">
-          {/* Left: Scan, Products & Cart */}
+          {/* Left: Barcode Scan, Products & Cart */}
           <section className="flex-1 flex flex-col gap-4 p-6 overflow-hidden border-r border-slate-200">
-            {/* Scan / Search */}
+            {/* Barcode Scanner */}
             <form onSubmit={handleScanSubmit} className="flex-shrink-0">
               <div className="relative">
                 <Scan className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -747,131 +833,32 @@ const POSInterface: React.FC = () => {
                   autoFocus
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  placeholder="Scan barcode or type product..."
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400"
+                  placeholder="Scan barcode or type product name/SKU..."
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProductModalOpen(true);
-                    setModalQuery('');
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center space-x-1 px-3 py-1 rounded-lg bg-slate-900 text-[11px] font-bold text-white uppercase tracking-widest"
-                >
-                  <Search size={14} />
-                  <span>Search</span>
-                </button>
               </div>
             </form>
 
-            {/* Products Table - takes remaining space */}
-            <div className="flex-1 overflow-auto rounded-2xl border border-slate-200 bg-slate-50/40 min-h-0">
-              {productsLoading ? (
-                <div className="flex items-center justify-center h-full">
-                  <div className="flex items-center space-x-2 text-xs text-slate-500">
-                    <div className="w-3 h-3 border-2 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
-                    <span>Loading products...</span>
-                  </div>
-                </div>
-              ) : productsError ? (
-                <div className="flex items-center justify-center h-full text-[10px] text-red-600">
-                  Error: {productsError}
-                </div>
-              ) : allProducts && allProducts.length > 0 ? (
-                <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Product</th>
-                      <th className="px-4 py-2 text-left">SKU</th>
-                      <th className="px-4 py-2 text-left">Category</th>
-                      <th className="px-4 py-2 text-right">Price</th>
-                      <th className="px-4 py-2 text-center">Stock</th>
-                      <th className="px-4 py-2 text-center">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allProducts.map((product) => {
-                      const stock = (product as any).inventoryStock?.totalQuantity ?? product.stock ?? 0;
-                      const price = Number(product.sellingPrice ?? product.price ?? 0);
-                      const isOutOfStock = stock <= 0;
-                      const category = (product as any).category?.name || (product as any).category || 'N/A';
-                      
-                      return (
-                        <tr key={product.id} className="border-t border-slate-100 hover:bg-slate-100/50 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="text-[12px] font-semibold text-slate-900">
-                              {product.name}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="text-[11px] text-slate-600">
-                              {product.sku || '-'}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="text-[11px] text-slate-600">
-                              {category}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <span className="font-bold text-emerald-600 text-[12px]">
-                              {formatPKR(price)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold ${
-                              stock <= 0 
-                                ? 'bg-red-100 text-red-700' 
-                                : stock <= 5 
-                                ? 'bg-amber-100 text-amber-700' 
-                                : 'bg-emerald-100 text-emerald-700'
-                            }`}>
-                              {stock}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            <div className="flex items-center justify-center space-x-2">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('✅ Add clicked:', product.name);
-                                  handleAddProductToCart(product);
-                                }}
-                                disabled={isOutOfStock}
-                                className="inline-flex items-center space-x-1 rounded-lg bg-emerald-600 text-white px-2 py-1 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all"
-                              >
-                                <Plus size={12} />
-                                <span>Add</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  console.log('⏸️ Hold clicked:', product.name);
-                                  handleAddProductToCart(product);
-                                  setTimeout(() => handleHoldOrder(), 0);
-                                }}
-                                disabled={isOutOfStock}
-                                className="inline-flex items-center space-x-1 rounded-lg border-2 border-amber-500 bg-amber-50 text-amber-700 px-2 py-1 text-[10px] font-black uppercase tracking-widest hover:bg-amber-100 disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
-                              >
-                                <Clock size={12} />
-                                <span>Hold</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="flex items-center justify-center h-full text-xs text-slate-500">
-                  No products available. Add products from the admin panel.
-                </div>
-              )}
+            {/* Products Table with Filters - takes remaining space */}
+            <div className="flex-1 overflow-auto space-y-4 min-h-0">
+              {/* Filters */}
+              <ProductsFilters
+                searchQuery={productSearch}
+                setSearchQuery={setProductSearch}
+                selectedCategory={productCategory}
+                setSelectedCategory={setProductCategory}
+                stockFilter={productStockFilter}
+                setStockFilter={setProductStockFilter}
+                categories={categories}
+                onReset={handleResetFilters}
+              />
+
+              {/* Table */}
+              <ProductsTable
+                products={filteredProducts}
+                loading={productsLoading}
+                onAddToCart={handleAddProductToCart}
+              />
             </div>
 
             {/* Cart Cards Section - shows added products as cards */}
@@ -887,11 +874,11 @@ const POSInterface: React.FC = () => {
                   {cart.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col rounded-lg border border-emerald-200 bg-emerald-50 p-3 hover:shadow-md transition-shadow"
+                      className="flex flex-col rounded-xl border border-blue-200 bg-blue-50 p-3 hover:shadow-md transition-shadow"
                     >
                       {/* Product Image Placeholder */}
-                      <div className="w-full h-20 bg-emerald-100 rounded-lg mb-2 flex items-center justify-center border border-emerald-200">
-                        <ShoppingCart size={24} className="text-emerald-400" />
+                      <div className="w-full h-20 bg-blue-100 rounded-lg mb-2 flex items-center justify-center border border-blue-200">
+                        <ShoppingCart size={24} className="text-blue-400" />
                       </div>
 
                       {/* Product Name */}
@@ -902,17 +889,17 @@ const POSInterface: React.FC = () => {
                       {/* Price */}
                       <div className="mb-2">
                         <span className="text-[10px] text-slate-600">Price:</span>
-                        <div className="text-xs font-bold text-emerald-600">
-                          {formatPKR(item.price)}
+                        <div className="text-xs font-bold text-slate-900">
+                          {formatCurrency(item.price)}
                         </div>
                       </div>
 
                       {/* Quantity Controls */}
-                      <div className="flex items-center justify-between mb-2 bg-white rounded-lg border border-emerald-200 p-1">
+                      <div className="flex items-center justify-between mb-2 bg-white rounded-lg border border-blue-200 p-1">
                         <button
                           type="button"
                           onClick={() => handleQuantityChange(item.id, -1)}
-                          className="p-0.5 text-slate-500 hover:text-emerald-600"
+                          className="p-0.5 text-slate-500 hover:text-blue-600"
                         >
                           <Minus size={12} />
                         </button>
@@ -922,7 +909,7 @@ const POSInterface: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleQuantityChange(item.id, 1)}
-                          className="p-0.5 text-slate-500 hover:text-emerald-600"
+                          className="p-0.5 text-slate-500 hover:text-blue-600"
                         >
                           <Plus size={12} />
                         </button>
@@ -931,8 +918,8 @@ const POSInterface: React.FC = () => {
                       {/* Line Total */}
                       <div className="mb-2 text-center">
                         <span className="text-[9px] text-slate-600">Subtotal:</span>
-                        <div className="text-xs font-bold text-emerald-700">
-                          {formatPKR(item.price * item.quantity)}
+                        <div className="text-xs font-bold text-slate-900">
+                          {formatCurrency(item.price * item.quantity)}
                         </div>
                       </div>
 
@@ -940,7 +927,7 @@ const POSInterface: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveItem(item.id)}
-                        className="w-full rounded-lg bg-red-50 border border-red-200 text-red-600 px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest hover:bg-red-100 transition-all"
+                        className="w-full rounded-xl bg-red-50 border border-red-200 text-red-600 px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest hover:bg-red-100 transition-all"
                       >
                         <X size={10} className="inline mr-1" />
                         Remove
@@ -1000,10 +987,10 @@ const POSInterface: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-semibold text-slate-700">
-                          {formatPKR(item.price)}
+                          {formatCurrency(item.price)}
                         </td>
                         <td className="px-4 py-2 text-right text-[12px] font-bold text-slate-900">
-                          {formatPKR(item.price * item.quantity)}
+                          {formatCurrency(item.price * item.quantity)}
                         </td>
                         <td className="px-2 py-2 text-center">
                           <button
@@ -1024,38 +1011,38 @@ const POSInterface: React.FC = () => {
 
           {/* Right: Totals & Payment */}
           <aside className="w-80 flex flex-col bg-white/50">
-            <div className="p-4 border-b border-slate-200 flex items-center space-x-2">
-              <ShoppingCart size={18} className="text-emerald-400" />
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center space-x-2">
+              <ShoppingCart size={16} className="text-blue-600" />
               <h2 className="text-sm font-bold">Active Cart</h2>
             </div>
 
-            <div className="p-4 border-b border-slate-200 space-y-2 text-sm">
+            <div className="px-4 py-3 border-b border-slate-200 space-y-1.5 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-semibold text-slate-800">
-                  {formatPKR(subtotal)}
+                  {formatCurrency(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Tax (GST)</span>
                 <span className="font-semibold text-slate-800">
-                  {formatPKR(tax)}
+                  {formatCurrency(tax)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Discount</span>
-                <span className="font-semibold text-emerald-600">
-                  -{formatPKR(discountAmount)}
+                <span className="font-semibold text-slate-900">
+                  -{formatCurrency(discountAmount)}
                 </span>
               </div>
-              <hr className="my-2 border-dashed border-slate-200" />
-              <div className="flex justify-between items-center text-lg font-black">
+              <hr className="my-1.5 border-dashed border-slate-200" />
+              <div className="flex justify-between items-center text-base font-black">
                 <span className="flex items-center space-x-1 text-slate-900">
-                  <Banknote size={18} />
+                  <Banknote size={16} />
                   <span>Total</span>
                 </span>
-                <span className="text-emerald-500 text-xl font-bold">
-                  {formatPKR(total)}
+                <span className="text-slate-900 text-lg font-bold">
+                  {formatCurrency(total)}
                 </span>
               </div>
             </div>
@@ -1066,9 +1053,9 @@ const POSInterface: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setDiscountMode('amount')}
-                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-lg border px-2 py-1 font-bold uppercase tracking-widest ${
+                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-xl border px-2 py-1 font-bold uppercase tracking-widest ${
                     discountMode === 'amount'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-slate-200 text-slate-600 bg-white'
                   }`}
                 >
@@ -1078,9 +1065,9 @@ const POSInterface: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setDiscountMode('percent')}
-                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-lg border px-2 py-1 font-bold uppercase tracking-widest ${
+                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-xl border px-2 py-1 font-bold uppercase tracking-widest ${
                     discountMode === 'percent'
-                      ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-slate-200 text-slate-600 bg-white'
                   }`}
                 >
@@ -1094,7 +1081,7 @@ const POSInterface: React.FC = () => {
                   min={0}
                   value={discountValue || ''}
                   onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
-                  className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
+                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-100 focus:border-blue-400"
                   placeholder={discountMode === 'amount' ? 'Rs. amount' : '% value'}
                 />
                 <span className="text-[11px] text-slate-500 font-semibold">
@@ -1102,11 +1089,11 @@ const POSInterface: React.FC = () => {
                 </span>
               </div>
               {discountAmount > 0 && (
-                <div className="text-[11px] text-emerald-700 font-medium">
+                <div className="text-[11px] text-slate-900 font-medium">
                   Applied discount:{' '}
                   {discountMode === 'amount'
-                    ? formatPKR(discountAmount)
-                    : `${discountValue}% (${formatPKR(discountAmount)})`}
+                    ? formatCurrency(discountAmount)
+                    : `${discountValue}% (${formatCurrency(discountAmount)})`}
                 </div>
               )}
             </div>
@@ -1126,9 +1113,9 @@ const POSInterface: React.FC = () => {
                       key={value}
                       type="button"
                       onClick={() => setPaymentMethod(value)}
-                      className={`rounded-lg px-2 py-1.5 text-[11px] font-bold uppercase tracking-widest border ${
+                      className={`rounded-xl px-2 py-1.5 text-[11px] font-bold uppercase tracking-widest border ${
                         paymentMethod === value
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                       }`}
                     >
@@ -1156,15 +1143,14 @@ const POSInterface: React.FC = () => {
             {/* Received Amount & Change Calculation */}
             {paymentMethod === 'CASH' && cart.length > 0 && (
               <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50/50">
-                <div className="text-[11px] font-black uppercase tracking-widest text-slate-500 flex items-center space-x-2">
-                  <IndianRupee size={14} />
+                <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">
                   <span>Payment Details</span>
                 </div>
-                
+
                 {/* Received Amount Input */}
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 mb-1 block">
-                    Amount Received (₨)
+                    Amount Received
                   </label>
                   <input
                     type="number"
@@ -1179,13 +1165,13 @@ const POSInterface: React.FC = () => {
 
                 {/* Change Display */}
                 {receivedAmount && (
-                  <div className={`rounded-lg p-3 border-2 ${
+                  <div className={`rounded-xl p-3 border-2 ${
                     hasInsufficientAmount
                       ? 'bg-red-50 border-red-200'
                       : hasExactAmount
                       ? 'bg-blue-50 border-blue-200'
                       : hasChange
-                      ? 'bg-emerald-50 border-emerald-200'
+                      ? 'bg-blue-50 border-blue-200'
                       : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div className="flex items-center justify-between mb-1">
@@ -1193,7 +1179,7 @@ const POSInterface: React.FC = () => {
                         Bill Total
                       </span>
                       <span className="text-sm font-bold text-slate-700">
-                        {formatPKR(total)}
+                        {formatCurrency(total)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mb-1">
@@ -1201,7 +1187,7 @@ const POSInterface: React.FC = () => {
                         Received
                       </span>
                       <span className="text-sm font-bold text-slate-700">
-                        {formatPKR(receivedAmountNum)}
+                        {formatCurrency(receivedAmountNum)}
                       </span>
                     </div>
                     <hr className={`my-2 border-dashed ${
@@ -1221,18 +1207,18 @@ const POSInterface: React.FC = () => {
                         hasInsufficientAmount
                           ? 'text-red-600'
                           : hasExactAmount
-                          ? 'text-blue-600'
+                          ? 'text-slate-900'
                           : hasChange
-                          ? 'text-emerald-600'
+                          ? 'text-slate-900'
                           : 'text-slate-400'
                       }`}>
                         {hasInsufficientAmount
-                          ? formatPKR(Math.abs(changeAmount))
+                          ? formatCurrency(Math.abs(changeAmount))
                           : hasExactAmount
                           ? 'No Change'
                           : hasChange
-                          ? formatPKR(changeAmount)
-                          : formatPKR(0)
+                          ? formatCurrency(changeAmount)
+                          : formatCurrency(0)
                         }
                       </span>
                     </div>
@@ -1243,13 +1229,13 @@ const POSInterface: React.FC = () => {
                       </div>
                     )}
                     {hasExactAmount && (
-                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-blue-600 font-bold">
+                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-slate-900 font-bold">
                         <CheckCircle size={12} />
                         <span>Exact amount paid</span>
                       </div>
                     )}
                     {hasChange && (
-                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-emerald-600 font-bold">
+                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-slate-900 font-bold">
                         <CheckCircle size={12} />
                         <span>Return to customer</span>
                       </div>
@@ -1259,36 +1245,28 @@ const POSInterface: React.FC = () => {
               </div>
             )}
 
-            {/* Hold Order Button */}
-            <div className="p-4 border-t border-slate-200 space-y-2">
+            {/* Action buttons - Compact layout */}
+            <div className="p-3 border-t border-slate-200 bg-slate-50/80 space-y-2">
+              {/* Hold Order Button */}
               <button
                 type="button"
                 onClick={handleHoldOrder}
                 disabled={!cart.length}
-                className="w-full rounded-xl border-2 border-amber-500 bg-amber-50 px-4 py-2.5 text-[11px] font-black uppercase tracking-widest text-amber-700 hover:bg-amber-100 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 flex items-center justify-center space-x-2 transition-all"
+                className="w-full rounded-xl border-2 border-blue-500 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-100 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 flex items-center justify-center space-x-1.5 transition-all"
               >
-                <Clock size={16} />
+                <Clock size={14} />
                 <span>Hold Current Order</span>
               </button>
-            </div>
 
-            {/* Bottom action bar */}
-            <div className="p-4 space-y-3 border-t border-slate-200 bg-slate-50/80 mt-auto">
-              <div className="flex items-center justify-between mb-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
-                <span>Actions</span>
-                <span className="flex items-center space-x-1 text-slate-400">
-                  <Clock size={13} />
-                  <span>Ready</span>
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-3">
+              {/* Clear Cart & Complete Sale */}
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={handleClearCart}
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-100 flex items-center justify-center space-x-1"
+                  className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-100 flex items-center justify-center space-x-1"
                 >
-                  <Trash2 size={14} />
-                  <span>CLEAR CARD</span>
+                  <Trash2 size={12} />
+                  <span>CLEAR</span>
                 </button>
                 <button
                   type="button"
@@ -1301,36 +1279,36 @@ const POSInterface: React.FC = () => {
                   title={!canCompleteSale ?
                     `${!cart.length ? 'Add items to cart. ' : ''}${!paymentMethod ? 'Select payment method. ' : ''}${!deviceId ? 'Connect to terminal. ' : ''}`.trim()
                     : ''}
-                  className={`rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-widest flex items-center justify-center space-x-2 transition-all ${
+                  className={`rounded-xl px-2 py-2 text-[10px] font-black uppercase tracking-widest flex items-center justify-center space-x-1.5 transition-all ${
                     !canCompleteSale || isSubmitting
-                      ? 'bg-emerald-400 cursor-not-allowed'
-                      : 'bg-emerald-600 text-slate-900 shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 cursor-pointer'
+                      ? 'bg-blue-300 text-slate-500 cursor-not-allowed'
+                      : 'bg-blue-600 text-white shadow-md shadow-blue-600/30 hover:bg-blue-700 cursor-pointer'
                   }`}
                 >
                   {isSubmitting ? (
                     <>
-                      <CreditCard size={14} className="animate-pulse" />
+                      <CreditCard size={12} className="animate-pulse" />
                       <span>Processing...</span>
                     </>
                   ) : (
                     <>
-                      <CreditCard size={14} />
-                      <span>COMPLETE SALE</span>
+                      <CreditCard size={12} />
+                      <span>COMPLETE</span>
                     </>
                   )}
                 </button>
               </div>
-              <div className="flex items-center justify-between text-[10px] font-medium text-slate-500">
+
+              {/* Online/Offline Status */}
+              <div className="flex items-center justify-between text-[9px] font-medium text-slate-500 pt-1">
                 <div className="flex items-center space-x-1">
                   {isOnline ? (
-                    <Wifi size={13} className="text-emerald-500" />
+                    <Wifi size={11} className="text-blue-600" />
                   ) : (
-                    <WifiOff size={13} className="text-amber-500" />
+                    <WifiOff size={11} className="text-slate-400" />
                   )}
                   <span>
-                    {isOnline
-                      ? 'Sales posted directly to server'
-                      : 'Sales stored locally for sync'}
+                    {isOnline ? 'Online mode' : 'Offline mode'}
                   </span>
                 </div>
               </div>
@@ -1338,102 +1316,8 @@ const POSInterface: React.FC = () => {
           </aside>
         </div>
       </div>
-
-      {/* Product Search Modal */}
-      {productModalOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
-          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-slate-200">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200">
-              <h2 className="text-sm font-extrabold text-slate-900">
-                Search Products
-              </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setProductModalOpen(false);
-                  setModalQuery('');
-                  setModalResults([]);
-                }}
-                className="p-1 rounded-full hover:bg-slate-100 text-slate-500"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={modalQuery}
-                  onChange={(e) => setModalQuery(e.target.value)}
-                  placeholder="Search by name, SKU..."
-                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
-                />
-              </div>
-              <div className="max-h-64 overflow-auto rounded-xl border border-slate-100 bg-slate-50/40">
-                {modalLoading ? (
-                  <div className="flex items-center justify-center py-6 text-xs text-slate-500">
-                    Loading products...
-                  </div>
-                ) : modalResults.length === 0 ? (
-                  <div className="flex items-center justify-center py-6 text-xs text-slate-500">
-                    No products found. Try a different search.
-                  </div>
-                ) : (
-                  <table className="w-full text-xs">
-                    <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                      <tr>
-                        <th className="px-3 py-2 text-left">Product</th>
-                        <th className="px-3 py-2 text-left">SKU</th>
-                        <th className="px-3 py-2 text-right">Price</th>
-                        <th className="px-3 py-2 w-24"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {modalResults.map((p) => (
-                        <tr
-                          key={p.id}
-                          className="border-t border-slate-100 hover:bg-white"
-                        >
-                          <td className="px-3 py-2">
-                            <div className="font-semibold text-slate-900">
-                              {p.name}
-                            </div>
-                            {typeof p.stock === 'number' && (
-                              <div className="text-[10px] text-slate-500">
-                                Stock: {p.stock}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-slate-600">
-                            {p.sku || p.barcode || '-'}
-                          </td>
-                          <td className="px-3 py-2 text-right font-semibold text-slate-800">
-                            {formatPKR((p as any).sellingPrice ?? (p as any).price ?? 0)}
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                handleAddProductToCart(p);
-                              }}
-                              className="inline-flex items-center space-x-1 rounded-lg bg-emerald-600 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-slate-900"
-                            >
-                              <Plus size={12} />
-                              <span>Add</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-</>
+    </>
   );
 };
 

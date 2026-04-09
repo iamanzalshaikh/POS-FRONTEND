@@ -38,12 +38,15 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
     useEffect(() => {
         if (isOpen) {
             if (editMember) {
+                // Extract terminal IDs from assignedTerminals
+                const terminalIds = editMember.assignedTerminals?.map(t => t.id) || [];
                 setFormData({
                     name: editMember.name,
                     email: editMember.email,
                     role: editMember.role as any,
                     password: '',
-                    isActive: editMember.status === 'active'
+                    isActive: editMember.status === 'active',
+                    assignedTerminalIds: terminalIds.length > 0 ? terminalIds : undefined,
                 });
             } else {
                 setFormData({ name: '', email: '', role: 'CASHIER', password: '', isActive: true });
@@ -94,14 +97,14 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
         }
 
         setLoading(true);
-        const result = editMember && onEdit 
-            ? await onEdit(editMember.id, { 
-                name: formData.name, 
-                role: formData.role, 
+        const result = editMember && onEdit
+            ? await onEdit(editMember.id, {
+                name: formData.name,
+                role: formData.role,
                 isActive: (formData as any).isActive,
                 ...(formData.password ? { password: formData.password } : {}),
-                ...(formData.role === "CASHIER" ? { assignedTerminalIds: formData.assignedTerminalIds } : {})
-              }) 
+                ...(formData.role === "CASHIER" ? { assignedTerminalIds: formData.assignedTerminalIds || [] } : {})
+              })
             : await onAdd(formData);
         setLoading(false);
 
@@ -111,7 +114,6 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
             setError(result.error || `Failed to ${editMember ? 'update' : 'create'} staff.`);
         }
     };
-
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8">
             <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>

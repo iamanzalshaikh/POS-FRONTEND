@@ -118,7 +118,7 @@ const AllTransactions: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#F7F8FA] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
           <div className="text-sm font-bold text-slate-500">Loading transactions...</div>
         </div>
       </div>
@@ -132,7 +132,7 @@ const AllTransactions: React.FC = () => {
         <div className="max-w-5xl mx-auto">
           <button
             onClick={() => navigate('/accountant/expenses')}
-            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-amber-600 transition-colors group mb-4"
+            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors group mb-4"
           >
             <ArrowLeft size={18} className="transition-transform group-hover:-translate-x-1" />
             <span>Back to Expenses</span>
@@ -174,12 +174,12 @@ const AllTransactions: React.FC = () => {
 
           <div className="bg-white border border-slate-200 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <RotateCcw size={20} className="text-amber-400" />
+              <div className="p-2 bg-blue-50 rounded-lg">
+                <RotateCcw size={20} className="text-blue-400" />
               </div>
               <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Refunded</span>
             </div>
-            <div className="text-2xl font-black text-amber-600">
+            <div className="text-2xl font-black text-blue-600">
               {transactions.filter(t => t.type === 'Refund').length}
             </div>
             <div className="text-[10px] font-bold text-slate-500 mt-1">orders</div>
@@ -193,7 +193,7 @@ const AllTransactions: React.FC = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as any)}
-              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
             >
               <option value="all">All Types</option>
               <option value="refund">Refunds</option>
@@ -214,7 +214,7 @@ const AllTransactions: React.FC = () => {
                 >
                   <div className="flex items-center gap-4">
                     <div className={`p-3 rounded-xl ${
-                      transaction.type === 'Refund' ? 'bg-amber-50 text-amber-500' :
+                      transaction.type === 'Refund' ? 'bg-blue-50 text-blue-500' :
                       transaction.type === 'Cancellation' ? 'bg-red-50 text-red-500' :
                       'bg-slate-50 text-slate-500'
                     }`}>
@@ -253,7 +253,7 @@ const AllTransactions: React.FC = () => {
           <div className="mt-6 bg-white border border-slate-200 rounded-2xl p-6">
             <div className="flex justify-between items-center">
               <span className="text-sm font-black uppercase text-slate-500 tracking-widest">Total Value</span>
-              <span className="text-2xl font-black text-amber-600">
+              <span className="text-2xl font-black text-blue-600">
                 ₹{totalAmount.toLocaleString('en-IN', { 
                   minimumFractionDigits: 2, 
                   maximumFractionDigits: 2 

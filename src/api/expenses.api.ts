@@ -18,6 +18,7 @@ export interface CreateExpenseData {
   amount: number;
   date: string;
   notes?: string;
+  customCategoryId?: string;
 }
 
 export interface UpdateExpenseData extends Partial<CreateExpenseData> {}
@@ -115,20 +116,35 @@ const storeExpenses = (expenses: Expense[]): void => {
 export const getExpenses = async (): Promise<ExpensesApiResponse> => {
   try {
     const response = await api.get<any>('/expenses');
-    
+
+    console.log('[Expenses API] Raw API response:', response.data);
+
     // Handle different response structures
     let data: Expense[];
     if (Array.isArray(response.data)) {
       data = response.data;
+    } else if (response.data?.data?.items && Array.isArray(response.data.data.items)) {
+      // Paginated response: { success, data: { items: [...], pagination: {...} } }
+      data = response.data.data.items;
+      console.log('[Expenses API] Parsed paginated response, items:', data.length);
     } else if (response.data?.data && Array.isArray(response.data.data)) {
+      // Flat array: { success, data: [...] }
       data = response.data.data;
+      console.log('[Expenses API] Parsed flat array response, items:', data.length);
     } else {
+      console.warn('[Expenses API] Unknown response structure:', response.data);
       data = [];
     }
-    
+
+    // Prisma Decimal serializes to string — normalize to number
+    const normalized = data.map((item: Expense) => ({
+      ...item,
+      amount: Number(item.amount),
+    }));
+
     return {
       success: true,
-      data,
+      data: normalized,
     };
   } catch (error: any) {
     // If API fails (e.g., endpoint doesn't exist yet), use localStorage
@@ -148,32 +164,20 @@ export const getExpenses = async (): Promise<ExpensesApiResponse> => {
 export const createExpense = async (data: CreateExpenseData): Promise<ExpensesApiResponse> => {
   try {
     const response = await api.post<any>('/expenses', data);
-    
+
     return {
       success: true,
       data: response.data?.data || response.data,
       message: response.data?.message || 'Expense created successfully',
     };
   } catch (error: any) {
-    // Fallback to localStorage
-    console.warn('[Expenses API] API call failed, using localStorage:', error.message);
-    
-    const newExpense: Expense = {
-      id: `exp_${Date.now()}`,
-      ...data,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    
-    const expenses = getStoredExpenses();
-    expenses.unshift(newExpense);
-    storeExpenses(expenses);
-    
-    return {
-      success: true,
-      data: [newExpense],
-      message: 'Expense created (offline mode)',
-    };
+    // Log detailed error for debugging
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message;
+    console.error('[Expenses API] Create expense failed:', { status, message, data });
+
+    // Re-throw the error instead of silently falling back
+    throw error;
   }
 };
 
@@ -185,41 +189,18 @@ export const updateExpense = async (
   data: UpdateExpenseData
 ): Promise<ExpensesApiResponse> => {
   try {
-    const response = await api.put<any>(`/expenses/${id}`, data);
-    
+    const response = await api.patch<any>(`/expenses/${id}`, data);
+
     return {
       success: true,
       data: response.data?.data || response.data,
       message: response.data?.message || 'Expense updated successfully',
     };
   } catch (error: any) {
-    // Fallback to localStorage
-    console.warn('[Expenses API] API call failed, using localStorage:', error.message);
-    
-    const expenses = getStoredExpenses();
-    const index = expenses.findIndex(e => e.id === id);
-    
-    if (index === -1) {
-      return {
-        success: false,
-        data: [],
-        message: 'Expense not found',
-      };
-    }
-    
-    expenses[index] = {
-      ...expenses[index],
-      ...data,
-      updatedAt: new Date().toISOString(),
-    };
-    
-    storeExpenses(expenses);
-    
-    return {
-      success: true,
-      data: [expenses[index]],
-      message: 'Expense updated (offline mode)',
-    };
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message;
+    console.error('[Expenses API] Update expense failed:', { status, message, id, data });
+    throw error;
   }
 };
 
@@ -229,34 +210,17 @@ export const updateExpense = async (
 export const deleteExpense = async (id: string): Promise<ExpensesApiResponse> => {
   try {
     const response = await api.delete<any>(`/expenses/${id}`);
-    
+
     return {
       success: true,
       data: [],
       message: response.data?.message || 'Expense deleted successfully',
     };
   } catch (error: any) {
-    // Fallback to localStorage
-    console.warn('[Expenses API] API call failed, using localStorage:', error.message);
-    
-    const expenses = getStoredExpenses();
-    const filtered = expenses.filter(e => e.id !== id);
-    
-    if (filtered.length === expenses.length) {
-      return {
-        success: false,
-        data: [],
-        message: 'Expense not found',
-      };
-    }
-    
-    storeExpenses(filtered);
-    
-    return {
-      success: true,
-      data: [],
-      message: 'Expense deleted (offline mode)',
-    };
+    const status = error.response?.status;
+    const message = error.response?.data?.message || error.message;
+    console.error('[Expenses API] Delete expense failed:', { status, message, id });
+    throw error;
   }
 };
 
@@ -266,7 +230,7 @@ export const deleteExpense = async (id: string): Promise<ExpensesApiResponse> =>
 export const getExpenseById = async (id: string): Promise<ExpensesApiResponse> => {
   try {
     const response = await api.get<any>(`/expenses/${id}`);
-    
+
     return {
       success: true,
       data: [response.data?.data || response.data],
@@ -275,7 +239,7 @@ export const getExpenseById = async (id: string): Promise<ExpensesApiResponse> =
     // Fallback to localStorage
     const expenses = getStoredExpenses();
     const expense = expenses.find(e => e.id === id);
-    
+
     if (!expense) {
       return {
         success: false,
@@ -283,10 +247,121 @@ export const getExpenseById = async (id: string): Promise<ExpensesApiResponse> =
         message: 'Expense not found',
       };
     }
-    
+
     return {
       success: true,
       data: [expense],
     };
+  }
+};
+
+// ============================================================================
+// CUSTOM CATEGORIES API
+// ============================================================================
+
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  isDefault?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CategoriesApiResponse {
+  success: boolean;
+  data: ExpenseCategory[];
+  message?: string;
+}
+
+/**
+ * Fetch all custom expense categories
+ */
+export const getExpenseCategories = async (): Promise<CategoriesApiResponse> => {
+  try {
+    const response = await api.get<any>('/expenses/categories');
+
+    let data: ExpenseCategory[];
+    // Backend returns: { success: true, data: { defaultCategories: [...], customCategories: [...] } }
+    if (response.data?.data?.customCategories && Array.isArray(response.data.data.customCategories)) {
+      const custom = response.data.data.customCategories;
+      const defaults = response.data.data.defaultCategories || [];
+      data = [...defaults, ...custom];
+    } else if (response.data?.data?.data && Array.isArray(response.data.data.data)) {
+      data = response.data.data.data;
+    } else if (Array.isArray(response.data?.data)) {
+      data = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      data = response.data;
+    } else {
+      data = [];
+    }
+
+    return {
+      success: true,
+      data,
+    };
+  } catch (error: any) {
+    console.warn('[Expenses API] Failed to fetch categories:', error.message);
+    return {
+      success: true,
+      data: [],
+    };
+  }
+};
+
+/**
+ * Create a new custom expense category
+ */
+export const createExpenseCategory = async (name: string): Promise<CategoriesApiResponse> => {
+  try {
+    const response = await api.post<any>('/expenses/categories', { name });
+
+    return {
+      success: true,
+      data: response.data?.data || response.data,
+      message: response.data?.message || 'Category created successfully',
+    };
+  } catch (error: any) {
+    console.error('[Expenses API] Failed to create category:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update a custom expense category
+ */
+export const updateExpenseCategory = async (
+  id: string,
+  name: string
+): Promise<CategoriesApiResponse> => {
+  try {
+    const response = await api.patch<any>(`/expenses/categories/${id}`, { name });
+
+    return {
+      success: true,
+      data: response.data?.data || response.data,
+      message: response.data?.message || 'Category updated successfully',
+    };
+  } catch (error: any) {
+    console.error('[Expenses API] Failed to update category:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a custom expense category
+ */
+export const deleteExpenseCategory = async (id: string): Promise<CategoriesApiResponse> => {
+  try {
+    const response = await api.delete<any>(`/expenses/categories/${id}`);
+
+    return {
+      success: true,
+      data: [],
+      message: response.data?.message || 'Category deleted successfully',
+    };
+  } catch (error: any) {
+    console.error('[Expenses API] Failed to delete category:', error);
+    throw error;
   }
 };

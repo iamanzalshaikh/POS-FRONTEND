@@ -101,7 +101,7 @@ const TaxManagement: React.FC = () => {
       case 'paid':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case 'pending':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'overdue':
         return 'bg-red-50 text-red-700 border-red-200';
     }
@@ -159,7 +159,7 @@ const TaxManagement: React.FC = () => {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
             <div className="text-sm font-bold text-slate-500">Loading tax data...</div>
           </div>
         </div>
@@ -184,7 +184,7 @@ const TaxManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-6 bg-white border border-slate-200 rounded-3xl">
           <div className="flex items-center justify-between mb-4">
-            <FileText size={24} className="text-amber-400" />
+            <FileText size={24} className="text-blue-400" />
             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Total Liability</span>
           </div>
           <div className="text-3xl font-black text-slate-900">₹{totalLiability.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -218,7 +218,7 @@ const TaxManagement: React.FC = () => {
           <h2 className="text-lg font-bold text-slate-900">Tax Breakdown</h2>
           <button
             onClick={handleExportReport}
-            className="flex items-center space-x-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all"
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
           >
             <Download size={16} />
             <span>Export Report</span>
@@ -260,7 +260,7 @@ const TaxManagement: React.FC = () => {
                   <td className="px-8 py-4 text-right">
                     <button
                       onClick={() => handlePayTax(item.id)}
-                      className="text-[10px] font-black uppercase text-amber-500 hover:text-amber-600 tracking-widest"
+                      className="text-[10px] font-black uppercase text-blue-500 hover:text-blue-600 tracking-widest"
                       disabled={item.status === 'paid'}
                     >
                       {item.status === 'paid' ? 'Paid' : 'Pay Now'}
@@ -281,14 +281,14 @@ const TaxManagement: React.FC = () => {
 
       {/* Tax Reminders */}
       {totalOverdue > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-3xl p-6">
           <div className="flex items-start space-x-4">
-            <AlertCircle size={24} className="text-amber-500 flex-shrink-0 mt-1" />
+            <AlertCircle size={24} className="text-blue-500 flex-shrink-0 mt-1" />
             <div>
-              <h3 className="text-sm font-bold text-amber-900 mb-2">Upcoming Tax Deadlines</h3>
+              <h3 className="text-sm font-bold text-blue-900 mb-2">Upcoming Tax Deadlines</h3>
               <ul className="space-y-2">
                 {taxItems.filter(t => t.status === 'pending' || t.status === 'overdue').map((item) => (
-                  <li key={item.id} className="text-[10px] text-amber-800">
+                  <li key={item.id} className="text-[10px] text-blue-800">
                     <span className="font-black uppercase">{item.type}</span> - {item.status === 'overdue' ? 'Overdue since' : 'Due on'} {item.dueDate}
                   </li>
                 ))}

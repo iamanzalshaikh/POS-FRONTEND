@@ -1,312 +1,429 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, Plus, ArrowUpRight, AlertCircle, XCircle, RotateCcw } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ArrowUpRight, XCircle, RotateCcw, Calculator, Package, ArrowUpDown } from 'lucide-react';
 import { getInventoryLogs, getSalesTransactions } from '../../api/finance.api';
+import { getExpenses } from '../../api/expenses.api';
+import type { Expense as ExpenseType } from '../../utils/expense-utils';
 
-interface Expense {
+interface Transaction {
   id: string;
+  invoiceNumber?: string;
   description: string;
   amount: number;
   date: string;
-  type: 'Inventory' | 'Refund' | 'Cancellation';
-  status?: 'pending' | 'processed';
+  dateRaw: Date;
+  type: 'Sale' | 'Refund' | 'Cancellation' | 'Inventory' | 'Business Expense';
+  status: 'completed' | 'pending' | 'processed';
+  paymentMethod?: string;
 }
 
-interface SalesStats {
-  totalSales: number;
-  totalRevenue: number;
-  cancelledCount: number;
-  cancelledAmount: number;
-  refundedCount: number;
-  refundedAmount: number;
-}
+type SortField = 'date' | 'amount' | 'type' | 'description';
+type SortDirection = 'asc' | 'desc';
 
 const ExpenseTracker: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [totalExpenses, setTotalExpenses] = useState(0);
-  const [salesStats, setSalesStats] = useState<SalesStats | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'refund' | 'cancellation' | 'inventory'>('all');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 8;
 
   useEffect(() => {
-    fetchExpenses();
+    fetchTransactions();
   }, []);
 
-  const fetchExpenses = async () => {
+  const fetchTransactions = async () => {
     try {
       setLoading(true);
-      console.log('💰 [ExpenseTracker] Fetching expenses...');
-      
-      // Fetch inventory adjustments and sales transactions
-      const [inventoryLogsResponse, salesResponse] = await Promise.all([
-        getInventoryLogs({ limit: 10, changeType: 'ADJUSTMENT' }),
-        getSalesTransactions({ limit: 100 })
+
+      const [inventoryLogsResponse, salesResponse, expensesResponse] = await Promise.all([
+        getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' }),
+        getSalesTransactions({ limit: 200 }),
+        getExpenses()
       ]);
 
-      console.log('💰 [ExpenseTracker] Inventory Logs Response:', inventoryLogsResponse);
-      console.log('💰 [ExpenseTracker] Sales Response:', salesResponse);
+      const transactionList: Transaction[] = [];
 
-      const expenseList: Expense[] = [];
-      let cancelledCount = 0;
-      let cancelledAmount = 0;
-      let refundedCount = 0;
-      let refundedAmount = 0;
-      let totalSales = 0;
-      let totalRevenue = 0;
+      // Process sales transactions
+      if (salesResponse.success && salesResponse.data) {
+        const sales = Array.isArray(salesResponse.data)
+          ? salesResponse.data
+          : (salesResponse.data as any);
 
-      // Process inventory logs as expenses
+        sales.forEach((sale: any) => {
+          const dateRaw = new Date(sale.createdAt);
+          if (sale.isCancelled) {
+            transactionList.push({
+              id: sale.id,
+              invoiceNumber: sale.invoiceNumber,
+              description: `Invoice #${sale.invoiceNumber}`,
+              amount: Number(sale.totalAmount),
+              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              dateRaw,
+              type: 'Cancellation',
+              status: 'completed',
+              paymentMethod: sale.paymentMethod
+            });
+          } else if (sale.paymentStatus === 'REFUNDED' || sale.paymentStatus === 'REFUND') {
+            transactionList.push({
+              id: sale.id,
+              invoiceNumber: sale.invoiceNumber,
+              description: `Invoice #${sale.invoiceNumber}`,
+              amount: Number(sale.totalAmount),
+              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              dateRaw,
+              type: 'Refund',
+              status: 'completed',
+              paymentMethod: sale.paymentMethod
+            });
+          } else {
+            transactionList.push({
+              id: sale.id,
+              invoiceNumber: sale.invoiceNumber,
+              description: `Invoice #${sale.invoiceNumber}`,
+              amount: Number(sale.totalAmount),
+              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              dateRaw,
+              type: 'Sale',
+              status: 'completed',
+              paymentMethod: sale.paymentMethod
+            });
+          }
+        });
+      }
+
+      // Process inventory logs
       if (inventoryLogsResponse.success && inventoryLogsResponse.data) {
-        // Data can be either direct array or object with logs property
-        const logs = Array.isArray(inventoryLogsResponse.data) 
-          ? inventoryLogsResponse.data 
+        const logs = Array.isArray(inventoryLogsResponse.data)
+          ? inventoryLogsResponse.data
           : (inventoryLogsResponse.data as any).logs || [];
-        
-        console.log('💰 [ExpenseTracker] Found', logs.length, 'inventory logs');
+
         logs.forEach((log: any) => {
-          expenseList.push({
+          const dateRaw = new Date(log.createdAt);
+          transactionList.push({
             id: log.id,
             description: `${log.changeType} - ${log.product?.name || 'Inventory Adjustment'}`,
-            amount: Math.abs(Number(log.quantityChange)) * 10, // Estimated cost
-            date: new Date(log.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            amount: Math.abs(Number(log.quantityChange)) * 10,
+            date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            dateRaw,
             type: 'Inventory',
             status: 'processed'
           });
         });
-      } else {
-        console.warn('💰 [ExpenseTracker] No inventory logs data or failed response');
       }
 
-      // Process sales for refunds and cancellations
-      if (salesResponse.success && salesResponse.data) {
-        // Data is a direct array from our normalized response
-        const sales = Array.isArray(salesResponse.data) 
-          ? salesResponse.data 
-          : (salesResponse.data as any);
-        
-        console.log('💰 [ExpenseTracker] Found', sales.length, 'sales');
+      // Process business expenses
+      if (expensesResponse.success && expensesResponse.data) {
+        const businessExpenses = expensesResponse.data as ExpenseType[];
 
-        sales.forEach(sale => {
-          totalSales += 1;
-          totalRevenue += Number(sale.totalAmount);
-
-          if (sale.isCancelled) {
-            cancelledCount += 1;
-            cancelledAmount += Number(sale.totalAmount);
-            expenseList.push({
-              id: sale.id,
-              description: `Cancelled - Invoice #${sale.invoiceNumber}`,
-              amount: Number(sale.totalAmount),
-              date: new Date(sale.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              type: 'Cancellation',
-              status: 'processed'
-            });
-          } else if (sale.paymentStatus === 'REFUNDED') {
-            refundedCount += 1;
-            refundedAmount += Number(sale.totalAmount);
-            expenseList.push({
-              id: sale.id,
-              description: `Refund - Invoice #${sale.invoiceNumber}`,
-              amount: Number(sale.totalAmount),
-              date: new Date(sale.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              type: 'Refund',
-              status: 'processed'
-            });
-          }
+        businessExpenses.forEach(expense => {
+          const dateRaw = new Date(expense.date);
+          transactionList.push({
+            id: expense.id,
+            description: `${expense.category} - ${expense.description}`,
+            amount: expense.amount,
+            date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            dateRaw,
+            type: 'Business Expense',
+            status: 'processed'
+          });
         });
-
-        setSalesStats({
-          totalSales,
-          totalRevenue,
-          cancelledCount,
-          cancelledAmount,
-          refundedCount,
-          refundedAmount
-        });
-      } else {
-        console.warn('💰 [ExpenseTracker] No sales data or failed response');
       }
 
-      // Sort by date (most recent first)
-      expenseList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      console.log('💰 [ExpenseTracker] Total expenses:', expenseList.length);
-      setExpenses(expenseList.slice(0, 10)); // Show top 10
-      setTotalExpenses(expenseList.reduce((sum, e) => sum + e.amount, 0));
+      transactionList.sort((a, b) => b.dateRaw.getTime() - a.dateRaw.getTime());
+      setTransactions(transactionList);
     } catch (err: any) {
-      console.error('Failed to fetch expenses:', err);
-      setError(err.message || 'Failed to load expenses');
+      console.error('Failed to fetch transactions:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddExpense = () => {
-    alert('Add expense functionality - Would open modal to record new expense');
+  const filteredAndSorted = useMemo(() => {
+    let result = [...transactions];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(t =>
+        t.description.toLowerCase().includes(q) ||
+        t.invoiceNumber?.toLowerCase().includes(q) ||
+        t.type.toLowerCase().includes(q) ||
+        t.paymentMethod?.toLowerCase().includes(q)
+      );
+    }
+
+    // Type filter
+    if (filterType !== 'all') {
+      result = result.filter(t => t.type === filterType);
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      result = result.filter(t => t.status === filterStatus);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case 'date':
+          cmp = a.dateRaw.getTime() - b.dateRaw.getTime();
+          break;
+        case 'amount':
+          cmp = a.amount - b.amount;
+          break;
+        case 'type':
+          cmp = a.type.localeCompare(b.type);
+          break;
+        case 'description':
+          cmp = a.description.localeCompare(b.description);
+          break;
+      }
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+
+    return result;
+  }, [transactions, searchQuery, filterType, filterStatus, sortField, sortDirection]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
+  const paginatedItems = filteredAndSorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const totalAmount = filteredAndSorted.reduce((sum, t) => sum + t.amount, 0);
+  const saleCount = filteredAndSorted.filter(t => t.type === 'Sale').length;
+  const refundCount = filteredAndSorted.filter(t => t.type === 'Refund').length;
+  const cancelCount = filteredAndSorted.filter(t => t.type === 'Cancellation').length;
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
   };
 
-  const filteredExpenses = filterType === 'all' 
-    ? expenses 
-    : expenses.filter(e => e.type.toLowerCase() === filterType);
+  const getTypeIcon = (type: Transaction['type']) => {
+    switch (type) {
+      case 'Sale': return <ArrowUpRight size={16} className="text-emerald-500" />;
+      case 'Refund': return <RotateCcw size={16} className="text-amber-500" />;
+      case 'Cancellation': return <XCircle size={16} className="text-rose-500" />;
+      case 'Inventory': return <Package size={16} className="text-slate-400" />;
+      case 'Business Expense': return <Calculator size={16} className="text-blue-500" />;
+    }
+  };
+
+  const getTypeBadgeClass = (type: Transaction['type']) => {
+    switch (type) {
+      case 'Sale': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'Refund': return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'Cancellation': return 'bg-rose-50 text-rose-700 border-rose-100';
+      case 'Inventory': return 'bg-slate-50 text-slate-600 border-slate-100';
+      case 'Business Expense': return 'bg-blue-50 text-blue-700 border-blue-100';
+    }
+  };
 
   if (loading) {
     return (
-      <div className="p-8 bg-white border border-slate-200 rounded-3xl overflow-hidden flex items-center justify-center min-h-[300px]">
+      <div className="bg-white border border-slate-100 rounded-3xl shadow-sm p-8 flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-sm font-bold text-slate-500">Loading expenses...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-8 bg-white border border-slate-200 rounded-3xl overflow-hidden">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold flex items-center">
-            <Calculator size={24} className="mr-3 text-amber-400" />
-            Pending Expenses
-          </h2>
-        </div>
-        <div className="text-center text-red-500 py-8">
-          <AlertCircle size={48} className="mx-auto mb-4 opacity-50" />
-          <p className="text-sm font-bold">{error}</p>
+          <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-sm font-black text-slate-400 uppercase tracking-widest">Loading transactions...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Sales Stats Cards */}
-      {salesStats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-emerald-50 rounded-lg">
-                <Calculator size={20} className="text-emerald-400" />
-              </div>
-              <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Total Sales</span>
-            </div>
-            <div className="text-2xl font-black text-slate-900">{salesStats.totalSales}</div>
-            <div className="text-[10px] font-bold text-slate-500 mt-1">
-              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(salesStats.totalRevenue)}
-            </div>
+    <div className="bg-white border border-slate-100 rounded-3xl shadow-sm group transition-all duration-500 hover:shadow-xl">
+      {/* Header */}
+      <div className="p-6 border-b border-slate-100">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Recent Transactions</h3>
+            <p className="text-xs text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Sales, refunds & expenses</p>
           </div>
-
-          <div className="bg-white border border-slate-200 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-red-50 rounded-lg">
-                <XCircle size={20} className="text-red-400" />
-              </div>
-              <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Cancelled</span>
-            </div>
-            <div className="text-2xl font-black text-red-600">{salesStats.cancelledCount}</div>
-            <div className="text-[10px] font-bold text-slate-500 mt-1">
-              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(salesStats.cancelledAmount)}
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-amber-50 rounded-lg">
-                <RotateCcw size={20} className="text-amber-400" />
-              </div>
-              <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Refunded</span>
-            </div>
-            <div className="text-2xl font-black text-amber-600">{salesStats.refundedCount}</div>
-            <div className="text-[10px] font-bold text-slate-500 mt-1">
-              {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(salesStats.refundedAmount)}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Expense Tracker */}
-      <div className="p-8 bg-white border border-slate-200 rounded-3xl overflow-hidden group">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold flex items-center">
-            <Calculator size={24} className="mr-3 text-amber-400" />
-            Recent Transactions
-          </h2>
-          <div className="flex items-center gap-2">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
-            >
-              <option value="all">All Types</option>
-              <option value="refund">Refunds</option>
-              <option value="cancellation">Cancellations</option>
-              <option value="inventory">Inventory</option>
-            </select>
-            <button
-              onClick={handleAddExpense}
-              className="p-2 bg-amber-500/10 text-amber-400 rounded-xl hover:bg-amber-500/20 transition-all"
-            >
-              <Plus size={20} />
-            </button>
+          <div className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100 shadow-sm shadow-blue-50/50">
+            <span className="text-[10px] font-black uppercase tracking-widest">{filteredAndSorted.length} records</span>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {filteredExpenses.length > 0 ? (
-            filteredExpenses.map((expense, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:bg-slate-100 transition-all cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
-                    expense.type === 'Refund' ? 'bg-amber-50 text-amber-500' :
-                    expense.type === 'Cancellation' ? 'bg-red-50 text-red-500' :
-                    'bg-slate-50 text-slate-500'
-                  }`}>
-                    {expense.type === 'Refund' ? <RotateCcw size={18} /> :
-                     expense.type === 'Cancellation' ? <XCircle size={18} /> :
-                     <ArrowUpRight size={18} />}
-                  </div>
-                  <div>
-                    <div className="font-bold text-sm tracking-tight text-slate-900">{expense.description}</div>
-                    <div className="text-[10px] text-slate-500 font-black uppercase">
-                      {expense.type} • {expense.date}
+        {/* Search + Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by invoice, description, type..."
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+            />
+          </div>
+          <select
+            value={filterType}
+            onChange={e => { setFilterType(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+          >
+            <option value="all">All Types</option>
+            <option value="Sale">Sales</option>
+            <option value="Refund">Refunds</option>
+            <option value="Cancellation">Cancellations</option>
+            <option value="Inventory">Inventory</option>
+            <option value="Business Expense">Expenses</option>
+          </select>
+          <select
+            value={filterStatus}
+            onChange={e => { setFilterStatus(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+          >
+            <option value="all">All Status</option>
+            <option value="completed">Completed</option>
+            <option value="processed">Processed</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="text-left px-6 py-3">
+                <button
+                  onClick={() => handleSort('description')}
+                  className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-500 tracking-widest hover:text-slate-900 transition-colors"
+                >
+                  Description
+                  <ArrowUpDown size={12} />
+                </button>
+              </th>
+              <th className="text-left px-6 py-3">
+                <button
+                  onClick={() => handleSort('type')}
+                  className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-500 tracking-widest hover:text-slate-900 transition-colors"
+                >
+                  Type
+                  <ArrowUpDown size={12} />
+                </button>
+              </th>
+              <th className="text-left px-6 py-3">
+                <button
+                  onClick={() => handleSort('date')}
+                  className="flex items-center gap-1 text-[10px] font-black uppercase text-slate-500 tracking-widest hover:text-slate-900 transition-colors"
+                >
+                  Date
+                  <ArrowUpDown size={12} />
+                </button>
+              </th>
+              <th className="text-right px-6 py-3">
+                <button
+                  onClick={() => handleSort('amount')}
+                  className="flex items-center gap-1 justify-end text-[10px] font-black uppercase text-slate-500 tracking-widest hover:text-slate-900 transition-colors ml-auto"
+                >
+                  Amount
+                  <ArrowUpDown size={12} />
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedItems.length > 0 ? (
+              paginatedItems.map((tx) => (
+                <tr
+                  key={tx.id}
+                  className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors cursor-pointer"
+                  onClick={() => tx.invoiceNumber && navigate(`/accountant/transactions`)}
+                >
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-slate-50">
+                        {getTypeIcon(tx.type)}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-slate-900 tracking-tight">{tx.description}</div>
+                        {tx.paymentMethod && (
+                          <div className="text-[10px] text-slate-400 font-medium">{tx.paymentMethod}</div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className="font-black text-slate-900">
-                    {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(expense.amount)}
-                  </span>
-                  <ArrowUpRight size={14} className="text-slate-400" />
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-12 text-slate-400">
-              <p className="text-sm font-bold">No transactions found</p>
-            </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${getTypeBadgeClass(tx.type)}`}>
+                      {tx.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-xs font-medium text-slate-600">{tx.date}</span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <span className="text-sm font-black text-slate-900 tabular-nums">
+                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount)}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="px-6 py-16 text-center">
+                  <p className="text-sm font-bold text-slate-400">No transactions found</p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="text-xs font-medium text-slate-500">
+          Showing <span className="font-black text-slate-900">{paginatedItems.length}</span> of{' '}
+          <span className="font-black text-slate-900">{filteredAndSorted.length}</span> transactions
+          {totalAmount > 0 && (
+            <span className="ml-3">
+              Total: <span className="font-black text-slate-900">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalAmount)}</span>
+            </span>
           )}
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-xs font-black text-slate-500 w-16 text-center">
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
 
-        {totalExpenses > 0 && (
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Total Value</span>
-              <span className="text-lg font-black text-amber-600">
-                {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalExpenses)}
-              </span>
-            </div>
-          </div>
-        )}
-
-        <button
-          onClick={() => navigate('/accountant/transactions')}
-          className="w-full mt-6 py-3 border border-slate-200 border-dashed rounded-2xl text-slate-500 text-xs font-black uppercase tracking-widest hover:border-amber-500/50 hover:text-amber-500 transition-all"
-        >
-          View All Transactions
-        </button>
+      {/* Summary Stats */}
+      <div className="grid grid-cols-3 border-t border-slate-100 divide-x divide-slate-100">
+        <div className="p-4 text-center">
+          <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Sales</div>
+          <div className="text-lg font-black text-emerald-600 mt-1">{saleCount}</div>
+        </div>
+        <div className="p-4 text-center">
+          <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Refunds</div>
+          <div className="text-lg font-black text-amber-600 mt-1">{refundCount}</div>
+        </div>
+        <div className="p-4 text-center">
+          <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Cancelled</div>
+          <div className="text-lg font-black text-rose-600 mt-1">{cancelCount}</div>
+        </div>
       </div>
     </div>
   );

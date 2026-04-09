@@ -31,7 +31,7 @@ const ExportData: React.FC = () => {
       name: 'Tax Reports',
       description: 'GST, TDS, and income tax summaries for filing',
       format: 'PDF, Excel',
-      icon: <FileText size={24} className="text-amber-400" />,
+      icon: <FileText size={24} className="text-blue-400" />,
       endpoint: 'tax-reports'
     },
     {
@@ -55,30 +55,38 @@ const ExportData: React.FC = () => {
   const handleExport = async (optionId: string) => {
     try {
       setLoading(optionId);
-      
+
       if (optionId === '4') { // Revenue Report
         const response = await getSalesReport({ startDate, endDate });
-        if (response.data?.success) {
+        if (response.success) {
           alert('Revenue report downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       } else if (optionId === '3') { // Expense Ledger
         const response = await getInventoryReport();
-        if (response.data?.success) {
+        if (response.success) {
           alert('Expense ledger downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       } else if (optionId === '2') { // Tax Reports
         const response = await getSalesReport({ startDate, endDate });
-        if (response.data?.success) {
+        if (response.success) {
           alert('Tax report downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       } else { // Financial Statements
         const response = await getSalesTransactions({ startDate, endDate, limit: 100 });
-        if (response.data?.success) {
+        if (response.success) {
           alert('Financial statements downloaded successfully!');
+        } else {
+          alert(`Export failed: ${response.message || 'Unknown error'}`);
         }
       }
     } catch (err: any) {
-      alert(`Export failed: ${err.response?.data?.message || 'Unknown error'}`);
+      alert(`Export failed: ${err.message || 'Unknown error'}`);
     } finally {
       setLoading(null);
     }
@@ -95,7 +103,7 @@ const ExportData: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold flex items-center">
-              <Download size={24} className="mr-3 text-amber-400" />
+              <Download size={24} className="mr-3 text-blue-400" />
               Export Financial Data
             </h2>
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">
@@ -104,7 +112,7 @@ const ExportData: React.FC = () => {
           </div>
           <button
             onClick={handleExportAll}
-            className="flex items-center space-x-2 px-6 py-3 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/30"
+            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
           >
             <Download size={16} />
             <span>Export All</span>
@@ -167,10 +175,10 @@ const ExportData: React.FC = () => {
         {exportOptions.map((option) => (
           <div
             key={option.id}
-            className="bg-white border border-slate-200 rounded-3xl p-6 hover:border-amber-200 hover:shadow-lg hover:shadow-amber-500/10 transition-all group cursor-pointer"
+            className="bg-white border border-slate-200 rounded-3xl p-6 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10 transition-all group cursor-pointer"
           >
             <div className="flex items-start justify-between mb-4">
-              <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-amber-50 transition-colors">
+              <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-blue-50 transition-colors">
                 {option.icon}
               </div>
               <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest bg-slate-100 px-3 py-1 rounded-lg">
@@ -186,11 +194,11 @@ const ExportData: React.FC = () => {
             <button
               onClick={() => handleExport(option.id)}
               disabled={loading === option.id}
-              className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all group-hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all group-hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading === option.id ? (
                 <span className="flex items-center justify-center">
-                  <span className="w-4 h-4 border-2 border-amber-200 border-t-amber-500 rounded-full animate-spin mr-2"></span>
+                  <span className="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mr-2"></span>
                   Generating...
                 </span>
               ) : (
@@ -204,7 +212,7 @@ const ExportData: React.FC = () => {
       {/* Scheduled Exports */}
       <div className="bg-white border border-slate-200 rounded-3xl p-8">
         <h3 className="text-lg font-bold text-slate-900 mb-6">Scheduled Exports</h3>
-        
+
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
             <div className="flex items-center space-x-4">
@@ -228,8 +236,8 @@ const ExportData: React.FC = () => {
 
           <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
             <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-                <FileText size={20} className="text-amber-500" />
+              <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                <FileText size={20} className="text-blue-500" />
               </div>
               <div>
                 <div className="text-sm font-bold text-slate-900">Quarterly Tax Report</div>
@@ -247,7 +255,7 @@ const ExportData: React.FC = () => {
           </div>
         </div>
 
-        <button className="w-full mt-6 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 text-[10px] font-black uppercase tracking-widest hover:border-amber-500 hover:text-amber-500 transition-all">
+        <button className="w-full mt-6 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-500 text-[10px] font-black uppercase tracking-widest hover:border-blue-500 hover:text-blue-500 transition-all">
           + Schedule New Export
         </button>
       </div>

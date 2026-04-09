@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart } from 'lucide-react';
 import { getSalesReport, getInventoryReport } from '../../api/finance.api';
+import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
+import type { Expense } from '../../utils/expense-utils';
+import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
 
 interface MonthlyCloseData {
   period: {
@@ -15,6 +18,14 @@ interface MonthlyCloseData {
     totalTax: number;
     netRevenue: number;
   };
+  expenses: {
+    total: number;
+    byCategory: Array<{
+      category: string;
+      amount: number;
+      percentage: number;
+    }>;
+  };
   inventory: {
     openingStock?: number;
     closingStock: number;
@@ -25,6 +36,8 @@ interface MonthlyCloseData {
   profit: {
     grossProfit: number;
     grossMargin: number;
+    netProfit: number;
+    netMargin: number;
   };
 }
 
@@ -48,11 +61,18 @@ const MonthlyCloseReport: React.FC = () => {
       const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
       const endDate = new Date(year, month, 0).toISOString().split('T')[0];
 
-      // Fetch sales and inventory data
-      const [salesResponse, inventoryResponse] = await Promise.all([
+      console.log('📊 [MonthlyClose] Fetching data for:', { startDate, endDate, selectedMonth });
+
+      // Fetch sales, inventory, and expenses
+      const [salesResponse, inventoryResponse, expensesResponse] = await Promise.all([
         getSalesReport({ startDate, endDate }),
-        getInventoryReport()
+        getInventoryReport(),
+        getExpenses()
       ]);
+
+      console.log('📊 [MonthlyClose] Sales Response:', salesResponse);
+      console.log('📊 [MonthlyClose] Inventory Response:', inventoryResponse);
+      console.log('📊 [MonthlyClose] Expenses Response:', expensesResponse);
 
       if (!salesResponse.success || !inventoryResponse.success) {
         throw new Error('Failed to fetch data');
@@ -60,18 +80,51 @@ const MonthlyCloseReport: React.FC = () => {
 
       const salesData = salesResponse.data as SalesReportData;
       const inventoryData = inventoryResponse.data as InventoryReportData;
+      
+      // Filter expenses by selected month
+      let allExpenses: Expense[] = [];
+      if (expensesResponse.success && expensesResponse.data) {
+        allExpenses = expensesResponse.data.filter((expense: Expense) => {
+          const expenseDate = new Date(expense.date);
+          const expenseMonth = expenseDate.toISOString().slice(0, 7);
+          return expenseMonth === selectedMonth;
+        });
+      }
+      
+      console.log('📊 [MonthlyClose] Filtered expenses:', allExpenses.length, 'items');
 
-      // Calculate metrics
+      // Calculate sales metrics
       const totalRevenue = salesData.summary.totalRevenue;
       const totalDiscount = salesData.summary.totalDiscount;
       const totalTax = salesData.summary.totalTax;
       const netRevenue = totalRevenue - totalDiscount - totalTax;
 
-      // Estimate COGS (in production, backend should provide this)
-      // Using 70% of revenue as estimated COGS
-      const estimatedCOGS = totalRevenue * 0.70;
-      const grossProfit = netRevenue - estimatedCOGS;
+      // Calculate actual expenses from API
+      const totalExpenses = allExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
+      console.log('📊 [MonthlyClose] Total Expenses:', totalExpenses);
+
+      // Calculate expense breakdown by category
+      const expenseByCategory = EXPENSE_CATEGORIES
+        .map(cat => {
+          const catExpenses = allExpenses.filter(e => e.category === cat.value);
+          const catAmount = catExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+          return {
+            category: cat.label,
+            value: cat.value,
+            amount: catAmount,
+            percentage: totalExpenses > 0 ? (catAmount / totalExpenses) * 100 : 0,
+          };
+        })
+        .filter(c => c.amount > 0)
+        .sort((a, b) => b.amount - a.amount);
+
+      console.log('📊 [MonthlyClose] Expense by Category:', expenseByCategory);
+
+      // Calculate profit with ACTUAL expenses (no estimates)
+      const grossProfit = netRevenue - totalExpenses;
       const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+      const netProfit = grossProfit; // For now, net = gross (can add other deductions later)
+      const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
       setData({
         period: {
@@ -85,6 +138,10 @@ const MonthlyCloseReport: React.FC = () => {
           totalTax,
           netRevenue
         },
+        expenses: {
+          total: totalExpenses,
+          byCategory: expenseByCategory
+        },
         inventory: {
           closingStock: inventoryData.summary.totalStockValue,
           stockValuation: inventoryData.summary.totalStockValue,
@@ -93,7 +150,9 @@ const MonthlyCloseReport: React.FC = () => {
         },
         profit: {
           grossProfit,
-          grossMargin
+          grossMargin,
+          netProfit,
+          netMargin
         }
       });
     } catch (err: any) {
@@ -124,7 +183,7 @@ const MonthlyCloseReport: React.FC = () => {
       <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <div className="w-12 h-12 border-4 border-amber-200 border-t-amber-500 rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
             <div className="text-sm font-bold text-slate-500">Loading monthly close report...</div>
           </div>
         </div>
@@ -160,7 +219,7 @@ const MonthlyCloseReport: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-              <FileText size={28} className="text-amber-400" />
+              <FileText size={28} className="text-blue-400" />
               Monthly Close Report
             </h2>
             <p className="text-sm font-bold text-slate-500 mt-2">
@@ -173,16 +232,16 @@ const MonthlyCloseReport: React.FC = () => {
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 outline-none"
+              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
             />
           </div>
         </div>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-          <h3 className="text-lg font-black text-amber-900 mb-2">
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
+          <h3 className="text-lg font-black text-blue-900 mb-2">
             {getMonthName(selectedMonth)}
           </h3>
-          <p className="text-xs font-bold text-amber-700 uppercase tracking-widest">
+          <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">
             {data.period.startDate} to {data.period.endDate}
           </p>
         </div>
@@ -230,16 +289,16 @@ const MonthlyCloseReport: React.FC = () => {
         {/* Gross Profit */}
         <div className="bg-white border border-slate-200 rounded-3xl p-6">
           <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-amber-50 rounded-xl">
-              <TrendingUp size={24} className="text-amber-400" />
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <TrendingUp size={24} className="text-blue-400" />
             </div>
             <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Gross Profit</span>
           </div>
-          <div className="text-3xl font-black text-amber-600">
+          <div className="text-3xl font-black text-blue-600">
             {formatCurrency(data.profit.grossProfit)}
           </div>
           <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-bold text-amber-600">
+            <span className="text-xs font-bold text-blue-600">
               {data.profit.grossMargin.toFixed(1)}% margin
             </span>
           </div>
@@ -265,7 +324,7 @@ const MonthlyCloseReport: React.FC = () => {
       </div>
 
       {/* Detailed Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Sales Breakdown */}
         <div className="bg-white border border-slate-200 rounded-3xl p-8">
           <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
@@ -292,6 +351,36 @@ const MonthlyCloseReport: React.FC = () => {
           </div>
         </div>
 
+        {/* Expense Breakdown */}
+        <div className="bg-white border border-slate-200 rounded-3xl p-8">
+          <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+            <PieChart size={20} className="text-red-400" />
+            Expense Breakdown
+          </h3>
+          {data.expenses.byCategory.length > 0 ? (
+            <div className="space-y-3">
+              {data.expenses.byCategory.map((cat) => (
+                <div key={cat.category} className="flex justify-between items-center py-2">
+                  <span className="text-sm font-bold text-slate-700">{cat.category}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-slate-900">{formatCurrency(cat.amount)}</span>
+                    <span className="text-[10px] font-bold text-slate-500 ml-2">({cat.percentage.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between items-center py-3 pt-4 border-t-2 border-slate-200 mt-4">
+                <span className="text-sm font-black uppercase text-slate-700 tracking-widest">Total Expenses</span>
+                <span className="text-lg font-black text-red-600">{formatCurrency(data.expenses.total)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400">
+              <PieChart size={48} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-bold">No expenses recorded</p>
+            </div>
+          )}
+        </div>
+
         {/* Inventory Status */}
         <div className="bg-white border border-slate-200 rounded-3xl p-8">
           <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
@@ -305,7 +394,7 @@ const MonthlyCloseReport: React.FC = () => {
             </div>
             <div className="flex justify-between items-center py-3 border-b border-slate-100">
               <span className="text-sm font-bold text-slate-600">Low Stock Items</span>
-              <span className="text-sm font-black text-amber-600">{data.inventory.lowStockCount}</span>
+              <span className="text-sm font-black text-blue-600">{data.inventory.lowStockCount}</span>
             </div>
             <div className="flex justify-between items-center py-3 border-b border-slate-100">
               <span className="text-sm font-bold text-slate-600">Out of Stock Items</span>
@@ -319,7 +408,7 @@ const MonthlyCloseReport: React.FC = () => {
                   <span className="text-sm font-black">Excellent</span>
                 </span>
               ) : (
-                <span className="flex items-center gap-2 text-amber-600">
+                <span className="flex items-center gap-2 text-blue-600">
                   <AlertCircle size={16} />
                   <span className="text-sm font-black">Needs Attention</span>
                 </span>
@@ -329,10 +418,37 @@ const MonthlyCloseReport: React.FC = () => {
         </div>
       </div>
 
+      {/* Profit Summary */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-8">
+        <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+          <TrendingUp size={20} className="text-blue-400" />
+          Profit Summary
+        </h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center py-4 border-b border-slate-100">
+            <span className="text-base font-bold text-slate-700">Net Revenue</span>
+            <span className="text-xl font-black text-emerald-600">{formatCurrency(data.sales.netRevenue)}</span>
+          </div>
+          <div className="flex justify-between items-center py-4 border-b border-slate-100">
+            <span className="text-base font-bold text-slate-700">Total Expenses</span>
+            <span className="text-xl font-black text-red-600">-{formatCurrency(data.expenses.total)}</span>
+          </div>
+          <div className="flex justify-between items-center py-6 px-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 mt-4">
+            <div>
+              <span className="text-base font-black uppercase text-blue-900 tracking-widest">Net Profit</span>
+              <div className="text-[10px] font-bold text-blue-700 mt-1">
+                {data.profit.netMargin.toFixed(1)}% margin
+              </div>
+            </div>
+            <span className="text-3xl font-black text-blue-600">{formatCurrency(data.profit.netProfit)}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Action Items */}
       {(data.inventory.lowStockCount > 0 || data.inventory.outOfStockCount > 0) && (
-        <div className="bg-amber-50 border border-amber-200 rounded-3xl p-6">
-          <h3 className="text-lg font-black text-amber-900 mb-4 flex items-center gap-3">
+        <div className="bg-blue-50 border border-blue-200 rounded-3xl p-6">
+          <h3 className="text-lg font-black text-blue-900 mb-4 flex items-center gap-3">
             <AlertCircle size={20} />
             Action Required
           </h3>

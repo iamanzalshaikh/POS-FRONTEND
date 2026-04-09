@@ -105,7 +105,15 @@ const ReturnRefundPage: React.FC = () => {
 
     try {
       const response = await getSaleByInvoiceNumber(invoiceNumber.trim());
-      const saleData: Sale = response.data.data;
+      console.log('🔍 ReturnRefund - API response:', response);
+      
+      // getSaleByInvoiceNumber returns res.data which is { success, data, message }
+      // The sale object is in response.data
+      const saleData: Sale = response?.data || response;
+
+      if (!saleData?.id) {
+        throw new Error('Invalid sale data received');
+      }
 
       // Check if sale is already refunded
       if (saleData.paymentStatus === 'REFUNDED') {

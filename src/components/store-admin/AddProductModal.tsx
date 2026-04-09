@@ -74,14 +74,13 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
         formData.append('sku', sku);
         formData.append('barcode', barcode);
         formData.append('categoryId', categoryId);
-        formData.append('subCategoryId', subCategoryId);
         formData.append('purchasePrice', purchasePrice);
         formData.append('sellingPrice', sellingPrice);
         formData.append('taxPercentage', taxPercentage);
         // formData.append('discountPercentage', discountPercentage);
         formData.append('initialStock', initialStock);
         formData.append('reorderLevel', reorderLevel);
-        
+
         if (imageFile) {
             formData.append('image', imageFile);
         }

@@ -60,7 +60,7 @@ export interface Product {
 // PRODUCT CRUD
 // ============================================================================
 
-export const fetchProducts = async (params?: any) => {
+export const fetchProducts = async (params?: Record<string, any>) => {
   console.log('📦 [Products API] Calling GET /products...');
   try {
     const response = await api.get("/products", { params });

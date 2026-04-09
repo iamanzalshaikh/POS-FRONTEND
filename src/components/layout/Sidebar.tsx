@@ -18,7 +18,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
     const location = useLocation();
-    
+
     // State to manage the Inventory dropdown
     const [isInventoryOpen, setIsInventoryOpen] = useState(false);
 

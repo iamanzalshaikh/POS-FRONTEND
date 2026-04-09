@@ -1,49 +1,67 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useSidebar } from './sidebar';
 
 interface SidebarLinkProps {
-  to: string;
   icon: React.ReactNode;
   label: string;
-  variant?: 'indigo' | 'emerald' | 'amber' | 'rose' | 'slate';
+  to?: string;
+  onClick?: () => void;
+  variant?: 'indigo' | 'purple' | 'amber' | 'emerald' | 'navy';
 }
 
-const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, label, variant = 'indigo' }) => {
-  const { collapsed } = useSidebar();
-
-  const variantMap = {
-    indigo: 'text-indigo-400 bg-indigo-50/10 border-r-2 border-indigo-500',
-    emerald: 'text-emerald-400 bg-emerald-50/10 border-r-2 border-emerald-500',
-    amber: 'text-amber-400 bg-amber-50/10 border-r-2 border-amber-500',
-    rose: 'text-rose-400 bg-rose-50/10 border-r-2 border-rose-500',
-    slate: 'text-slate-400 bg-slate-50/10 border-r-2 border-slate-500',
+const SidebarLink: React.FC<SidebarLinkProps> = ({
+  icon,
+  label,
+  to,
+  onClick,
+  variant: _variant = 'navy'
+}) => {
+  const variantStyles = {
+    indigo: 'bg-[#2A2760] shadow-md text-white',
+    purple: 'bg-[#2A2760] shadow-md text-white',
+    amber: 'bg-[#2A2760] shadow-md text-white',
+    emerald: 'bg-[#2A2760] shadow-md text-white',
+    navy: 'bg-[#2A2760] shadow-md text-white'
   };
 
+  const baseClasses = "flex items-center px-4 py-3.5 mb-2 rounded-2xl transition-all duration-200 cursor-pointer overflow-hidden group";
+
+  if (to) {
+    return (
+      <NavLink
+        to={to}
+        onClick={onClick}
+        title={label}
+        end
+        className={({ isActive }) =>
+          `${baseClasses} ${
+            isActive
+              ? `${variantStyles.navy}`
+              : 'text-slate-400 hover:text-white hover:bg-[#2A2760]'
+          }`
+        }
+      >
+        {({ isActive }) => (
+          <div className="flex items-center space-x-3 w-full">
+             <div className={`flex-shrink-0 flex items-center justify-center w-6 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-400 group-hover:text-indigo-500'}`}>{icon}</div>
+             <span className="sidebar-label whitespace-nowrap transition-all duration-300 ease-in-out font-bold tracking-wide text-sm">{label}</span>
+          </div>
+        )}
+      </NavLink>
+    );
+  }
+
   return (
-    <NavLink
-      to={to}
-      end
-      className={({ isActive }) =>
-        `flex items-center gap-3 px-3 py-3 transition-all duration-300 group relative ${
-          isActive 
-            ? variantMap[variant] 
-            : 'text-slate-400 hover:text-white hover:bg-white/5'
-        }`
-      }
+    <div
+      onClick={onClick}
+      title={label}
+      className={`${baseClasses} text-slate-400 hover:text-white hover:bg-[#2A2760]`}
     >
-      <div className="flex-shrink-0 transition-transform duration-300 group-hover:scale-110">{icon}</div>
-      {!collapsed && (
-        <span className="font-bold text-sm tracking-tight truncate animate-in fade-in slide-in-from-left-2 duration-300">
-          {label}
-        </span>
-      )}
-      {collapsed && (
-        <div className="absolute left-full ml-4 px-3 py-2 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-[100] shadow-xl border border-white/5 pointer-events-none">
-          {label}
-        </div>
-      )}
-    </NavLink>
+      <div className="flex items-center space-x-3 w-full">
+        <div className="flex-shrink-0 flex items-center justify-center w-6 text-slate-400 group-hover:text-indigo-500 transition-colors">{icon}</div>
+        <span className="sidebar-label whitespace-nowrap transition-all duration-300 ease-in-out font-bold tracking-wide text-sm">{label}</span>
+      </div>
+    </div>
   );
 };
 

@@ -2,6 +2,11 @@
 export type StaffRole = "STORE_ADMIN" | "CASHIER" | "ACCOUNTANT";
 export type StaffStatus = "active" | "inactive";
 
+export interface AssignedTerminal {
+    id: string;
+    deviceName: string;
+}
+
 export interface StaffMember {
     id: string;
     name: string;
@@ -10,6 +15,7 @@ export interface StaffMember {
     status: StaffStatus;
     lastLogin: string;
     lastLogout: string;
+    assignedTerminals?: AssignedTerminal[];
 }
 
 export interface StaffAuthActivity {
