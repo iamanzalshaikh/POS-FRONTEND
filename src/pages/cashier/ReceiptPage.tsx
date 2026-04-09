@@ -1,12 +1,20 @@
 import React from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Printer, Mail, CheckCircle2, Clock, ArrowLeft, WifiOff, RefreshCw, MapPin, Phone, Building2 } from 'lucide-react';
+import { Printer, Mail, CheckCircle2, Clock, ArrowLeft, WifiOff, RefreshCw, MapPin, Phone, Building2, Globe } from 'lucide-react';
 import { getSaleById } from '../../api/sales.api';
 import { offlineStorage } from '../../services/offline-storage.service';
 import { offlineSync } from '../../services/offline-sync.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatCurrency } from '../../utils/expense-utils';
+
+// Simple number formatter without currency symbol
+const formatNumber = (amount: number): string => {
+  return new Intl.NumberFormat('en-PK', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 type ReceiptStatus = 'COMPLETED' | 'PENDING_SYNC';
 type SaleData = {
@@ -63,7 +71,6 @@ const ReceiptPage: React.FC = () => {
   const [shouldAutoPrint] = React.useState(
     (location.state as LocationState)?.autoPrint === true
   );
-  const [autoPrintTriggered, setAutoPrintTriggered] = React.useState(false);
   const [email, setEmail] = React.useState('');
   const [emailMessage, setEmailMessage] = React.useState<string | null>(null);
   const [hasPrinted, setHasPrinted] = React.useState(false);
@@ -71,6 +78,7 @@ const ReceiptPage: React.FC = () => {
   const [isSyncing, setIsSyncing] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
+  const autoPrintTriggeredRef = React.useRef(false);
 
   // Smart sale loading - Online-first with offline fallback
   React.useEffect(() => {
@@ -209,48 +217,65 @@ const ReceiptPage: React.FC = () => {
 
   // Auto-print receipt when data is loaded AND autoPrint flag is true
   React.useEffect(() => {
+    console.log('🖨️ [ReceiptPage] Auto-print check triggered:', {
+      shouldAutoPrint,
+      hasSale: !!sale,
+      autoPrintTriggered: autoPrintTriggeredRef.current,
+      saleData: sale ? {
+        id: sale.id,
+        tempId: sale.tempId,
+        invoiceNumber: sale.invoiceNumber,
+        items: sale.saleItems?.length || sale.items?.length || 0,
+        totalAmount: sale.totalAmount,
+      } : null,
+    });
+
     // Only auto-print if:
     // 1. shouldAutoPrint is true (came from COMPLETE SALE)
-    // 2. Data is ready
-    // 3. Not already printed
-    // 4. Not already triggered
-    if (!shouldAutoPrint || !sale || isDataReady || hasPrinted || autoPrintTriggered) return;
+    // 2. Sale data is loaded
+    // 3. Not already triggered (using ref to avoid React StrictMode issues)
+    if (!shouldAutoPrint || !sale || autoPrintTriggeredRef.current) {
+      console.log('⏸️ [ReceiptPage] Auto-print blocked:', {
+        shouldAutoPrint,
+        hasSale: !!sale,
+        autoPrintTriggered: autoPrintTriggeredRef.current,
+      });
+      return;
+    }
 
-    // Check what data we have - be more lenient
-    const hasItems = sale.saleItems && Array.isArray(sale.saleItems) && sale.saleItems.length > 0;
-    const hasSubtotal = sale.subtotal !== undefined && sale.subtotal !== null;
+    // Check what data we have - be VERY lenient
+    const hasItems = (sale.saleItems || sale.items) && 
+                     Array.isArray(sale.saleItems || sale.items) && 
+                     (sale.saleItems || sale.items).length > 0;
     const hasTotal = sale.totalAmount !== undefined && sale.totalAmount !== null;
     const hasInvoiceNumber = sale.invoiceNumber || sale.id || sale.tempId;
 
-    console.log('🖨️ [ReceiptPage] Auto-print check:', {
-      shouldAutoPrint,
-      hasSale: !!sale,
+    console.log('📊 [ReceiptPage] Data check:', {
       hasItems,
-      hasSubtotal,
       hasTotal,
       hasInvoiceNumber,
-      isDataReady,
-      hasPrinted,
-      autoPrintTriggered,
+      itemsCount: (sale.saleItems || sale.items)?.length,
+      totalAmount: sale.totalAmount,
     });
 
-    const allDataReady = hasItems && hasSubtotal && hasTotal && hasInvoiceNumber;
+    const allDataReady = hasItems && hasTotal && hasInvoiceNumber;
 
     if (allDataReady) {
-      console.log('✅ [ReceiptPage] Receipt data ready + autoPrint flag = true, triggering print...');
-      setIsDataReady(true);
+      console.log('✅ [ReceiptPage] All checks passed, triggering print in 800ms...');
+      autoPrintTriggeredRef.current = true;
 
-      // Minimal delay (500ms) to ensure DOM is fully rendered
+      // Longer delay (800ms) to ensure receipt DOM is fully rendered
       const printTimer = setTimeout(() => {
-        console.log('🖨️ [ReceiptPage] Auto-printing receipt...');
+        console.log('🖨️ [ReceiptPage] NOW calling window.print() - printing receipt page...');
         window.print();
         setHasPrinted(true);
-        setAutoPrintTriggered(true);
-      }, 500);
+      }, 800);
 
       return () => clearTimeout(printTimer);
+    } else {
+      console.log('❌ [ReceiptPage] Data not ready for auto-print');
     }
-  }, [shouldAutoPrint, sale, isDataReady, hasPrinted, autoPrintTriggered]);
+  }, [shouldAutoPrint, sale]);
 
   // Auto-navigate back to POS terminal after printing
   React.useEffect(() => {
@@ -436,65 +461,59 @@ const ReceiptPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0">
-        <section className="md:col-span-2 border-r border-slate-200 p-6 print:p-4 print:col-span-3 print:border-0 receipt-content">
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-4xl mx-auto p-6">
           {/* Store Info Header - For Print */}
           <div className="mb-6 pb-4 border-b-2 border-slate-300 print:block">
             {user?.store ? (
               // Use auth store info as primary source
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Building2 size={20} className="text-slate-700" />
-                  <h2 className="text-xl font-bold text-slate-900">{user.store.name}</h2>
-                </div>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">{user.store.name}</h2>
                 {user.store.address && (
-                  <div className="flex items-start space-x-2 mb-1">
-                    <MapPin size={16} className="text-slate-500 mt-0.5 flex-shrink-0" />
+                  <div className="flex items-center justify-center space-x-2 mb-1">
+                    <MapPin size={16} className="text-slate-500 flex-shrink-0" />
                     <p className="text-sm text-slate-700">{user.store.address}</p>
                   </div>
                 )}
                 {user.store.phone && (
-                  <div className="flex items-center space-x-2 mb-1">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
                     <Phone size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">Phone: {user.store.phone}</p>
+                    <p className="text-sm text-slate-700">{user.store.phone}</p>
                   </div>
                 )}
                 {user.store.email && (
-                  <div className="flex items-center space-x-2 mb-1">
+                  <div className="flex items-center justify-center space-x-2">
                     <Mail size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">Email: {user.store.email}</p>
+                    <p className="text-sm text-slate-700">{user.store.email}</p>
                   </div>
                 )}
               </div>
             ) : sale?.store ? (
               // Fallback to sale's store info
-              <div>
-                <div className="flex items-center space-x-2 mb-2">
-                  <Building2 size={20} className="text-slate-700" />
-                  <h2 className="text-xl font-bold text-slate-900">{sale.store.name}</h2>
-                </div>
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">{sale.store.name}</h2>
                 {sale.store.address && (
-                  <div className="flex items-start space-x-2 mb-1">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
                     <MapPin size={16} className="text-slate-500 mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-slate-700">{sale.store.address}</p>
                   </div>
                 )}
                 {sale.store.phone && (
-                  <div className="flex items-center space-x-2 mb-1">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
                     <Phone size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">Phone: {sale.store.phone}</p>
+                    <p className="text-sm text-slate-700">{sale.store.phone}</p>
                   </div>
                 )}
                 {sale.store.email && (
-                  <div className="flex items-center space-x-2 mb-1">
+                  <div className="flex items-center justify-center space-x-2">
                     <Mail size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">Email: {sale.store.email}</p>
+                    <p className="text-sm text-slate-700">{sale.store.email}</p>
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-center py-4">
-                <h2 className="text-xl font-bold text-slate-900">SALE RECEIPT</h2>
+                <h2 className="text-2xl font-bold text-slate-900">SALE RECEIPT</h2>
               </div>
             )}
           </div>
@@ -529,24 +548,23 @@ const ReceiptPage: React.FC = () => {
             )}
           </div>
 
-          <table className="w-full text-xs border-t border-b border-slate-200">
-            <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-y border-slate-200">
               <tr>
-                <th className="px-2 py-2 text-left">Item</th>
-                <th className="px-2 py-2 text-center w-12">Qty</th>
-                <th className="px-2 py-2 text-right w-16">Unit Price</th>
-                <th className="px-2 py-2 text-right w-16">Subtotal</th>
-                <th className="px-2 py-2 text-right w-14">GST (18%)</th>
-                <th className="px-2 py-2 text-right w-14">Discount</th>
-                <th className="px-2 py-2 text-right w-16">Line Total</th>
+                <th className="px-3 py-3 text-left">Item</th>
+                <th className="px-3 py-3 text-center w-16">Qty</th>
+                <th className="px-3 py-3 text-right w-20">Price</th>
+                <th className="px-3 py-3 text-right w-20">GST</th>
+                <th className="px-3 py-3 text-right w-20">Discount</th>
+                <th className="px-3 py-3 text-right w-24">Total</th>
               </tr>
             </thead>
             <tbody>
               {items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
-                    className="px-3 py-6 text-center text-slate-400"
+                    colSpan={6}
+                    className="px-3 py-8 text-center text-slate-400"
                   >
                     No line items available.
                   </td>
@@ -557,17 +575,16 @@ const ReceiptPage: React.FC = () => {
                   let totalSubtotal = 0;
                   let totalGST = 0;
                   let totalDiscount = sale?.discountAmount || 0;
-                  let totalLineAmount = 0;
 
                   // Calculate per-item values
                   const itemDetails = items.map((item: any) => {
                     // Handle both flat structure (offline) and nested structure (online)
-                    const productName = 
+                    const productName =
                       item.productName ||                    // Offline sales (flat)
                       item.product?.name ||                  // Online sales (nested)
                       item.name ||                           // Fallback
                       'Unknown Product';
-                    
+
                     const unitPrice = Number(item.price || item.unitPrice || 0);
                     const quantity = Number(item.quantity || 1);
                     const subtotal = unitPrice * quantity;
@@ -582,49 +599,45 @@ const ReceiptPage: React.FC = () => {
 
                   // Distribute discount proportionally
                   const discountPercentage = totalSubtotal > 0 ? (totalDiscount / totalSubtotal) : 0;
-                  
+
                   return itemDetails.map((details: any, idx: number) => {
                     const itemDiscount = details.subtotal * discountPercentage;
                     const lineTotal = details.subtotal + details.gst - itemDiscount;
-                    totalLineAmount += lineTotal;
-
-                    console.log(`🧾 Receipt item ${idx}:`, {
-                      productName: details.productName,
-                      unitPrice: details.unitPrice,
-                      quantity: details.quantity,
-                      subtotal: details.subtotal,
-                      gst: details.gst,
-                      discount: itemDiscount,
-                      lineTotal,
-                    });
 
                     return (
                       <tr
                         key={idx}
-                        className="border-t border-slate-100"
+                        className="border-b border-slate-100 last:border-0"
                       >
-                        <td className="px-2 py-2">
-                          <div className="font-semibold text-slate-800">
+                        <td className="px-3 py-3">
+                          <div className="font-semibold text-slate-900">
                             {details.productName}
                           </div>
                         </td>
-                        <td className="px-2 py-2 text-center">
-                          {details.quantity}
+                        <td className="px-3 py-4 text-center">
+                          <span className="text-base font-bold text-slate-800">
+                            {details.quantity}
+                          </span>
                         </td>
-                        <td className="px-2 py-2 text-right">
-                          {formatCurrency(details.unitPrice)}
+                        <td className="px-3 py-4 text-right">
+                          <span className="text-base font-bold text-slate-800">
+                            {formatNumber(details.unitPrice)}
+                          </span>
                         </td>
-                        <td className="px-2 py-2 text-right">
-                          {formatCurrency(details.subtotal)}
+                        <td className="px-3 py-4 text-right">
+                          <span className="text-base font-bold text-slate-600">
+                            {formatNumber(details.gst)}
+                          </span>
                         </td>
-                        <td className="px-2 py-2 text-right">
-                          {formatCurrency(details.gst)}
+                        <td className="px-3 py-4 text-right">
+                          <span className="text-base font-bold text-blue-600">
+                            {formatNumber(itemDiscount)}
+                          </span>
                         </td>
-                        <td className="px-2 py-2 text-right">
-                          {formatCurrency(itemDiscount)}
-                        </td>
-                        <td className="px-2 py-2 text-right font-semibold text-slate-900">
-                          {formatCurrency(lineTotal)}
+                        <td className="px-3 py-4 text-right">
+                          <span className="text-lg font-black text-slate-900">
+                            {formatNumber(lineTotal)}
+                          </span>
                         </td>
                       </tr>
                     );
@@ -673,21 +686,21 @@ const ReceiptPage: React.FC = () => {
                 <>
                   <div className="flex justify-between font-semibold text-slate-800">
                     <span>Total Subtotal:</span>
-                    <span>{formatCurrency(totalSubtotal)}</span>
+                    <span>{formatNumber(totalSubtotal)}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-slate-800">
                     <span>Total GST (18%):</span>
-                    <span>{formatCurrency(totalGST)}</span>
+                    <span>{formatNumber(totalGST)}</span>
                   </div>
                   {totalDiscount > 0 && (
                     <div className="flex justify-between font-semibold text-emerald-600">
                       <span>Total Discount:</span>
-                      <span>-{formatCurrency(totalDiscount)}</span>
+                      <span>-{formatNumber(totalDiscount)}</span>
                     </div>
                   )}
                   <div className="border-t border-dashed border-slate-300 pt-3 flex justify-between font-black text-base text-slate-900">
                     <span>GRAND TOTAL:</span>
-                    <span className="text-emerald-600">{formatCurrency(grandTotal)}</span>
+                    <span className="text-emerald-600">{formatNumber(grandTotal)}</span>
                   </div>
                 </>
               );
@@ -712,63 +725,47 @@ const ReceiptPage: React.FC = () => {
               )}
             </div>
           )}
-        </section>
 
-        <aside className="p-6 flex flex-col space-y-4 print:hidden">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="inline-flex items-center justify-center space-x-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-md hover:bg-black"
-          >
-            <Printer size={16} />
-            <span>Print Receipt</span>
-          </button>
-
-          <div className="border border-slate-200 rounded-2xl p-3 space-y-2">
-            <div className="flex items-center space-x-2 text-xs font-bold text-slate-700">
-              <Mail size={14} />
-              <span>Email Receipt</span>
+          {/* Footer */}
+          <div className="mt-8 pt-4 border-t-2 border-slate-200 text-center print:mt-4 print:pt-3">
+            <p className="text-sm font-bold text-slate-700">
+              Software by <span className="text-blue-600">Elsa DevOps Technology</span>
+            </p>
+            <div className="mt-1 text-xs text-slate-500 space-x-4">
+              <span className="inline-flex items-center gap-1">
+                <Phone size={12} className="inline" />
+                03128289654
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Globe size={12} className="inline" />
+                www.elsadevops.com
+              </span>
             </div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="customer@example.com"
-              className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
-            />
+          </div>
+        </div>
+
+        {/* Action Buttons - Right Side */}
+        <div className="max-w-4xl mx-auto px-6 pb-6 print:hidden">
+          <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              disabled={!email}
-              onClick={handleEmailReceipt}
-              className="w-full rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-slate-900 disabled:bg-emerald-400"
+              onClick={handlePrint}
+              className="inline-flex items-center justify-center space-x-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-black uppercase tracking-widest text-white shadow-md hover:bg-blue-700"
             >
-              Send Email
+              <Printer size={16} />
+              <span>Print Receipt</span>
             </button>
-            {emailMessage && (
-              <div className="text-[11px] text-slate-600">
-                {emailMessage}
-              </div>
-            )}
+
+            <button
+              type="button"
+              onClick={() => navigate('/cashier/terminal')}
+              className="inline-flex items-center justify-center space-x-2 rounded-xl border border-blue-500 bg-blue-50 px-4 py-3 text-xs font-black uppercase tracking-widest text-blue-800 hover:bg-blue-100"
+            >
+              <ArrowLeft size={14} />
+              <span>New Sale</span>
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={() => navigate('/cashier/shift-summary')}
-            className="inline-flex items-center justify-center space-x-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-widest text-slate-800 hover:bg-slate-50"
-          >
-            <Clock size={14} />
-            <span>Shift Summary</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => navigate('/cashier/terminal')}
-            className="mt-auto inline-flex items-center justify-center space-x-2 rounded-xl border border-emerald-500 bg-emerald-50 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-emerald-800 hover:bg-emerald-100"
-          >
-            <ArrowLeft size={14} />
-            <span>New Sale</span>
-          </button>
-        </aside>
+        </div>
       </div>
     </div>
   );

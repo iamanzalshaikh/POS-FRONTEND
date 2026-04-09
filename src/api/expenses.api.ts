@@ -18,6 +18,7 @@ export interface CreateExpenseData {
   amount: number;
   date: string;
   notes?: string;
+  customCategoryId?: string;
 }
 
 export interface UpdateExpenseData extends Partial<CreateExpenseData> {}

@@ -146,6 +146,7 @@ const ExpensesPage: React.FC = () => {
       amount: Number(data.amount),
       date: data.date,
       notes: data.notes || undefined,
+      customCategoryId: data.customCategoryId,
     };
 
     if (editingExpense) {

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '@/components/store-admin/Sidebar';
 import TopNavbar from '@/components/store-admin/TopNavbar';
-import StaffHeader from '@/components/store-admin/StaffHeader';
 import StaffFilters from '@/components/store-admin/StaffFilters';
 import StaffTable from '@/components/store-admin/StaffTable';
 import StaffPagination from '@/components/store-admin/StaffPagination';
@@ -99,11 +98,18 @@ export default function StaffManagementPage() {
                 <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
                 <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in space-y-10">
-                    <StaffHeader
-                        onAddStaff={() => setIsModalOpen(true)}
-                        onExport={() => alert('Export CSV feature coming soon!')}
-                        onRefresh={() => fetchUsers()}
-                    />
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Staff Management</h1>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Manage your team and access levels</p>
+                        </div>
+                        <button
+                            onClick={() => setIsModalOpen(true)}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/30"
+                        >
+                            Add Staff
+                        </button>
+                    </div>
 
                     <div className="mt-8">
                         <StatsCards data={[

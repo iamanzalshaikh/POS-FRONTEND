@@ -17,6 +17,7 @@ export interface ExpenseFormData {
   amount: string;
   date: string;
   notes: string;
+  customCategoryId?: string;
 }
 
 const ExpenseModal: React.FC<ExpenseModalProps> = ({
@@ -31,6 +32,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     amount: '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
+    customCategoryId: undefined,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,12 +57,18 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   useEffect(() => {
     if (editingExpense) {
+      // If expense has a custom category, set the value to CUSTOM:id
+      const categoryValue = editingExpense.customCategoryId
+        ? `CUSTOM:${editingExpense.customCategoryId}`
+        : editingExpense.category;
+
       setFormData({
-        category: editingExpense.category,
+        category: categoryValue,
         description: editingExpense.description,
         amount: editingExpense.amount.toString(),
         date: editingExpense.date,
         notes: editingExpense.notes || '',
+        customCategoryId: editingExpense.customCategoryId || undefined,
       });
     } else {
       setFormData({
@@ -69,6 +77,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         amount: '',
         date: new Date().toISOString().split('T')[0],
         notes: '',
+        customCategoryId: undefined,
       });
     }
     setError(null);
@@ -79,13 +88,23 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     setLoading(true);
     setError(null);
 
+    // Parse category value - handle custom categories
+    let category = formData.category;
+    let customCategoryId: string | undefined = undefined;
+
+    if (category.startsWith('CUSTOM:')) {
+      customCategoryId = category.replace('CUSTOM:', '');
+      category = 'OTHER'; // Backend requires a valid enum value when customCategoryId is provided
+    }
+
     try {
       await onSubmit({
-        category: formData.category,
+        category,
         description: formData.description,
         amount: formData.amount,
         date: formData.date,
         notes: formData.notes,
+        customCategoryId,
       });
       onClose();
     } catch (err: any) {
@@ -145,7 +164,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                   </option>
                 ))}
                 {customCategories.map((cat) => (
-                  <option key={cat.id} value={cat.name}>
+                  <option key={cat.id} value={`CUSTOM:${cat.id}`}>
                     {cat.name}
                   </option>
                 ))}

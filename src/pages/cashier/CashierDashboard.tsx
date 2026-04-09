@@ -4,7 +4,6 @@ import { ShoppingCart, Scan, Package, RotateCcw, Clock } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import SidebarLink from '../../components/ui/SidebarLink';
 import DeviceAccessGate from '../../components/cashier/DeviceAccessGate';
-import DeviceStatusIndicator from '../../components/cashier/DeviceStatusIndicator';
 import POSInterface from './POSInterface';
 import ShiftTools from './ShiftTools';
 import DeviceSelection from './DeviceSelection';
@@ -27,13 +26,15 @@ const CashierDashboard: React.FC = () => {
 
   const sidebar = (
     <>
-      <div className="flex items-center space-x-3 mb-10 pl-1 mt-2">
-        <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-md shadow-emerald-500/30 flex-shrink-0">
-          <Scan size={24} className="text-white" />
-        </div>
-        <div className="sidebar-header-text whitespace-nowrap overflow-hidden">
-          <div className="font-extrabold text-xl tracking-tight text-slate-800 leading-none">QUICK-POS</div>
-          <div className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest mt-1">Cashier Pro</div>
+      <div className="p-6 border-b border-slate-100/50 mb-6">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-[#262255] rounded-xl flex items-center justify-center shadow-indigo-100 shadow-xl border border-indigo-500/20 flex-shrink-0">
+            <Scan size={24} className="text-white" />
+          </div>
+          <div className="sidebar-header-text whitespace-nowrap overflow-hidden">
+            <div className="text-xl font-extrabold text-white tracking-tight leading-none" style={{ textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>Hybrid POS</div>
+            <div className="text-[10px] font-black text-slate-300 mt-1 uppercase tracking-widest">CASHIER</div>
+          </div>
         </div>
       </div>
 
@@ -43,38 +44,38 @@ const CashierDashboard: React.FC = () => {
             to="/cashier/devices"
             icon={<Scan size={20} />}
             label="Select Device"
-            variant="emerald"
+            variant="navy"
           />
         )}
         <SidebarLink
           to="/cashier/terminal"
           icon={<ShoppingCart size={20} />}
           label="POS Terminal"
-          variant="emerald"
+          variant="navy"
         />
         <SidebarLink
           to="/cashier/offline-sales"
           icon={<Clock size={20} />}
           label="Offline Sales"
-          variant="emerald"
+          variant="navy"
         />
         <SidebarLink
           to="/cashier/returns"
           icon={<RotateCcw size={20} />}
           label="Returns / Refunds"
-          variant="emerald"
+          variant="navy"
         />
         <SidebarLink
           to="/cashier/products"
           icon={<Package size={20} />}
           label="Products"
-          variant="emerald"
+          variant="navy"
         />
         <SidebarLink
           to="/cashier/inventory"
           icon={<Package size={20} />}
           label="Inventory Check"
-          variant="emerald"
+          variant="navy"
         />
       </nav>
     </>
@@ -82,13 +83,12 @@ const CashierDashboard: React.FC = () => {
 
   return (
     <DeviceAccessGate>
-      <DashboardLayout 
+      <DashboardLayout
         sidebarContent={sidebar}
         title="POS Terminal"
         subtitle="Complete sales and manage your active shift"
         role="CASHIER"
         accentColor="emerald"
-        headerExtra={<DeviceStatusIndicator deviceId={displayTerminalId} deviceName={displayTerminalName} />}
       >
         <Routes>
           <Route

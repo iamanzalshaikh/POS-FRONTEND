@@ -12,6 +12,7 @@
 export interface Expense {
   id: string;
   category: string;
+  customCategoryId?: string | null;
   description: string;
   amount: number;
   date: string;
@@ -50,6 +51,7 @@ export const EXPENSE_CATEGORIES = [
   { value: 'MAINTENANCE', label: 'Maintenance' },
   { value: 'MARKETING', label: 'Marketing' },
   { value: 'TAXES', label: 'Taxes' },
+  { value: 'OTHER', label: 'Other' },
 ] as const;
 
 // ============================================================================

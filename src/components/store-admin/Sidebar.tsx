@@ -48,11 +48,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const [inventoryOpen, setInventoryOpen] = React.useState(true);
 
     return (
-        <aside className={`w-64 bg-[#262255] border-r border-[#262255]/20 text-slate-200 h-screen fixed top-0 flex flex-col z-60 transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} left-0 shadow-sm lg:shadow-none`}>
+        <aside className={`w-64 bg-[#262255] border-r border-[#262255]/20 text-slate-200 h-screen fixed top-0 left-0 flex flex-col z-50 transition-transform duration-300 ease-in-out ${
+            isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}>
             {/* Close button (Mobile only) */}
             <button
                 onClick={onClose}
-                className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl"
+                className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
             >
                 <ChevronRight size={20} className="rotate-180" />
             </button>
