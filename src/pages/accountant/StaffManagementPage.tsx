@@ -469,7 +469,6 @@ const StaffManagementPage: React.FC = () => {
                                   joinDate: member.joiningDate.split('T')[0],
                                   address: '', // Backend doesn't store this yet
                                   basicSalary: String(member.monthlySalary),
-                                  salaryType: 'PER_MONTH',
                                   joiningType: 'FULL_TIME',
                                   status: member.status,
                                 });

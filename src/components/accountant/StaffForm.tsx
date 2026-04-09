@@ -6,7 +6,6 @@ import { X, Loader2, CheckCircle2, AlertCircle, User, Phone, Mail, Calendar, Map
 // ============================================================================
 
 export type StaffStatus = 'ACTIVE' | 'INACTIVE';
-export type SalaryType = 'PER_MONTH' | 'PER_LECTURE';
 export type JoiningType = 'FULL_TIME' | 'PART_TIME' | 'VISITING';
 export type MaritalStatus = 'SINGLE' | 'MARRIED' | 'OTHER';
 
@@ -23,7 +22,6 @@ export interface StaffFormData {
   joinDate: string;
   address: string;
   basicSalary: string;
-  salaryType: SalaryType;
   joiningType: JoiningType;
   status: StaffStatus;
 }
@@ -51,11 +49,6 @@ const ROLES = [
   { value: 'CLEANER', label: 'Cleaner' },
   { value: 'DRIVER', label: 'Driver' },
   { value: 'OTHER', label: 'Other' },
-] as const;
-
-const SALARY_TYPES = [
-  { value: 'PER_MONTH', label: 'Per Month' },
-  { value: 'PER_LECTURE', label: 'Per Lecture' },
 ] as const;
 
 const JOINING_TYPES = [
@@ -88,7 +81,6 @@ const EMPTY_FORM: StaffFormData = {
   joinDate: new Date().toISOString().split('T')[0],
   address: '',
   basicSalary: '',
-  salaryType: 'PER_MONTH',
   joiningType: 'FULL_TIME',
   status: 'ACTIVE',
 };
@@ -241,7 +233,6 @@ const StaffForm: React.FC<StaffFormProps> = ({
   const updateJoinDate = useCallback((v: string) => setFormData((p) => ({ ...p, joinDate: v })), []);
   const updateAddress = useCallback((v: string) => setFormData((p) => ({ ...p, address: v })), []);
   const updateBasicSalary = useCallback((v: string) => setFormData((p) => ({ ...p, basicSalary: v })), []);
-  const updateSalaryType = useCallback((v: string) => setFormData((p) => ({ ...p, salaryType: v as SalaryType })), []);
   const updateJoiningType = useCallback((v: string) => setFormData((p) => ({ ...p, joiningType: v as JoiningType })), []);
   const updateStatus = useCallback((v: string) => setFormData((p) => ({ ...p, status: v as StaffStatus })), []);
 
@@ -343,7 +334,6 @@ const StaffForm: React.FC<StaffFormProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <SelectField label="Role" value={formData.role} onChange={updateRole} options={ROLES} required error={errors.role} icon={Briefcase} />
                 <TextField label="Basic Salary (Rs)" type="number" value={formData.basicSalary} onChange={updateBasicSalary} required error={errors.basicSalary} placeholder="0" icon={DollarSign} />
-                <SelectField label="Salary Type" value={formData.salaryType} onChange={updateSalaryType} options={SALARY_TYPES} icon={DollarSign} />
                 <SelectField label="Joining Type" value={formData.joiningType} onChange={updateJoiningType} options={JOINING_TYPES} icon={Briefcase} />
                 <TextField label="Join Date" type="date" value={formData.joinDate} onChange={updateJoinDate} required error={errors.joinDate} icon={Calendar} />
                 <SelectField label="Status" value={formData.status} onChange={updateStatus} options={STATUSES} icon={CheckCircle2} />
