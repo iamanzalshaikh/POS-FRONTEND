@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, DollarSign, Calendar, FolderPlus } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2 } from 'lucide-react';
 import {
   getExpenses,
   createExpense,
@@ -10,133 +10,50 @@ import {
 import type { Expense } from '../../utils/expense-utils';
 import {
   getExpenseSummary,
-  applyFilters,
   formatCurrency,
+  getCategoryLabel,
+  formatDate,
 } from '../../utils/expense-utils';
-import ExpensesFilters from '../../components/accountant/ExpensesFilters';
-import ExpensesTable from '../../components/accountant/ExpensesTable';
-import ExpensePagination from '../../components/accountant/ExpensePagination';
 import ExpenseModal, { type ExpenseFormData } from '../../components/accountant/ExpenseModal';
 import CategoryModal from '../../components/accountant/CategoryModal';
 import Toast, { type ToastType } from '../../components/ui/Toast';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface FilterState {
-  category: string;
-  month: string;
-  search: string;
-}
-
-interface ToastState {
-  message: string;
-  type: ToastType;
-}
-
-// ============================================================================
-// COMPONENT
-// ============================================================================
+import MetricCard from '../../components/global-components/MetricCard';
+import PageHeader from '../../components/global-components/PageHeader';
+import { DataTable } from '../../components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
 
 const ExpensesPage: React.FC = () => {
-  // Data state
   const [loading, setLoading] = useState(true);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
 
-  // Pagination state
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-
-  // Filters state
-  const [filters, setFilters] = useState<FilterState>({
-    category: 'ALL',
-    month: '',
-    search: '',
-  });
-
-  // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-
-  // Delete confirmation state
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-
-  // Summary state
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [summary, setSummary] = useState({ today: 0, thisMonth: 0, total: 0 });
-
-  // Toast state
-  const [toast, setToast] = useState<ToastState | null>(null);
-
-  // ============================================================================
-  // EFFECTS
-  // ============================================================================
 
   useEffect(() => {
     fetchExpenses();
   }, []);
 
   useEffect(() => {
-    const filtered = applyFilters(expenses, filters);
-    setFilteredExpenses(filtered);
-    setPage(1); // Reset to first page when filters change
-  }, [expenses, filters]);
-
-  useEffect(() => {
-    // Update summaries when expenses change
-    const summaryData = getExpenseSummary(expenses);
-    setSummary(summaryData);
+    setSummary(getExpenseSummary(expenses));
   }, [expenses]);
-
-  // ============================================================================
-  // HANDLERS
-  // ============================================================================
 
   const fetchExpenses = async () => {
     try {
       setLoading(true);
       const response = await getExpenses();
-
       if (response.success) {
         setExpenses(response.data);
-      } else {
-        showToast('Failed to fetch expenses', 'error');
-        setExpenses([]);
       }
     } catch (error: any) {
-      console.error('[ExpensesPage] Failed to fetch expenses:', error);
-
-      let errorMessage = 'Failed to fetch expenses';
-      if (error.response?.status === 403) {
-        errorMessage = 'Access denied. Please ensure you have Accountant role and are assigned to a store.';
-      } else if (error.response?.status === 401) {
-        errorMessage = 'Session expired. Please login again.';
-      } else if (error.code === 'ERR_NETWORK') {
-        errorMessage = 'Cannot connect to server. Please ensure backend is running.';
-      }
-
-      showToast(errorMessage, 'error');
-      setExpenses([]);
+      showToast('Failed to fetch expenses', 'error');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAddExpense = () => {
-    setEditingExpense(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEditExpense = (expense: Expense) => {
-    setEditingExpense(expense);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingExpense(null);
   };
 
   const handleSubmit = async (data: ExpenseFormData) => {
@@ -154,16 +71,12 @@ const ExpensesPage: React.FC = () => {
       if (response.success) {
         showToast('Expense updated successfully', 'success');
         await fetchExpenses();
-      } else {
-        throw new Error(response.message || 'Failed to update expense');
       }
     } else {
       const response = await createExpense(expenseData);
       if (response.success) {
         showToast('Expense created successfully', 'success');
         await fetchExpenses();
-      } else {
-        throw new Error(response.message || 'Failed to create expense');
       }
     }
   };
@@ -174,177 +87,169 @@ const ExpensesPage: React.FC = () => {
       if (response.success) {
         showToast('Expense deleted successfully', 'success');
         await fetchExpenses();
-        setDeleteConfirmId(null);
-      } else {
-        showToast(response.message || 'Failed to delete expense', 'error');
       }
     } catch (error: any) {
-      console.error('[ExpensesPage] Failed to delete expense:', error);
       showToast('Failed to delete expense', 'error');
     }
-  };
-
-  const handleFilterChange = (key: keyof FilterState, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const handleResetFilters = () => {
-    setFilters({
-      category: 'ALL',
-      month: '',
-      search: '',
-    });
   };
 
   const showToast = (message: string, type: ToastType) => {
     setToast({ message, type });
   };
 
-  const closeToast = () => {
-    setToast(null);
-  };
+  const filteredExpenses = expenses.filter(e => {
+    const matchesSearch = e.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          e.category.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === 'ALL' || e.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  });
 
-  // ============================================================================
-  // PAGINATION
-  // ============================================================================
-
-  const paginatedExpenses = filteredExpenses.slice((page - 1) * limit, page * limit);
-  const totalFiltered = filteredExpenses.length;
-
-  // ============================================================================
-  // RENDER
-  // ============================================================================
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <div className="text-sm font-bold text-slate-500">Loading expenses...</div>
+  const columns: ColumnDef<Expense>[] = [
+    {
+      header: "Expense Details",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center gap-3">
+          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
+            <DollarSign size={20} />
+          </div>
+          <div className="text-left">
+            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.description}</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-0.5">{formatDate(row.original.date)}</p>
+          </div>
         </div>
-      </div>
-    );
-  }
+      )
+    },
+    {
+      header: "Category",
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <span className="px-3 py-1.5 bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-[2px]">
+            {getCategoryLabel(row.original.category)}
+          </span>
+        </div>
+      )
+    },
+    {
+      header: "Amount",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest tabular-nums">
+          {formatCurrency(row.original.amount)}
+        </div>
+      )
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex justify-center items-center gap-2">
+          <button
+            onClick={() => {
+              setEditingExpense(row.original);
+              setIsModalOpen(true);
+            }}
+            className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-slate-700 dark:hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
+            title="Edit"
+          >
+            <Edit2 size={16} />
+          </button>
+          <button
+            onClick={() => handleDelete(row.original.id)}
+            className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50"
+            title="Delete"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      )
+    }
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Toast Notification */}
+    <div className="animate-fade-in space-y-8">
+      <PageHeader
+        title="Expenses Management"
+        description="Track and manage all business expenses"
+        primaryAction={{
+          label: "Add Expense",
+          icon: TrendingUp,
+          onClick: () => {
+            setEditingExpense(null);
+            setIsModalOpen(true);
+          }
+        }}
+        secondaryAction={{
+          label: "Add Category",
+          icon: FolderPlus,
+          onClick: () => setIsCategoryModalOpen(true)
+        }}
+      />
+
       {toast && (
-        <div className="fixed top-4 right-4 z-[100] animate-slide-in-right">
-          <Toast message={toast.message} type={toast.type} onClose={closeToast} />
+        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-right-4">
+          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight">Expenses Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Track and manage all business expenses</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={() => setIsCategoryModalOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20 border border-emerald-500"
-          >
-            <FolderPlus className="w-5 h-5" />
-            Add Category
-          </button>
-          <button
-            onClick={handleAddExpense}
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/20 border border-blue-500"
-          >
-            <TrendingUp className="w-5 h-5" />
-            Add Expense
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Today'sExpense */}
-        <div className="bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:shadow-[#2563EB]/10 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2.5 bg-emerald-50 rounded-xl">
-              <DollarSign className="w-5 h-5 text-emerald-500" />
-            </div>
-            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">
-              Today
-            </span>
-          </div>
-          <div className="text-3xl font-black text-slate-900">{formatCurrency(summary.today)}</div>
-          <div className="text-[10px] font-bold text-slate-500 mt-1">Expenses for today</div>
-        </div>
-
-        {/* This Month Expense */}
-        <div className="bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:shadow-[#2563EB]/10 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2.5 bg-blue-50 rounded-xl">
-              <Calendar className="w-5 h-5 text-blue-500" />
-            </div>
-            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">
-              This Month
-            </span>
-          </div>
-          <div className="text-3xl font-black text-slate-900">
-            {formatCurrency(summary.thisMonth)}
-          </div>
-          <div className="text-[10px] font-bold text-slate-500 mt-1">Expenses for current month</div>
-        </div>
-
-        {/* Total Expense */}
-        <div className="bg-white rounded-[32px] border border-slate-100 p-6 shadow-sm hover:shadow-xl hover:shadow-[#2563EB]/10 transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2.5 bg-indigo-50 rounded-xl">
-              <TrendingUp className="w-5 h-5 text-indigo-500" />
-            </div>
-            <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">
-              Total
-            </span>
-          </div>
-          <div className="text-3xl font-black text-slate-900">{formatCurrency(summary.total)}</div>
-          <div className="text-[10px] font-bold text-slate-500 mt-1">All-time expenses</div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <ExpensesFilters
-        searchQuery={filters.search}
-        setSearchQuery={(value) => handleFilterChange('search', value)}
-        selectedCategory={filters.category}
-        setSelectedCategory={(value) => handleFilterChange('category', value)}
-        selectedMonth={filters.month}
-        setSelectedMonth={(value) => handleFilterChange('month', value)}
-        onReset={handleResetFilters}
-      />
-
-      {/* Expense Table */}
-      <ExpensesTable
-        expenses={paginatedExpenses}
-        onEdit={handleEditExpense}
-        onDelete={handleDelete}
-        deleteConfirmId={deleteConfirmId}
-        setDeleteConfirmId={setDeleteConfirmId}
-      />
-
-      {/* Pagination */}
-      {totalFiltered > 0 && (
-        <ExpensePagination
-          page={page}
-          setPage={setPage}
-          total={totalFiltered}
-          limit={limit}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <MetricCard
+          title="Today's Expenses"
+          value={formatCurrency(summary.today)}
+          icon={DollarSign}
+          colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
-      )}
+        <MetricCard
+          title="This Month"
+          value={formatCurrency(summary.thisMonth)}
+          icon={Calendar}
+          colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        />
+        <MetricCard
+          title="Total Expenses"
+          value={formatCurrency(summary.total)}
+          icon={TrendingUp}
+          colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+        />
+      </div>
 
-      {/* Add/Edit Modal */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+        <DataTable
+          columns={columns}
+          data={filteredExpenses}
+          isLoading={loading}
+          onRefresh={fetchExpenses}
+          placeholder="Search expenses..."
+          headerActions={
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="Search description..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                />
+              </div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
+              >
+                <option value="ALL">All Categories</option>
+                {/* Categories could be dynamically listed here if available */}
+              </select>
+            </div>
+          }
+        />
+      </div>
+
       <ExpenseModal
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmit}
         editingExpense={editingExpense}
       />
 
-      {/* Category Management Modal */}
       <CategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}

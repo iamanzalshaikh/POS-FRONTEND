@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { getSalesReport, getSalesTransactions } from '../../api/finance.api';
+import MetricCard from '../../components/global-components/MetricCard';
 
 interface TaxItem {
   id: string;
@@ -182,34 +183,24 @@ const TaxManagement: React.FC = () => {
     <div className="space-y-6 animate-fade-in">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <FileText size={24} className="text-blue-400" />
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Total Liability</span>
-          </div>
-          <div className="text-3xl font-black text-slate-900">₹{totalLiability.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="text-[10px] text-slate-500 font-black uppercase mt-2">Last 30 Days</div>
-        </div>
-
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <CheckCircle size={24} className="text-emerald-400" />
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Paid</span>
-          </div>
-          <div className="text-3xl font-black text-emerald-600">₹{totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="text-[10px] text-slate-500 font-black uppercase mt-2">
-            {totalLiability > 0 ? ((totalPaid / totalLiability) * 100).toFixed(1) : 0}% Completed
-          </div>
-        </div>
-
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <AlertCircle size={24} className="text-red-400" />
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Overdue</span>
-          </div>
-          <div className="text-3xl font-black text-red-600">₹{totalOverdue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-          <div className="text-[10px] text-slate-500 font-black uppercase mt-2">Requires Action</div>
-        </div>
+        <MetricCard
+          title="Total Liability"
+          value={`₹${totalLiability.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          icon={FileText}
+          colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        />
+        <MetricCard
+          title="Paid Taxes"
+          value={`₹${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          icon={CheckCircle}
+          colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+        />
+        <MetricCard
+          title="Overdue Taxes"
+          value={`₹${totalOverdue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          icon={AlertCircle}
+          colorClass="bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"
+        />
       </div>
 
       {/* Tax Breakdown Table */}

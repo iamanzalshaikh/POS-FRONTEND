@@ -269,7 +269,7 @@ function DataTableComponent<TData, TValue>({
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="bg-muted/50">
                                     {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id} className="bg-card/95 font-black uppercase text-[10px] tracking-widest text-muted-foreground/80 h-16 py-5">
+                                        <TableHead key={header.id} className="bg-card/95 font-black uppercase text-[10px] tracking-widest text-muted-foreground/80 h-16 py-5 text-center">
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -286,7 +286,7 @@ function DataTableComponent<TData, TValue>({
                             [...Array(10)].map((_, i) => (
                                 <TableRow key={i}>
                                     {columns.map((_, j) => (
-                                        <TableCell key={j} className="h-14">
+                                        <TableCell key={j} className="h-14 text-center">
                                             <Skeleton className="h-5 w-full rounded-lg" />
                                         </TableCell>
                                     ))}
@@ -299,7 +299,7 @@ function DataTableComponent<TData, TValue>({
                                     data-state={row.getIsSelected() && "selected"}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="font-medium text-muted-foreground py-8">
+                                        <TableCell key={cell.id} className="font-medium text-muted-foreground py-8 text-center">
                                             {flexRender(
                                                 cell.column.columnDef.cell,
                                                 cell.getContext()

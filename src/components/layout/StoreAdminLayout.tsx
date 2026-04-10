@@ -1,23 +1,36 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from '@/components/store-admin/Sidebar';
+import Sidebar from '@/components/layout/MainSidebar';
 import TopNavbar from '@/components/store-admin/TopNavbar';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
+import { Columns2, Users, Boxes, ShoppingCart, Monitor, BarChart3, Settings, Layers, Package, Settings2 } from 'lucide-react';
+
+const storeAdminMenu = [
+    { name: 'Dashboard', icon: Columns2, path: '/store-admin/dashboard' },
+    { name: 'Staff Management', icon: Users, path: '/store-admin/staff' },
+    {
+        name: 'Inventory',
+        icon: Boxes,
+        path: '/store-admin/inventory',
+        children: [
+            { name: 'Stock Levels', icon: Layers, path: '/store-admin/inventory/stocks' },
+            { name: 'Products', icon: Package, path: '/store-admin/inventory/products' },
+            { name: 'Categories', icon: Layers, path: '/store-admin/categories' },
+            { name: 'Adjustments', icon: Settings2, path: '/store-admin/inventory/adjustments' },
+        ]
+    },
+    { name: 'Sales History', icon: ShoppingCart, path: '/store-admin/sales' },
+    { name: 'Devices', icon: Monitor, path: '/store-admin/devices' },
+    { name: 'Reports', icon: BarChart3, path: '/store-admin/reports' },
+    { name: 'Store Settings', icon: Settings, path: '/store-admin/settings' },
+];
 
 export default function StoreAdminLayout() {
-    return (
-        <SidebarProvider>
-            <StoreAdminLayoutContent />
-        </SidebarProvider>
-    );
-}
-
-function StoreAdminLayoutContent() {
     const { collapsed } = useSidebar();
     return (
         <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 text-slate-900 dark:text-slate-100 uppercase">
             {/* Sidebar */}
-            <Sidebar />
+            <Sidebar menuItems={storeAdminMenu} roleName="Store Admin" />
 
             {/* Main Content */}
             <div className={`transition-all duration-300 ${collapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>

@@ -1,15 +1,31 @@
 import { PanelLeftOpen, PanelLeftClose } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useAuthStore } from '@/store/useAuthStore';
 
-export default function TopNavbar() {
+interface TopNavbarProps {
+    portalLabel?: string;
+    branchLabel?: string;
+    onMenuClick?: () => void;
+}
+
+export default function TopNavbar({
+    portalLabel = 'Store Admin Portal',
+    branchLabel = 'Main Branch',
+    onMenuClick,
+}: TopNavbarProps) {
     const { collapsed, toggle, openMobile } = useSidebar();
+    const { user } = useAuthStore();
 
     return (
         <header className="h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-4 sm:px-8 flex items-center justify-between shadow-sm shadow-slate-100/50 dark:shadow-none transition-colors duration-300">
             <div className="flex items-center gap-4 sm:gap-6">
                 <button
                     onClick={() => {
+                        if (onMenuClick) {
+                            onMenuClick();
+                            return;
+                        }
                         if (window.innerWidth < 1024) {
                             openMobile();
                         } else {
@@ -25,7 +41,7 @@ export default function TopNavbar() {
                 <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block"></div>
                 
                 <h2 className="text-sm font-bold text-slate-800 dark:text-slate-200 tracking-widest uppercase hidden md:block">
-                    Store Admin Portal
+                    {portalLabel}
                 </h2>
             </div>
 
@@ -39,11 +55,18 @@ export default function TopNavbar() {
 
                 <div className="flex items-center gap-3 pl-2">
                     <div className="text-right hidden sm:block">
-                        <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">MAIN BRANCH</p>
+                        <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{branchLabel}</p>
                         <div className="flex items-center justify-end gap-1.5 mt-0.5">
                             <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-200"></span>
                             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold tracking-widest uppercase">ONLINE</p>
                         </div>
+                    </div>
+                    <div className="hidden md:block h-8 w-px bg-slate-100 dark:bg-slate-800"></div>
+                    <div className="hidden md:block text-right">
+                        <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{user?.name || 'User'}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-widest uppercase">
+                            {(user?.role || 'member').replace('_', ' ')}
+                        </p>
                     </div>
                 </div>
             </div>

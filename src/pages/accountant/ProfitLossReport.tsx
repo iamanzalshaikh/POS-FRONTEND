@@ -3,6 +3,7 @@ import { PieChart, TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDown
 import { getProfitAndLoss } from '../../api/finance.api';
 import type { ProfitLossData } from '../../api/finance.api';
 import { formatCurrency } from '../../utils/expense-utils';
+import MetricCard from '../../components/global-components/MetricCard';
 
 const ProfitLossReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -108,49 +109,30 @@ const ProfitLossReport: React.FC = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <DollarSign size={24} className="text-emerald-400" />
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Gross Profit</span>
-          </div>
-          <div className="text-3xl font-black text-emerald-600">{formatCurrency(data.grossProfit)}</div>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] font-bold text-slate-500">
-              {data.grossMargin.toFixed(1)}% margin
-            </span>
-          </div>
-        </div>
-
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <ArrowDownRight size={24} className="text-red-400" />
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Op. Expenses</span>
-          </div>
-          <div className="text-3xl font-black text-red-600">{formatCurrency(data.operatingExpenses)}</div>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] font-bold text-slate-500">
-              {data.expenseRatio.toFixed(1)}% of revenue
-            </span>
-          </div>
-        </div>
-
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <DollarSign size={24} className="text-blue-400" />
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Net Profit</span>
-          </div>
-          <div className="text-3xl font-black text-blue-600">{formatCurrency(data.netProfit)}</div>
-          <div className="text-[10px] text-slate-500 font-black uppercase mt-2">{getPeriodLabel()}</div>
-        </div>
-
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <PieChart size={24} className="text-blue-400" />
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Profit Margin</span>
-          </div>
-          <div className="text-3xl font-black text-blue-600">{data.netMargin.toFixed(1)}%</div>
-          <div className="text-[10px] text-slate-500 font-black uppercase mt-2">Net Margin</div>
-        </div>
+        <MetricCard
+          title="Gross Profit"
+          value={formatCurrency(data.grossProfit)}
+          icon={DollarSign}
+          colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+        />
+        <MetricCard
+          title="Operating Expenses"
+          value={formatCurrency(data.operatingExpenses)}
+          icon={ArrowDownRight}
+          colorClass="bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"
+        />
+        <MetricCard
+          title="Net Profit"
+          value={formatCurrency(data.netProfit)}
+          icon={TrendingUp}
+          colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        />
+        <MetricCard
+          title="Profit Margin"
+          value={`${data.netMargin.toFixed(1)}%`}
+          icon={PieChart}
+          colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+        />
       </div>
 
       {/* Profit & Loss Statement */}

@@ -3,6 +3,8 @@ import { Download, FileSpreadsheet, Calendar, Filter, TrendingUp } from 'lucide-
 import { getExpenses } from '../../api/expenses.api';
 import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES, formatCurrency, formatDate } from '../../utils/expense-utils';
+import MetricCard from '../../components/global-components/MetricCard';
+import PageHeader from '../../components/global-components/PageHeader';
 
 const ExpenseReport: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,6 @@ const ExpenseReport: React.FC = () => {
       const response = await getExpenses();
       let filtered = response.data;
 
-      // Filter by date range
       const start = new Date(startDate);
       const end = new Date(endDate);
       filtered = filtered.filter(expense => {
@@ -30,7 +31,6 @@ const ExpenseReport: React.FC = () => {
         return expenseDate >= start && expenseDate <= end;
       });
 
-      // Filter by category
       if (selectedCategory !== 'ALL') {
         filtered = filtered.filter(expense => expense.category === selectedCategory);
       }
@@ -61,11 +61,7 @@ const ExpenseReport: React.FC = () => {
   };
 
   const handleExportCSV = () => {
-    if (expenses.length === 0) {
-      alert('No expenses to export');
-      return;
-    }
-
+    if (expenses.length === 0) return;
     const headers = ['ID', 'Category', 'Description', 'Amount', 'Date', 'Notes'];
     const rows = expenses.map(e => [
       e.id,
@@ -75,31 +71,15 @@ const ExpenseReport: React.FC = () => {
       e.date,
       `"${(e.notes || '').replace(/"/g, '""')}"`,
     ]);
-
-    const totals = calculateTotals();
-    const summary = [
-      [],
-      ['SUMMARY'],
-      [`Total Expenses:`, Number(totals.total).toFixed(2)],
-      [`Date Range:`, `${startDate} to ${endDate}`],
-      [`Category Filter:`, selectedCategory],
-    ];
-
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(',')),
-      ...summary.map(row => row.join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-
-    link.setAttribute('href', url);
-    link.setAttribute('download', `expense-report-${startDate}-to-${endDate}.csv`);
-    link.style.visibility = 'hidden';
-
-    document.body.appendChild(link);
+    const link = document.body.appendChild(document.createElement('a'));
+    link.href = URL.createObjectURL(blob);
+    link.download = `expense-report-${startDate}-to-${endDate}.csv`;
     link.click();
     document.body.removeChild(link);
   };
@@ -107,65 +87,49 @@ const ExpenseReport: React.FC = () => {
   const totals = calculateTotals();
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold flex items-center gap-3">
-              <FileSpreadsheet className="w-6 h-6 text-blue-500" />
-              Expense Report
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">Generate and export expense reports</p>
-          </div>
-          <button
-            onClick={handleExportCSV}
-            disabled={!fetched || expenses.length === 0}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            Export CSV
-          </button>
-        </div>
+    <div className="animate-fade-in space-y-8">
+      <PageHeader
+        title="Expense Report"
+        description="Generate and export detailed expense summaries"
+        primaryAction={{
+          label: "Export CSV",
+          icon: Download,
+          onClick: handleExportCSV
+        }}
+      />
 
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
-          <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">
-              Start Date
-            </label>
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-none">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Start Date</label>
+            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-5 py-3.5 flex-1">
               <Calendar className="w-4 h-4 text-slate-400" />
               <input
                 type="date"
-                className="flex-1 text-sm font-bold text-slate-900 bg-transparent outline-none"
+                className="bg-transparent outline-none text-sm font-bold text-slate-900 dark:text-white w-full"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
               />
             </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">
-              End Date
-            </label>
-            <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">End Date</label>
+            <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-5 py-3.5 flex-1">
               <Calendar className="w-4 h-4 text-slate-400" />
               <input
                 type="date"
-                className="flex-1 text-sm font-bold text-slate-900 bg-transparent outline-none"
+                className="bg-transparent outline-none text-sm font-bold text-slate-900 dark:text-white w-full"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
               />
             </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-black uppercase text-slate-500 tracking-widest mb-2">
-              Category
-            </label>
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Category</label>
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+              className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-5 py-3.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/5 transition-all appearance-none cursor-pointer"
             >
               <option value="ALL">All Categories</option>
               {EXPENSE_CATEGORIES.map(cat => (
@@ -177,113 +141,101 @@ const ExpenseReport: React.FC = () => {
             <button
               onClick={fetchReport}
               disabled={loading}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all disabled:opacity-50"
+              className="w-full h-[54px] bg-slate-900 dark:bg-slate-800 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-xl"
             >
-              {loading ? 'Loading...' : 'Generate Report'}
+              {loading ? 'Generating...' : 'Generate Report'}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Summary Cards */}
       {fetched && expenses.length > 0 && (
-        <>
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white border border-slate-200 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-emerald-50 rounded-xl">
-                  <TrendingUp className="w-5 h-5 text-emerald-500" />
-                </div>
-                <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Total</span>
-              </div>
-              <div className="text-3xl font-black text-slate-900">{formatCurrency(totals.total)}</div>
-              <div className="text-[10px] font-bold text-slate-500 mt-1">{expenses.length} expenses</div>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-blue-50 rounded-xl">
-                  <Calendar className="w-5 h-5 text-blue-500" />
-                </div>
-                <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Period</span>
-              </div>
-              <div className="text-sm font-black text-slate-900">{formatDate(startDate)}</div>
-              <div className="text-[10px] font-bold text-slate-500 mt-1">to {formatDate(endDate)}</div>
-            </div>
-            <div className="bg-white border border-slate-200 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-3">
-                <div className="p-2.5 bg-purple-50 rounded-xl">
-                  <Filter className="w-5 h-5 text-purple-500" />
-                </div>
-                <span className="text-[9px] font-black uppercase text-slate-500 tracking-widest">Category</span>
-              </div>
-              <div className="text-sm font-black text-slate-900">
-                {selectedCategory === 'ALL' ? 'All Categories' : selectedCategory}
-              </div>
-              <div className="text-[10px] font-bold text-slate-500 mt-1">Filter applied</div>
-            </div>
+            <MetricCard
+              title="Total Expenses"
+              value={formatCurrency(totals.total)}
+              icon={TrendingUp}
+              colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+            />
+            <MetricCard
+              title="Transactions"
+              value={String(expenses.length)}
+              icon={FileSpreadsheet}
+              colorClass="bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            />
+            <MetricCard
+              title="Category Mix"
+              value={String(totals.byCategory.length)}
+              icon={Filter}
+              colorClass="bg-slate-900 text-white dark:bg-slate-800 dark:text-white"
+            />
           </div>
 
-          {/* Category Breakdown */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-8">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Category Breakdown</h3>
-            <div className="space-y-4">
-              {totals.byCategory.map((cat) => (
-                <div key={cat.value} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                  <div>
-                    <div className="text-sm font-bold text-slate-900">{cat.category}</div>
-                    <div className="text-[10px] text-slate-500 mt-1">{cat.count} expenses</div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6">Category Distribution</h3>
+              <div className="space-y-4">
+                {totals.byCategory.map((cat) => (
+                  <div key={cat.value} className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                    <div className="flex justify-between items-center mb-2">
+                       <span className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">{cat.category}</span>
+                       <span className="text-[10px] font-black text-slate-400 dark:text-slate-500">{cat.percentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                       <div className="h-full bg-slate-900 dark:bg-slate-400 rounded-full" style={{ width: `${cat.percentage}%` }}></div>
+                    </div>
+                    <div className="flex justify-between mt-2">
+                       <span className="text-[9px] font-black text-slate-400 uppercase">{cat.count} items</span>
+                       <span className="text-[11px] font-black text-slate-900 dark:text-white">{formatCurrency(cat.amount)}</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-black text-slate-900">{formatCurrency(cat.amount)}</div>
-                    <div className="text-[10px] font-bold text-slate-500 mt-1">{cat.percentage.toFixed(1)}%</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Expense Table */}
-          <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden">
-            <div className="px-8 py-6 border-b border-slate-200">
-              <h3 className="text-lg font-bold text-slate-900">Expense Details</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-500 tracking-widest">Date</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-500 tracking-widest">Category</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-500 tracking-widest">Description</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-slate-500 tracking-widest">Notes</th>
-                    <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-500 tracking-widest">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {expenses.map((expense) => (
-                    <tr key={expense.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-sm font-medium text-slate-900">{formatDate(expense.date)}</td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-blue-50 text-blue-700">
-                          {expense.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-bold text-slate-900">{expense.description}</td>
-                      <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">{expense.notes || '-'}</td>
-                      <td className="px-6 py-4 text-right text-sm font-black text-slate-900">{formatCurrency(expense.amount)}</td>
+            <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Statement Items</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50">
+                    <tr>
+                      <th className="px-8 py-4 text-center text-[9px] font-black uppercase text-slate-400 tracking-widest">Date / Ref</th>
+                      <th className="px-8 py-4 text-center text-[9px] font-black uppercase text-slate-400 tracking-widest">Detail</th>
+                      <th className="px-8 py-4 text-center text-[9px] font-black uppercase text-slate-400 tracking-widest">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {expenses.map((expense) => (
+                      <tr key={expense.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                        <td className="px-8 py-5 text-center">
+                          <p className="text-xs font-black text-slate-900 dark:text-white">{formatDate(expense.date)}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">ID: {expense.id.slice(-6).toUpperCase()}</p>
+                        </td>
+                        <td className="px-8 py-5 text-center">
+                          <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{expense.description}</p>
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase rounded-md border border-slate-200 dark:border-slate-700">{expense.category}</span>
+                        </td>
+                        <td className="px-8 py-5 text-center">
+                          <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(expense.amount)}</p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </>
+        </div>
       )}
 
-      {/* Empty State */}
       {fetched && expenses.length === 0 && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center">
-          <FileSpreadsheet className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-          <p className="text-sm font-bold text-slate-500">No expenses found for the selected criteria</p>
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-20 text-center border border-slate-100 dark:border-slate-800">
+          <FileSpreadsheet className="w-16 h-16 mx-auto mb-6 text-slate-200" />
+          <h3 className="text-lg font-black text-slate-400 uppercase tracking-widest">No data found</h3>
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 text-center mx-auto">Try adjusting your filters to see more results</p>
         </div>
       )}
     </div>

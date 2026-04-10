@@ -1,9 +1,18 @@
 import React, { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
-import SuperAdminSidebar from './SuperAdminSidebar';
+import MainSidebar from './MainSidebar';
 import PageLoader from '../ui/PageLoader';
-import { ModeToggle } from '../mode-toggle';
+import { LayoutDashboard, Store, ClipboardList, Settings, Shield } from "lucide-react";
+import { useSidebar } from '@/components/ui/sidebar';
+import TopNavbar from '@/components/store-admin/TopNavbar';
+
+const superAdminMenu = [
+    { name: "Dashboard", icon: LayoutDashboard, path: "/super-admin/dashboard" },
+    { name: "Stores", icon: Store, path: "/super-admin/stores" },
+    { name: "Audit Logs", icon: ClipboardList, path: "/super-admin/audit-logs" },
+    { name: "Settings", icon: Settings, path: "/super-admin/settings" }
+];
 
 const SuperAdminLayout: React.FC = () => {
     const { isAuthenticated, isLoading, user, hydrate } = useAuthStore();
@@ -15,6 +24,8 @@ const SuperAdminLayout: React.FC = () => {
         }
     }, [isAuthenticated, hydrate]);
 
+    const { collapsed } = useSidebar();
+    
     if (isLoading) {
         return <PageLoader />;
     }
@@ -30,25 +41,12 @@ const SuperAdminLayout: React.FC = () => {
 
     return (
         <div className="flex bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 selection:bg-indigo-100 selection:text-indigo-900 font-sans transition-colors duration-300">
-            <SuperAdminSidebar />
+            <MainSidebar menuItems={superAdminMenu} roleName="Super Admin" brandIcon={Shield} />
             
-            <div className="flex-1 flex flex-col ml-[260px]">
-                {/* Optional Sticky Header to match Store Admin */}
-                <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 sticky top-0 z-40 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md transition-colors">
-                    <div className="flex items-center gap-4">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">Infrastructure Command Console</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <ModeToggle />
-                        <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2"></div>
-                        <div className="text-right">
-                            <p className="text-sm font-bold text-slate-900 dark:text-white leading-none">{user?.name}</p>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-tight">Super User</p>
-                        </div>
-                    </div>
-                </header>
+            <div className={`flex-1 flex flex-col transition-all duration-300 ${collapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+                <TopNavbar portalLabel="Super Admin Portal" branchLabel="Control Plane" />
 
-                <main className="flex-1 p-8 animate-in fade-in duration-500">
+                <main className="p-4 md:p-6 lg:p-8 w-full transition-all duration-300">
                     <div className="space-y-8">
                         <Outlet />
                     </div>
