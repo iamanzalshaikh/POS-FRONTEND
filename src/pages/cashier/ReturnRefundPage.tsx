@@ -2,19 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
-  ArrowLeft,
-  Package,
   AlertCircle,
   CheckCircle2,
-  X,
-  Minus,
-  Plus,
-  Receipt,
   RotateCcw,
-  Info,
 } from 'lucide-react';
 import { getSaleByInvoiceNumber } from '../../api/sales.api';
 import { refundSale } from '../../api/sales.api';
+import PageHeader from '../../components/global-components/PageHeader';
+import { formatCurrency } from '@/utils/format';
+import { cn } from '@/lib/utils';
 
 type SaleItem = {
   id: string;
@@ -105,32 +101,20 @@ const ReturnRefundPage: React.FC = () => {
 
     try {
       const response = await getSaleByInvoiceNumber(invoiceNumber.trim());
-      console.log('🔍 ReturnRefund - API response:', response);
-      
-      // getSaleByInvoiceNumber returns res.data which is { success, data, message }
-      // The sale object is in response.data
       const saleData: Sale = response?.data || response;
 
       if (!saleData?.id) {
         throw new Error('Invalid sale data received');
       }
 
-      // Check if sale is already refunded
       if (saleData.paymentStatus === 'REFUNDED') {
         setSearchError('This sale has already been refunded');
         setSale(saleData);
         return;
       }
 
-      // Check if sale is a reversal (refund itself)
       if (saleData.isReversal) {
         setSearchError('This is a refund transaction, not a sale');
-        return;
-      }
-
-      // Check if sale is not completed
-      if (saleData.paymentStatus !== 'COMPLETED') {
-        setSearchError('Only completed sales can be refunded');
         return;
       }
 
@@ -143,30 +127,22 @@ const ReturnRefundPage: React.FC = () => {
         productName: item.product.name,
         purchasedQuantity: item.quantity,
         unitPrice: item.price,
-        returnQuantity: 0,
+        returnQuantity: item.quantity,
         maxReturnQuantity: item.quantity,
       }));
       setReturnItems(items);
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        setSearchError('Sale not found. Please check the invoice number.');
-      } else {
-        setSearchError(error.response?.data?.message || 'Failed to fetch sale');
-      }
+      setSearchError(error.response?.data?.message || 'Sale not found');
     } finally {
       setIsSearching(false);
     }
   };
 
-  // Handle quantity change
   const handleQuantityChange = (saleItemId: string, delta: number) => {
     setReturnItems((prev) =>
       prev.map((item) => {
         if (item.saleItemId === saleItemId) {
-          const newQuantity = Math.max(
-            0,
-            Math.min(item.maxReturnQuantity, item.returnQuantity + delta)
-          );
+          const newQuantity = Math.max(0, Math.min(item.maxReturnQuantity, item.returnQuantity + delta));
           return { ...item, returnQuantity: newQuantity };
         }
         return item;
@@ -174,65 +150,20 @@ const ReturnRefundPage: React.FC = () => {
     );
   };
 
-  // Handle direct quantity input
-  const handleQuantityInput = (saleItemId: string, value: string) => {
-    const numValue = parseInt(value, 10);
-    setReturnItems((prev) =>
-      prev.map((item) => {
-        if (item.saleItemId === saleItemId) {
-          const newQuantity = Number.isNaN(numValue)
-            ? 0
-            : Math.max(0, Math.min(item.maxReturnQuantity, numValue));
-          return { ...item, returnQuantity: newQuantity };
-        }
-        return item;
-      })
-    );
-  };
-
-  // Calculate totals
-  const totalReturnAmount = returnItems.reduce(
-    (sum, item) => sum + item.returnQuantity * item.unitPrice,
-    0
-  );
-
+  const totalReturnAmount = returnItems.reduce((sum, item) => sum + item.returnQuantity * item.unitPrice, 0);
   const hasSelectedItems = returnItems.some((item) => item.returnQuantity > 0);
 
-  // Handle proceed to refund
-  const handleProceedToRefund = () => {
-    if (!hasSelectedItems) {
-      setRefundError('Please select at least one item to return');
-      return;
-    }
-    if (!refundReason.trim()) {
-      setRefundError('Please provide a refund reason');
-      return;
-    }
-    setShowConfirmModal(true);
-  };
-
-  // Handle confirm refund
   const handleConfirmRefund = async () => {
     if (!sale) return;
-
     setIsProcessing(true);
-    setRefundError(null);
-
     try {
-      // Note: Backend currently refunds entire sale
-      // For item-wise refunds, backend would need enhancement
       await refundSale(sale.id, refundReason);
       setRefundSuccess(true);
       setShowConfirmModal(false);
-
-      // Reset after success
       setTimeout(() => {
-        setInvoiceNumber('');
         setSale(null);
-        setReturnItems([]);
-        setRefundReason('');
-        setRefundSuccess(false);
-      }, 3000);
+        setInvoiceNumber('');
+      }, 2000);
     } catch (error: any) {
       setRefundError(error.response?.data?.message || 'Failed to process refund');
     } finally {
@@ -240,470 +171,164 @@ const ReturnRefundPage: React.FC = () => {
     }
   };
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-PK', {
-      style: 'currency',
-      currency: 'PKR',
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-PK', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => navigate('/cashier/terminal')}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-              >
-                <ArrowLeft size={20} className="text-slate-600" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-3">
-                  <RotateCcw className="text-emerald-600" size={28} />
-                  Return / Refund
-                </h1>
-                <p className="text-sm text-slate-500 mt-1">
-                  Process customer returns and refunds by invoice number
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <Info size={16} />
-              <span>Store Admin access required</span>
-            </div>
+    <div className="animate-fade-in space-y-8">
+      <PageHeader
+        title="Returns & Refunds"
+        description="Process customer returns and credit notes"
+        primaryAction={{
+          label: "Terminal",
+          icon: RotateCcw,
+          onClick: () => navigate('/cashier/terminal')
+        }}
+      />
+
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-none">
+        <form onSubmit={handleSearch} className="flex gap-4">
+          <div className="flex-1 relative group">
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <input
+              type="text"
+              placeholder="Scan receipt or type invoice number..."
+              value={invoiceNumber}
+              onChange={(e) => setInvoiceNumber(e.target.value)}
+              className="w-full h-[60px] pl-14 pr-6 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[1.5rem] text-sm font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all shadow-inner"
+            />
           </div>
-        </div>
+          <button
+            type="submit"
+            disabled={isSearching}
+            className="h-[60px] px-10 bg-slate-900 dark:bg-slate-800 text-white font-black uppercase tracking-widest text-[10px] rounded-[1.5rem] hover:bg-slate-800 transition-all active:scale-95 shadow-xl flex items-center gap-3"
+          >
+            {isSearching ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Search size={18} />}
+            Search
+          </button>
+        </form>
+
+        {searchError && (
+          <div className="mt-6 p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-4">
+            <AlertCircle className="text-rose-600 dark:text-rose-500" size={20} />
+            <p className="text-rose-700 dark:text-rose-400 text-[10px] font-black uppercase tracking-widest">{searchError}</p>
+          </div>
+        )}
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Search Section */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-          <form onSubmit={handleSearch} className="flex gap-4">
-            <div className="flex-1">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Invoice / Receipt Number
-              </label>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                <input
-                  type="text"
-                  value={invoiceNumber}
-                  onChange={(e) => setInvoiceNumber(e.target.value)}
-                  placeholder="Enter invoice number (e.g., STORE-20250124-000001)"
-                  className="w-full pl-12 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-slate-800 placeholder:text-slate-400"
-                  disabled={isProcessing || refundSuccess}
-                />
-              </div>
-            </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                disabled={isSearching || isProcessing || refundSuccess}
-                className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-semibold rounded-xl transition-colors flex items-center gap-2"
-              >
-                {isSearching ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Searching...
-                  </>
-                ) : (
-                  <>
-                    <Search size={20} />
-                    Search
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {searchError && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-              <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
-              <p className="text-red-700 text-sm">{searchError}</p>
-            </div>
-          )}
-        </div>
-
-        {/* Sale Details & Return Items */}
-        {sale && (
-          <>
-            {/* Sale Info Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <Receipt className="text-emerald-600" size={20} />
-                  <span className="text-sm font-semibold text-slate-600">Invoice</span>
+      {sale && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 overflow-hidden">
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Order Items</h3>
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Select items for return</p>
                 </div>
-                <p className="text-lg font-bold text-slate-800 truncate">{sale.invoiceNumber}</p>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <Package className="text-blue-600" size={20} />
-                  <span className="text-sm font-semibold text-slate-600">Items</span>
+                <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">INV# {sale.invoiceNumber}</span>
                 </div>
-                <p className="text-lg font-bold text-slate-800">{sale.saleItems.length} products</p>
               </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <CheckCircle2 className="text-emerald-600" size={20} />
-                  <span className="text-sm font-semibold text-slate-600">Payment</span>
-                </div>
-                <p className="text-lg font-bold text-slate-800">{sale.paymentMethod}</p>
-              </div>
-
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <Info className="text-purple-600" size={20} />
-                  <span className="text-sm font-semibold text-slate-600">Date</span>
-                </div>
-                <p className="text-sm font-bold text-slate-800">{formatDate(sale.createdAt)}</p>
-              </div>
-            </div>
-
-            {/* Return Items Table */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-              <div className="px-6 py-4 border-b border-slate-200 bg-slate-50">
-                <h2 className="text-lg font-bold text-slate-800">Purchased Items</h2>
-                <p className="text-sm text-slate-500 mt-1">
-                  Select quantities to return (partial returns allowed)
-                </p>
-              </div>
-
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
+                  <thead className="bg-slate-50 dark:bg-slate-800/50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-black text-slate-600 uppercase tracking-wider">
-                        Product
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-black text-slate-600 uppercase tracking-wider">
-                        SKU / Barcode
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-black text-slate-600 uppercase tracking-wider">
-                        Unit Price
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-black text-slate-600 uppercase tracking-wider">
-                        Purchased
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-black text-slate-600 uppercase tracking-wider">
-                        Return Qty
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-black text-slate-600 uppercase tracking-wider">
-                        Return Value
-                      </th>
+                      <th className="px-8 py-4 text-left text-[9px] font-black uppercase text-slate-400 tracking-widest">Product</th>
+                      <th className="px-8 py-4 text-center text-[9px] font-black uppercase text-slate-400 tracking-widest">Qty</th>
+                      <th className="px-8 py-4 text-right text-[9px] font-black uppercase text-slate-400 tracking-widest">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {returnItems.map((item) => (
-                      <tr
-                        key={item.saleItemId}
-                        className={`transition-colors ${
-                          item.returnQuantity > 0 ? 'bg-emerald-50' : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`w-2 h-2 rounded-full ${
-                                item.returnQuantity > 0
-                                  ? 'bg-emerald-500'
-                                  : 'bg-slate-300'
-                              }`}
-                            />
-                            <span className="font-semibold text-slate-800">
-                              {item.productName}
-                            </span>
-                          </div>
+                      <tr key={item.saleItemId} className={cn("transition-colors", item.returnQuantity > 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50")}>
+                        <td className="px-8 py-5">
+                          <p className="text-xs font-black text-slate-900 dark:text-white uppercase">{item.productName}</p>
+                          <p className="text-[9px] font-black text-slate-400 uppercase mt-1">{formatCurrency(item.unitPrice)} / unit</p>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="text-sm text-slate-500">
-                            {item.maxReturnQuantity > 0
-                              ? (sale.saleItems.find((i) => i.id === item.saleItemId)?.product
-                                  .sku ||
-                                sale.saleItems.find((i) => i.id === item.saleItemId)?.product
-                                  .barcode ||
-                                'N/A')
-                              : 'N/A'}
-                          </span>
+                        <td className="px-8 py-5">
+                           <div className="flex items-center justify-center gap-4">
+                              <button onClick={() => handleQuantityChange(item.saleItemId, -1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">-</button>
+                              <span className="text-xs font-black w-4 text-center">{item.returnQuantity}</span>
+                              <button onClick={() => handleQuantityChange(item.saleItemId, 1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">+</button>
+                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="font-medium text-slate-700">
-                            {formatCurrency(item.unitPrice)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
-                            {item.purchasedQuantity}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() =>
-                                handleQuantityChange(item.saleItemId, -1)
-                              }
-                              disabled={item.returnQuantity <= 0 || isProcessing}
-                              className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <Minus size={16} />
-                            </button>
-                            <input
-                              type="number"
-                              min="0"
-                              max={item.maxReturnQuantity}
-                              value={item.returnQuantity}
-                              onChange={(e) =>
-                                handleQuantityInput(item.saleItemId, e.target.value)
-                              }
-                              disabled={isProcessing}
-                              className="w-16 text-center py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                            />
-                            <button
-                              onClick={() =>
-                                handleQuantityChange(item.saleItemId, 1)
-                              }
-                              disabled={
-                                item.returnQuantity >= item.maxReturnQuantity ||
-                                isProcessing
-                              }
-                              className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                              <Plus size={16} />
-                            </button>
-                          </div>
-                          <p className="text-xs text-slate-500 text-center mt-1">
-                            Max: {item.maxReturnQuantity}
-                          </p>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span
-                            className={`font-bold ${
-                              item.returnQuantity > 0
-                                ? 'text-emerald-600'
-                                : 'text-slate-400'
-                            }`}
-                          >
-                            {formatCurrency(item.returnQuantity * item.unitPrice)}
-                          </span>
+                        <td className="px-8 py-5 text-right">
+                          <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(item.returnQuantity * item.unitPrice)}</p>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
 
-              {/* Summary */}
-              <div className="px-6 py-4 bg-slate-50 border-t border-slate-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-600">
-                      Total Return Amount
-                    </p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {returnItems.filter((i) => i.returnQuantity > 0).length} of{' '}
-                      {returnItems.length} items selected
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-emerald-600">
-                      {formatCurrency(totalReturnAmount)}
-                    </p>
-                  </div>
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 sticky top-24">
+              <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight mb-8">Refund Summary</h3>
+              
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtotal</span>
+                  <span className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(totalReturnAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                  <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Total Refund</span>
+                  <span className="text-lg font-black text-blue-600 dark:text-blue-400">{formatCurrency(totalReturnAmount)}</span>
                 </div>
               </div>
-            </div>
 
-            {/* Refund Reason & Action */}
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Refund Reason <span className="text-red-500">*</span>
-                </label>
+              <div className="space-y-2 mb-8">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Reason for Return</label>
                 <textarea
                   value={refundReason}
                   onChange={(e) => setRefundReason(e.target.value)}
-                  placeholder="Explain why the customer is returning these items..."
-                  rows={3}
-                  disabled={isProcessing || refundSuccess}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent text-slate-800 placeholder:text-slate-400 resize-none"
+                  placeholder="e.g. Defective item, change of mind..."
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all resize-none h-[120px]"
                 />
               </div>
 
-              {refundError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-                  <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
-                  <p className="text-red-700 text-sm">{refundError}</p>
+              {refundSuccess ? (
+                <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 animate-in zoom-in-95">
+                  <CheckCircle2 className="text-emerald-600" size={20} />
+                  <p className="text-emerald-700 text-[10px] font-black uppercase tracking-widest">Refund Approved!</p>
                 </div>
-              )}
-
-              {refundSuccess && (
-                <div className="mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3">
-                  <CheckCircle2 className="text-emerald-600 flex-shrink-0 mt-0.5" size={20} />
-                  <div>
-                    <p className="text-emerald-700 font-semibold text-sm">
-                      Refund processed successfully!
-                    </p>
-                    <p className="text-emerald-600 text-xs mt-1">
-                      Redirecting...
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-4 border-t border-slate-200">
-                <div className="text-sm text-slate-500">
-                  <p>
-                    Original Total:{' '}
-                    <span className="font-semibold text-slate-700">
-                      {formatCurrency(Number(sale.totalAmount))}
-                    </span>
-                  </p>
-                  <p>
-                    Refund Amount:{' '}
-                    <span className="font-bold text-emerald-600">
-                      {formatCurrency(totalReturnAmount)}
-                    </span>
-                  </p>
-                </div>
+              ) : (
                 <button
-                  onClick={handleProceedToRefund}
-                  disabled={
-                    !hasSelectedItems ||
-                    !refundReason.trim() ||
-                    isProcessing ||
-                    refundSuccess
-                  }
-                  className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-400 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 shadow-lg shadow-emerald-500/30"
+                  onClick={() => setShowConfirmModal(true)}
+                  disabled={!hasSelectedItems || !refundReason.trim() || isProcessing}
+                  className="w-full py-5 bg-blue-600 text-white font-black uppercase tracking-widest text-[10px] rounded-[1.5rem] hover:bg-blue-700 shadow-xl shadow-blue-400/20 transition-all active:scale-95 border border-blue-500 disabled:opacity-50"
                 >
-                  <RotateCcw size={20} />
-                  {isProcessing ? 'Processing...' : 'Process Refund'}
+                  {isProcessing ? "Processing..." : "Complete Refund"}
                 </button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Empty State */}
-        {!sale && !searchError && !isSearching && (
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-16 text-center">
-            <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Receipt className="text-slate-400" size={48} />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">
-              Search for a Sale
-            </h3>
-            <p className="text-slate-500 max-w-md mx-auto">
-              Enter the invoice number from the customer's receipt to view
-              purchased items and process returns
-            </p>
-            <div className="mt-8 flex items-center justify-center gap-6 text-sm text-slate-500">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="text-emerald-600" size={16} />
-                <span>Partial returns allowed</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="text-emerald-600" size={16} />
-                <span>Inventory auto-restored</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="text-emerald-600" size={16} />
-                <span>Audit trail maintained</span>
-              </div>
+              )}
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-slate-800">
-                Confirm Refund
-              </h3>
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                disabled={isProcessing}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
-              >
-                <X size={20} className="text-slate-600" />
-              </button>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Invoice:</span>
-                <span className="font-semibold text-slate-800">
-                  {sale?.invoiceNumber}
-                </span>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-sm w-full p-10 border border-slate-100 dark:border-slate-800">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/30 rounded-[2rem] flex items-center justify-center mb-8 border border-blue-100 dark:border-blue-900/50">
+                <RotateCcw size={40} className="text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Items to return:</span>
-                <span className="font-semibold text-slate-800">
-                  {returnItems.filter((i) => i.returnQuantity > 0).length}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-600">Refund amount:</span>
-                <span className="font-bold text-emerald-600">
-                  {formatCurrency(totalReturnAmount)}
-                </span>
-              </div>
-              <div className="pt-3 border-t border-slate-200">
-                <p className="text-xs text-slate-500 mb-1">Reason:</p>
-                <p className="text-sm text-slate-700">{refundReason}</p>
-              </div>
-            </div>
-
-            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl mb-6">
-              <p className="text-sm text-emerald-800">
-                <strong>Refund Action:</strong> This will refund the <strong>full sale amount</strong> of{' '}
-                <span className="font-bold">{formatCurrency(Number(sale.totalAmount))}</span>{' '}
-                and restore all items to inventory.
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Confirm Refund</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-4 leading-relaxed">
+                You are about to issue a refund of <strong className="text-blue-600 dark:text-blue-400">{formatCurrency(totalReturnAmount)}</strong>. This will adjust your daily balance.
               </p>
             </div>
-
-            <div className="flex gap-3">
+            <div className="flex gap-4 mt-10">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                disabled={isProcessing}
-                className="flex-1 px-4 py-3 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-4 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-100 transition-all"
               >
-                Cancel
+                No, Back
               </button>
               <button
                 onClick={handleConfirmRefund}
-                disabled={isProcessing}
-                className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-blue-700 transition-all shadow-lg active:scale-95"
               >
-                {isProcessing ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 size={20} />
-                    Confirm Refund
-                  </>
-                )}
+                Yes, Refund
               </button>
             </div>
           </div>

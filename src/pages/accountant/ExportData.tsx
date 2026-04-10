@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, Calendar, Filter } from 'lucide-react';
 import { getSalesReport, getInventoryReport, getSalesTransactions } from '../../api/finance.api';
+import MetricCard from '../../components/global-components/MetricCard';
 
 interface ExportOption {
   id: string;
@@ -168,6 +169,28 @@ const ExportData: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Export Options Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <MetricCard
+          title="Available Reports"
+          value={exportOptions.length}
+          icon={FileSpreadsheet}
+          colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        />
+        <MetricCard
+          title="Date Range"
+          value={`${startDate} - ${endDate}`}
+          icon={Calendar}
+          colorClass="bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
+        />
+        <MetricCard
+          title="Active Filter"
+          value={filterCategory === 'all' ? 'All Categories' : filterCategory}
+          icon={Filter}
+          colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+        />
       </div>
 
       {/* Export Options Grid */}

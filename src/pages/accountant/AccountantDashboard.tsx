@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { BarChart3, PieChart, FileText, Download, Calculator, FileSpreadsheet, TrendingUp, DollarSign, ArrowUpRight, ArrowDownRight, Users, Wallet } from 'lucide-react';
+import { BarChart3, PieChart, FileText, Download, Calculator, FileSpreadsheet, TrendingUp, DollarSign, Users, Wallet } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import SidebarLink from '../../components/ui/SidebarLink';
+import MetricCard from '../../components/global-components/MetricCard';
 import { getSalesReport } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
 import FinancialOverview from './FinancialOverview';
@@ -16,6 +16,8 @@ import MonthlyCloseReport from './MonthlyCloseReport';
 import AllTransactions from './AllTransactions';
 import StaffManagementPage from './StaffManagementPage';
 import PayrollManagementPage from './PayrollManagementPage';
+import PageHeader from '../../components/global-components/PageHeader';
+import { formatCurrency } from '@/utils/format';
 
 const AccountantDashboard: React.FC = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -71,68 +73,21 @@ const AccountantDashboard: React.FC = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const sidebar = (
-    <>
-      <div className="p-6 border-b border-slate-100/50 mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-[#262255] rounded-xl flex items-center justify-center shadow-indigo-100 shadow-xl border border-indigo-500/20 flex-shrink-0">
-            <Calculator size={24} className="text-white" />
-          </div>
-          <div className="sidebar-header-text whitespace-nowrap overflow-hidden">
-            <div className="text-xl font-extrabold text-white tracking-tight leading-none" style={{ textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>Hybrid POS</div>
-            <div className="text-[10px] font-black text-slate-300 mt-1 uppercase tracking-widest">ACCOUNTANT</div>
-          </div>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-1">
-        <SidebarLink to="/accountant" icon={<BarChart3 size={20} />} label="Summary" variant="navy" />
-        <SidebarLink to="/accountant/expenses" icon={<Calculator size={20} />} label="Expenses" variant="navy" />
-        <SidebarLink to="/accountant/expense-report" icon={<FileSpreadsheet size={20} />} label="Expense Report" variant="navy" />
-        <SidebarLink to="/accountant/staff" icon={<Users size={20} />} label="Staff" variant="navy" />
-        <SidebarLink to="/accountant/payroll" icon={<Wallet size={20} />} label="Payroll" variant="navy" />
-        <SidebarLink to="/accountant/tax" icon={<FileText size={20} />} label="Tax" variant="navy" />
-        <SidebarLink to="/accountant/pl" icon={<PieChart size={20} />} label="P&L" variant="navy" />
-        <SidebarLink to="/accountant/monthly-close" icon={<FileText size={20} />} label="Monthly Close" variant="navy" />
-        <SidebarLink to="/accountant/export" icon={<Download size={20} />} label="Export" variant="navy" />
-      </nav>
-    </>
-  );
-
-  const MetricCard = ({ title, value, change, isPositive, icon: Icon }: { title: string; value: string; change: string; isPositive: boolean; icon: React.ComponentType<any> }) => (
-    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-xl hover:shadow-[#2563EB]/10 transition-all group overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-20 h-20 bg-slate-50/50 rounded-full -mr-10 -mt-10 group-hover:scale-110 transition-transform"></div>
-      <div className="flex items-center justify-between relative z-10">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-blue-50 text-[#1E1B4B]">
-            <Icon size={18} strokeWidth={2} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">{title}</p>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform">{value}</h3>
-          </div>
-        </div>
-        <div className="flex items-center gap-1 shrink-0">
-          <span className={`text-[10px] font-black ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {isPositive ? '+' : ''}{change}%
-          </span>
-          {isPositive ? <ArrowUpRight size={10} className="text-emerald-600" /> : <ArrowDownRight size={10} className="text-rose-600" />}
-        </div>
-      </div>
-    </div>
-  );
+  const accountantMenu = [
+    { name: 'Summary', icon: BarChart3, path: '/accountant' },
+    { name: 'Expenses', icon: Calculator, path: '/accountant/expenses' },
+    { name: 'Expense Report', icon: FileSpreadsheet, path: '/accountant/expense-report' },
+    { name: 'Staff', icon: Users, path: '/accountant/staff' },
+    { name: 'Payroll', icon: Wallet, path: '/accountant/payroll' },
+    { name: 'Tax', icon: FileText, path: '/accountant/tax' },
+    { name: 'P&L', icon: PieChart, path: '/accountant/pl' },
+    { name: 'Monthly Close', icon: FileText, path: '/accountant/monthly-close' },
+    { name: 'Export', icon: Download, path: '/accountant/export' },
+  ];
 
   return (
     <DashboardLayout
-      sidebarContent={sidebar}
+      menuItems={accountantMenu}
       title="Financial Controller"
       subtitle="Review ledger, expenses and financial health"
       role="ACCOUNTANT"
@@ -140,55 +95,52 @@ const AccountantDashboard: React.FC = () => {
     >
       <Routes>
         <Route path="/" element={
-          <>
+          <div className="animate-fade-in space-y-10">
+            <PageHeader
+               title="Financial Overview"
+               description="Real-time financial analytics and business health"
+            />
+
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="bg-white border border-slate-200 rounded-2xl p-6 animate-pulse">
-                    <div className="h-4 bg-slate-200 rounded w-1/2 mb-4"></div>
-                    <div className="h-8 bg-slate-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-slate-200 rounded w-1/4"></div>
-                  </div>
+                  <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-[2rem]"></div>
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-fade-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard
                   title="Revenue"
                   value={formatCurrency(dashboardData.totalRevenue)}
-                  change={`+${dashboardData.revenueChange}`}
-                  isPositive={true}
                   icon={DollarSign}
+                  colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                 />
                 <MetricCard
                   title="Expenses"
                   value={formatCurrency(dashboardData.totalExpenses)}
-                  change={`${dashboardData.expensesChange > 0 ? '+' : ''}${dashboardData.expensesChange}`}
-                  isPositive={dashboardData.expensesChange > 0}
-                  icon={DollarSign}
+                  icon={Calculator}
+                  colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
                 />
                 <MetricCard
                   title="Net Profit"
                   value={formatCurrency(dashboardData.netProfit)}
-                  change={`+${dashboardData.profitChange}`}
-                  isPositive={true}
                   icon={TrendingUp}
+                  colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard
                   title="Tax Liability"
                   value={formatCurrency(dashboardData.taxLiability)}
-                  change="0"
-                  isPositive={true}
                   icon={FileText}
+                  colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
                 />
               </div>
             )}
 
-            <div className="space-y-8">
+            <div className="space-y-8 mt-10">
               <FinancialOverview />
               <ExpenseTracker />
             </div>
-          </>
+          </div>
         } />
         <Route path="/expenses" element={<ExpensesPage />} />
         <Route path="/expense-report" element={<ExpenseReport />} />

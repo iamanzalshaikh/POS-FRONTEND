@@ -1,95 +1,91 @@
 import React, { useState } from 'react';
-import { Package, AlertTriangle, XCircle } from 'lucide-react';
+import { Package, AlertTriangle, XCircle, RefreshCcw } from 'lucide-react';
 import InventoryDisplay from '../../components/cashier/InventoryDisplay';
+import PageHeader from '../../components/global-components/PageHeader';
+import { cn } from '@/lib/utils';
 
 type ViewMode = 'all' | 'low-stock' | 'out-of-stock';
 
-/**
- * InventoryCheckPage Component
- * 
- * Displays inventory information for cashier shift management.
- * Allows filtering between all items, low stock, and out of stock items.
- * 
- * API Integration:
- * - Fetches inventory data via InventoryDisplay component
- * - Proper error handling and loading states
- * - Manual refresh capability
- */
 const InventoryCheckPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleRefresh = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   return (
-    <div className="min-h-[520px] flex flex-col bg-white border border-slate-200 rounded-3xl p-6 space-y-6">
-      {/* Header */}
-      <div className="border-b border-slate-200 pb-4">
-        <div className="flex items-center space-x-2 mb-4">
-          <Package size={24} className="text-emerald-600" />
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">
-              Inventory Check
-            </h1>
-            <p className="text-sm text-slate-500 mt-1">
-              Monitor stock levels and availability of all products
-            </p>
-          </div>
-        </div>
+    <div className="animate-fade-in space-y-8">
+      <PageHeader
+        title="Inventory Check"
+        description="Monitor real-time stock levels and availability"
+        primaryAction={{
+          label: "Refresh Data",
+          icon: RefreshCcw,
+          onClick: handleRefresh
+        }}
+        icon={Package}
+      />
 
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-none">
         {/* View Mode Tabs */}
-        <div className="flex items-center space-x-2 flex-wrap gap-2">
+        <div className="flex items-center space-x-2 mb-8 bg-slate-50 dark:bg-slate-800 p-1.5 rounded-2xl w-fit">
           <button
             onClick={() => setViewMode('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={cn(
+              "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
               viewMode === 'all'
-                ? 'bg-emerald-600 text-white shadow-md'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+                ? "bg-slate-900 dark:bg-emerald-600 text-white shadow-lg"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            )}
           >
-            <span className="flex items-center space-x-2">
-              <Package size={16} />
-              <span>All Items</span>
+            <span className="flex items-center gap-2">
+              <Package size={14} />
+              All Items
             </span>
           </button>
 
           <button
             onClick={() => setViewMode('low-stock')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={cn(
+              "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
               viewMode === 'low-stock'
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+                ? "bg-amber-600 text-white shadow-lg"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            )}
           >
-            <span className="flex items-center space-x-2">
-              <AlertTriangle size={16} />
-              <span>Low Stock</span>
+            <span className="flex items-center gap-2">
+              <AlertTriangle size={14} />
+              Low Stock
             </span>
           </button>
 
           <button
             onClick={() => setViewMode('out-of-stock')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={cn(
+              "px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
               viewMode === 'out-of-stock'
-                ? 'bg-red-600 text-white shadow-md'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-            }`}
+                ? "bg-rose-600 text-white shadow-lg"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            )}
           >
-            <span className="flex items-center space-x-2">
-              <XCircle size={16} />
-              <span>Out of Stock</span>
+            <span className="flex items-center gap-2">
+              <XCircle size={14} />
+              Out of Stock
             </span>
           </button>
         </div>
-      </div>
 
-      {/* Inventory Display Component */}
-      <div className="flex-1">
-        <InventoryDisplay
-          showLowStockOnly={viewMode === 'low-stock'}
-          showOutOfStockOnly={viewMode === 'out-of-stock'}
-        />
+        {/* Inventory Display Component */}
+        <div className="flex-1" key={refreshKey}>
+          <InventoryDisplay
+            showLowStockOnly={viewMode === 'low-stock'}
+            showOutOfStockOnly={viewMode === 'out-of-stock'}
+          />
+        </div>
       </div>
     </div>
   );
 };
 
 export default InventoryCheckPage;
-

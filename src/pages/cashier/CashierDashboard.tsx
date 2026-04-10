@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ShoppingCart, Scan, Package, RotateCcw, Clock } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import SidebarLink from '../../components/ui/SidebarLink';
 import DeviceAccessGate from '../../components/cashier/DeviceAccessGate';
 import POSInterface from './POSInterface';
 import ShiftTools from './ShiftTools';
@@ -24,67 +23,19 @@ const CashierDashboard: React.FC = () => {
   const displayTerminalId = terminal?.id ?? null;
   const displayTerminalName = terminal?.deviceName ?? null;
 
-  const sidebar = (
-    <>
-      <div className="p-6 border-b border-slate-100/50 mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-[#262255] rounded-xl flex items-center justify-center shadow-indigo-100 shadow-xl border border-indigo-500/20 flex-shrink-0">
-            <Scan size={24} className="text-white" />
-          </div>
-          <div className="sidebar-header-text whitespace-nowrap overflow-hidden">
-            <div className="text-xl font-extrabold text-white tracking-tight leading-none" style={{ textShadow: '0 0 20px rgba(255,255,255,0.3)' }}>Hybrid POS</div>
-            <div className="text-[10px] font-black text-slate-300 mt-1 uppercase tracking-widest">CASHIER</div>
-          </div>
-        </div>
-      </div>
-
-      <nav className="flex-1 space-y-1">
-        {!deviceId && (
-          <SidebarLink
-            to="/cashier/devices"
-            icon={<Scan size={20} />}
-            label="Select Device"
-            variant="navy"
-          />
-        )}
-        <SidebarLink
-          to="/cashier/terminal"
-          icon={<ShoppingCart size={20} />}
-          label="POS Terminal"
-          variant="navy"
-        />
-        <SidebarLink
-          to="/cashier/offline-sales"
-          icon={<Clock size={20} />}
-          label="Offline Sales"
-          variant="navy"
-        />
-        <SidebarLink
-          to="/cashier/returns"
-          icon={<RotateCcw size={20} />}
-          label="Returns / Refunds"
-          variant="navy"
-        />
-        <SidebarLink
-          to="/cashier/products"
-          icon={<Package size={20} />}
-          label="Products"
-          variant="navy"
-        />
-        <SidebarLink
-          to="/cashier/inventory"
-          icon={<Package size={20} />}
-          label="Inventory Check"
-          variant="navy"
-        />
-      </nav>
-    </>
-  );
+  const cashierMenu = [
+    ...(deviceId ? [] : [{ name: 'Select Device', icon: Scan, path: '/cashier/devices' }]),
+    { name: 'POS Terminal', icon: ShoppingCart, path: '/cashier/terminal' },
+    { name: 'Offline Sales', icon: Clock, path: '/cashier/offline-sales' },
+    { name: 'Returns / Refunds', icon: RotateCcw, path: '/cashier/returns' },
+    { name: 'Products', icon: Package, path: '/cashier/products' },
+    { name: 'Inventory Check', icon: Package, path: '/cashier/inventory' },
+  ];
 
   return (
     <DeviceAccessGate>
       <DashboardLayout
-        sidebarContent={sidebar}
+        menuItems={cashierMenu}
         title="POS Terminal"
         subtitle="Complete sales and manage your active shift"
         role="CASHIER"

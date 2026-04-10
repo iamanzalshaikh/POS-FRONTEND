@@ -1,8 +1,3 @@
-/**
- * Offline Sales Dashboard Page
- * Shows all pending offline sales and allows manual sync/retry
- */
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -11,18 +6,21 @@ import {
   CheckCircle,
   AlertCircle,
   Clock,
-  ArrowLeft,
   Trash2,
   ExternalLink,
-  Printer
+  Printer,
+  Wifi,
 } from 'lucide-react';
 import { offlineStorage, type OfflineSale } from '../../services/offline-storage.service';
 import { offlineSync } from '../../services/offline-sync.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import PageHeader from '../../components/global-components/PageHeader';
+import MetricCard from '../../components/global-components/MetricCard';
+import { cn } from '@/lib/utils';
 
 const OfflineSalesPage: React.FC = () => {
   const navigate = useNavigate();
-  const { isOnline, triggerSync, pendingCount } = useOnlineStatus();
+  const { isOnline, triggerSync } = useOnlineStatus();
   const [offlineSales, setOfflineSales] = useState<OfflineSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -80,16 +78,12 @@ const OfflineSalesPage: React.FC = () => {
   };
 
   const handleViewReceipt = (sale: OfflineSale) => {
-    // Navigate to receipt page with sale data
     navigate(`/cashier/receipt/offline/${sale.tempId}`, {
       state: { sale, status: 'PENDING_SYNC' },
     });
   };
 
   const handleViewAndPrint = (sale: OfflineSale) => {
-    // Navigate immediately with local sale data (instant load)
-    // Sync will happen in background on ReceiptPage
-    console.log('📦 [OfflineSalesPage] Opening receipt for offline sale:', sale.tempId);
     navigate(`/cashier/receipt/offline/${sale.tempId}`, {
       state: { sale, status: 'PENDING_SYNC', autoPrint: true },
     });
@@ -100,110 +94,76 @@ const OfflineSalesPage: React.FC = () => {
   const syncedSales = offlineSales.filter(s => s.syncStatus === 'SYNCED');
 
   return (
-    <div className="min-h-[520px] flex flex-col bg-white border border-slate-200 rounded-3xl overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate('/cashier/terminal')}
-            className="p-2 rounded-lg hover:bg-slate-200 transition-colors"
-          >
-            <ArrowLeft size={20} className="text-slate-600" />
-          </button>
-          <div>
-            <h1 className="text-xl font-extrabold text-slate-900">
-              Offline Sales
-            </h1>
-            <p className="text-xs font-medium text-slate-500">
-              Manage and sync offline transactions
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <span
-              className={`h-2.5 w-2.5 rounded-full ${
-                isOnline ? 'bg-emerald-500' : 'bg-amber-400'
-              }`}
-            />
-            <span className="text-xs font-bold uppercase tracking-widest text-slate-600">
-              {isOnline ? 'Online' : 'Offline'}
-            </span>
-          </div>
-          {pendingSales.length > 0 && isOnline && (
-            <button
-              onClick={handleSyncAll}
-              disabled={syncing}
-              className="inline-flex items-center space-x-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 disabled:bg-emerald-400 transition-all"
-            >
-              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-              <span>Sync All ({pendingSales.length})</span>
-            </button>
-          )}
-        </div>
-      </header>
+    <div className="animate-fade-in space-y-8">
+      <PageHeader
+        title="Offline Sales"
+        description="Manage and synchronize offline transactions"
+        primaryAction={pendingSales.length > 0 && isOnline ? {
+          label: `Sync All (${pendingSales.length})`,
+          icon: RefreshCw,
+          onClick: handleSyncAll
+        } : undefined}
+      />
 
-      {/* Offline Banner */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          title="Connection"
+          value={isOnline ? "Online" : "Offline"}
+          icon={isOnline ? Wifi : WifiOff}
+          colorClass={isOnline ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400" : "bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"}
+        />
+        <MetricCard
+          title="Pending Sync"
+          value={String(pendingSales.length)}
+          icon={Clock}
+          colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+        />
+        <MetricCard
+          title="Failed Sync"
+          value={String(failedSales.length)}
+          icon={AlertCircle}
+          colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
+        />
+        <MetricCard
+          title="Total Synced"
+          value={String(syncedSales.length)}
+          icon={CheckCircle}
+          colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        />
+      </div>
+
       {!isOnline && (
-        <div className="flex items-center space-x-3 px-6 py-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-sm font-medium">
-          <WifiOff size={16} className="text-amber-500" />
-          <span>
-            You are offline. Sales will sync automatically when connection is restored.
-          </span>
+        <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-4">
+          <WifiOff className="text-amber-600 dark:text-amber-500" size={20} />
+          <p className="text-amber-800 dark:text-amber-400 text-[10px] font-black uppercase tracking-widest">
+            Currently Offline. Sales will synchronize automatically when connection is restored.
+          </p>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 px-6 py-4 border-b border-slate-200 bg-slate-50/40">
-        <div className="flex items-center space-x-3 p-3 rounded-xl bg-amber-50 border border-amber-200">
-          <Clock size={20} className="text-amber-600" />
-          <div>
-            <div className="text-2xl font-bold text-amber-900">{pendingSales.length}</div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Pending</div>
-          </div>
-        </div>
-        <div className="flex items-center space-x-3 p-3 rounded-xl bg-red-50 border border-red-200">
-          <AlertCircle size={20} className="text-red-600" />
-          <div>
-            <div className="text-2xl font-bold text-red-900">{failedSales.length}</div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-red-700">Failed</div>
-          </div>
-        </div>
-        <div className="flex items-center space-x-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-          <CheckCircle size={20} className="text-emerald-600" />
-          <div>
-            <div className="text-2xl font-bold text-emerald-900">{syncedSales.length}</div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Synced</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 shadow-none">
         {loading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="flex items-center space-x-2 text-sm text-slate-500">
-              <div className="w-5 h-5 border-2 border-emerald-200 border-t-emerald-500 rounded-full animate-spin"></div>
-              <span>Loading offline sales...</span>
-            </div>
+          <div className="flex flex-col items-center justify-center py-20 opacity-50">
+            <RefreshCw className="animate-spin text-blue-600" size={40} />
+            <p className="text-[10px] font-black uppercase tracking-widest mt-6">Searching local storage...</p>
           </div>
         ) : offlineSales.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 text-center">
-            <CheckCircle size={48} className="text-emerald-500 mb-4" />
-            <h3 className="text-lg font-bold text-slate-900">No Offline Sales</h3>
-            <p className="text-sm text-slate-500 mt-1">All sales have been synced</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <CheckCircle className="text-emerald-500/20" size={64} />
+            <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight mt-6">All Systems Clear</h3>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-2">No offline sales require synchronization</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* Pending Sales */}
-            {pendingSales.length > 0 && (
-              <div>
-                <h3 className="text-sm font-bold text-amber-900 uppercase tracking-widest mb-3 flex items-center space-x-2">
-                  <Clock size={16} />
-                  <span>Pending Sync</span>
+          <div className="space-y-10">
+            {/* Pending & Failed Sales Sections */}
+            {[...failedSales, ...pendingSales].length > 0 && (
+              <div className="space-y-6">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                  <Clock className="text-amber-500" size={18} />
+                  Pending & Failed Actions
                 </h3>
-                <div className="space-y-2">
-                  {pendingSales.map((sale) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[...failedSales, ...pendingSales].map((sale) => (
                     <OfflineSaleCard
                       key={sale.tempId}
                       sale={sale}
@@ -216,47 +176,15 @@ const OfflineSalesPage: React.FC = () => {
               </div>
             )}
 
-            {/* Failed Sales */}
-            {failedSales.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-bold text-red-900 uppercase tracking-widest flex items-center space-x-2">
-                    <AlertCircle size={16} />
-                    <span>Failed to Sync</span>
-                  </h3>
-                  {isOnline && (
-                    <button
-                      onClick={handleRetryFailed}
-                      disabled={syncing}
-                      className="inline-flex items-center space-x-1 rounded-lg bg-red-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-red-700 disabled:bg-red-400 transition-all"
-                    >
-                      <RefreshCw size={12} className={syncing ? 'animate-spin' : ''} />
-                      <span>Retry All</span>
-                    </button>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  {failedSales.map((sale) => (
-                    <OfflineSaleCard
-                      key={sale.tempId}
-                      sale={sale}
-                      onViewReceipt={() => handleViewReceipt(sale)}
-                      onDelete={() => handleDeleteSale(sale.tempId)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Synced Sales */}
+            {/* Recently Synced */}
             {syncedSales.length > 0 && (
-              <div>
-                <h3 className="text-sm font-bold text-emerald-900 uppercase tracking-widest mb-3 flex items-center space-x-2">
-                  <CheckCircle size={16} />
-                  <span>Recently Synced</span>
+              <div className="space-y-6 pt-10 border-t border-slate-100 dark:border-slate-800">
+                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-2">
+                  <CheckCircle className="text-emerald-500" size={18} />
+                  Recently Synced
                 </h3>
-                <div className="space-y-2">
-                  {syncedSales.slice(0, 5).map((sale) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {syncedSales.slice(0, 10).map((sale) => (
                     <OfflineSaleCard
                       key={sale.tempId}
                       sale={sale}
@@ -274,79 +202,55 @@ const OfflineSalesPage: React.FC = () => {
   );
 };
 
-// Offline Sale Card Component
 const OfflineSaleCard: React.FC<{
   sale: OfflineSale;
   onViewReceipt: () => void;
   onPrintReceipt?: () => void;
   onDelete: () => void;
 }> = ({ sale, onViewReceipt, onPrintReceipt, onDelete }) => {
-  const statusConfig = {
-    PENDING: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' },
-    SYNCING: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700' },
-    SYNCED: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700' },
-    FAILED: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' },
-  };
-
-  const config = statusConfig[sale.syncStatus];
+  const statusStyles = {
+    PENDING: "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/20 dark:border-amber-900/30",
+    SYNCING: "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/30",
+    SYNCED: "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/30",
+    FAILED: "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/20 dark:border-rose-900/30",
+  }[sale.syncStatus];
 
   return (
-    <div className={`flex items-center justify-between p-4 rounded-xl border ${config.bg} ${config.border}`}>
-      <div className="flex items-center space-x-4 flex-1">
-        <div className={`p-2 rounded-lg ${config.bg}`}>
-          {sale.syncStatus === 'FAILED' ? (
-            <AlertCircle size={20} className={config.text} />
-          ) : sale.syncStatus === 'SYNCED' ? (
-            <CheckCircle size={20} className={config.text} />
-          ) : (
-            <Clock size={20} className={config.text} />
-          )}
+    <div className="group bg-white dark:bg-slate-900 p-6 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 hover:border-blue-500/30 transition-all hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none translate-y-0 hover:-translate-y-1">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <span className={cn("px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border", statusStyles)}>
+            {sale.syncStatus}
+          </span>
+          <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase mt-3">{sale.invoiceNumber}</h4>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm font-bold text-slate-900">{sale.invoiceNumber}</span>
-            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded ${config.bg} ${config.text}`}>
-              {sale.syncStatus}
-            </span>
-          </div>
-          <div className="flex items-center space-x-4 mt-1 text-xs text-slate-600">
-            <span>{new Date(sale.createdAt).toLocaleString()}</span>
-            <span>₹{sale.totals.total.toFixed(2)}</span>
-            <span className="font-medium">{sale.paymentMethod}</span>
-          </div>
-          {sale.syncError && (
-            <div className="text-[11px] text-red-600 mt-1 flex items-center space-x-1">
-              <AlertCircle size={10} />
-              <span>Error: {sale.syncError}</span>
-            </div>
-          )}
+        <div className="flex gap-2">
+          <button onClick={onViewReceipt} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-blue-600 rounded-xl transition-all"><ExternalLink size={14} /></button>
+          <button onClick={onDelete} className="p-2.5 bg-rose-50 dark:bg-rose-950/20 text-rose-400 hover:text-rose-600 rounded-xl transition-all"><Trash2 size={14} /></button>
         </div>
       </div>
-      <div className="flex items-center space-x-2">
-        <button
-          onClick={onViewReceipt}
-          className="inline-flex items-center space-x-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all"
-        >
-          <ExternalLink size={12} />
-          <span>View</span>
-        </button>
+      
+      <div className="flex justify-between items-end mt-6">
+        <div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(sale.createdAt).toLocaleTimeString()}</p>
+          <p className="text-base font-black text-slate-900 dark:text-white mt-1">Rs {sale.totals.total.toLocaleString()}</p>
+        </div>
         {sale.syncStatus === 'PENDING' && onPrintReceipt && (
-          <button
-            onClick={onPrintReceipt}
-            className="inline-flex items-center space-x-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-emerald-700 transition-all"
-          >
+          <button onClick={onPrintReceipt} className="px-4 py-2 bg-slate-900 dark:bg-slate-800 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-all active:scale-95 flex items-center gap-2">
             <Printer size={12} />
-            <span>Print Receipt</span>
+            Print
           </button>
         )}
-        <button
-          onClick={onDelete}
-          className="inline-flex items-center space-x-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-red-600 hover:bg-red-100 transition-all"
-        >
-          <Trash2 size={12} />
-          <span>Delete</span>
-        </button>
       </div>
+      
+      {sale.syncError && (
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+           <p className="text-[9px] text-rose-600 dark:text-rose-400 lowercase font-medium flex items-center gap-1">
+              <AlertCircle size={10} />
+              {sale.syncError}
+           </p>
+        </div>
+      )}
     </div>
   );
 };

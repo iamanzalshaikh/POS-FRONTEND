@@ -634,110 +634,58 @@ const POSInterface: React.FC = () => {
 
   return (
     <>
-      {/* Hold Orders Section - Top of Page */}
+      {/* Hold Orders Section */}
       {holdOrders.length > 0 && (
-        <div className="w-full bg-blue-50 border-b border-blue-200 px-6 py-4">
-          <div className="max-w-7xl mx-auto">
-            <h3 className="text-sm font-black uppercase tracking-widest text-blue-800 flex items-center space-x-2 mb-3">
-              <Clock size={16} className="text-blue-600" />
-              <span>Hold Orders ({holdOrders.length})</span>
+        <div className="mb-8 animate-in slide-in-from-top duration-500">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
+              <Clock size={14} className="text-indigo-500" />
+              Hold Orders <span className="bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] ml-1">{holdOrders.length}</span>
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {holdOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="p-4 rounded-xl border-2 border-blue-200 bg-white hover:border-blue-300 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-blue-900">{order.id}</span>
-                    <span className="text-xs font-semibold text-blue-700">
-                      {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {holdOrders.map((order) => (
+              <div
+                key={order.id}
+                className="p-5 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all group relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-full -mr-8 -mt-8"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{order.id}</span>
+                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-lg">
+                      {order.items.length} Items
                     </span>
                   </div>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-slate-600">
-                      {order.timestamp.toLocaleTimeString()}
-                    </span>
-                    <span className="text-lg font-bold text-blue-900">
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-xl font-black text-slate-900 dark:text-white tabular-nums">
                       {formatCurrency(order.total)}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleResumeOrder(order.id)}
-                      className="flex-1 rounded-xl bg-blue-600 text-white px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
+                      className="flex-1 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-sm"
                     >
                       Resume
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteHoldOrder(order.id)}
-                      className="rounded-xl border-2 border-red-300 bg-red-50 text-red-600 px-3 py-2 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 transition-all"
+                      className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-2xl transition-all"
                     >
-                      Delete
+                      <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      <div className="flex flex-col h-full overflow-hidden bg-white border border-slate-200 rounded-3xl">
-      {/* Top Bar */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/60">
-        <div>
-          <div className="text-sm font-extrabold text-slate-900">
-            {user?.store?.name || 'Store'}
-          </div>
-          <div className="text-[11px] text-slate-500 font-medium">
-            CASHIER POS TERMINAL
-
-          </div>
-        </div>
-        <div className="text-xs font-semibold text-slate-600">
-          {now.toLocaleString()}
-        </div>
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-2">
-            <span
-              className={`h-2.5 w-2.5 rounded-full ${
-                isOnline ? 'bg-emerald-500' : 'bg-amber-400'
-              }`}
-            />
-            <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">
-              {isOnline ? 'Online' : 'Offline'}
-            </span>
-          </div>
-          {pendingCount > 0 && isOnline && (
-            <button
-              type="button"
-              onClick={triggerSync}
-              className="ml-2 inline-flex items-center space-x-1 rounded-lg bg-blue-600 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white hover:bg-blue-700 transition-all"
-              title="Sync pending offline sales"
-            >
-              <Clock size={12} />
-              <span>Sync {pendingCount}</span>
-            </button>
-          )}
-          <div className="h-6 w-px bg-slate-200" />
-          <div className="flex items-center space-x-2">
-            <UserCircle2 size={18} className="text-slate-500" />
-            <div className="text-[11px] leading-tight">
-              <div className="font-bold text-slate-800">
-                {user?.name || user?.email}
-              </div>
-              {displayTerminalName && (
-                <div className="text-slate-500 font-medium">
-                  Terminal: {displayTerminalName}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
+      <div className="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-500">
 
       {/* Offline Banner */}
       {isOnline === false && (

@@ -5,6 +5,7 @@ import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
 import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
+import MetricCard from '../../components/global-components/MetricCard';
 
 interface MonthlyCloseData {
   period: {
@@ -249,78 +250,30 @@ const MonthlyCloseReport: React.FC = () => {
 
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Revenue */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-emerald-50 rounded-xl">
-              <DollarSign size={24} className="text-emerald-400" />
-            </div>
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Revenue</span>
-          </div>
-          <div className="text-3xl font-black text-emerald-600">
-            {formatCurrency(data.sales.totalRevenue)}
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <TrendingUp size={16} className="text-emerald-400" />
-            <span className="text-xs font-bold text-slate-500">
-              {data.sales.totalTransactions} transactions
-            </span>
-          </div>
-        </div>
-
-        {/* Net Revenue */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-50 rounded-xl">
-              <DollarSign size={24} className="text-blue-400" />
-            </div>
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Net Revenue</span>
-          </div>
-          <div className="text-3xl font-black text-blue-600">
-            {formatCurrency(data.sales.netRevenue)}
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500">
-              After discounts & tax
-            </span>
-          </div>
-        </div>
-
-        {/* Gross Profit */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-blue-50 rounded-xl">
-              <TrendingUp size={24} className="text-blue-400" />
-            </div>
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Gross Profit</span>
-          </div>
-          <div className="text-3xl font-black text-blue-600">
-            {formatCurrency(data.profit.grossProfit)}
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-bold text-blue-600">
-              {data.profit.grossMargin.toFixed(1)}% margin
-            </span>
-          </div>
-        </div>
-
-        {/* Stock Valuation */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="p-3 bg-purple-50 rounded-xl">
-              <FileText size={24} className="text-purple-400" />
-            </div>
-            <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Stock Value</span>
-          </div>
-          <div className="text-3xl font-black text-purple-600">
-            {formatCurrency(data.inventory.closingStock)}
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500">
-              Closing valuation
-            </span>
-          </div>
-        </div>
+        <MetricCard
+          title="Total Revenue"
+          value={formatCurrency(data.sales.totalRevenue)}
+          icon={DollarSign}
+          colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+        />
+        <MetricCard
+          title="Net Revenue"
+          value={formatCurrency(data.sales.netRevenue)}
+          icon={TrendingUp}
+          colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        />
+        <MetricCard
+          title="Gross Profit"
+          value={formatCurrency(data.profit.grossProfit)}
+          icon={TrendingUp}
+          colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+        />
+        <MetricCard
+          title="Stock Value"
+          value={formatCurrency(data.inventory.closingStock)}
+          icon={FileText}
+          colorClass="bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
+        />
       </div>
 
       {/* Detailed Breakdown */}
