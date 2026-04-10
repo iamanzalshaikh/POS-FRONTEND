@@ -10,11 +10,13 @@ export default function CategoryPieChart({ data }: CategoryPieChartProps) {
             data={data}
             dataKey="value"
             nameKey="name"
-            title="Category Distribution"
-            subtitle="Sales by product group"
+            title="Sales by Category"
+            subtitle="Donut breakdown of payment groups"
             compact
-            innerRadius={50}
-            outerRadius={75}
+            innerRadius={60}
+            outerRadius={85}
+            paddingAngle={5}
+            centerLabel={data.length}
         />
     );
 }

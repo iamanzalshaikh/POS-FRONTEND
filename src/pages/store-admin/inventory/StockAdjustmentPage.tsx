@@ -4,6 +4,7 @@ import StockAdjustmentTable from '@/components/store-admin/StockAdjustmentTable'
 import { fetchProducts } from '@/api/products.api';
 import { fetchInventoryLogs } from '@/api/inventory.api';
 import { getAuditLogs } from '@/api/reports.api';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const StockAdjustmentPage = () => {
     const [productsRes, setProductsRes] = useState<any>(null);
@@ -64,9 +65,20 @@ const StockAdjustmentPage = () => {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px]">
-                <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-                <p className="mt-4 text-xs font-black text-slate-400 uppercase tracking-widest animate-pulse">Syncing Inventory Logs...</p>
+            <div className="space-y-12 animate-fade-in">
+                <div className="space-y-4">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-10 w-64" />
+                    <Skeleton className="h-4 w-96" />
+                </div>
+                <div className="max-w-5xl">
+                    <Skeleton className="h-[300px] rounded-[32px]" />
+                </div>
+                <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+                    ))}
+                </div>
             </div>
         );
     }

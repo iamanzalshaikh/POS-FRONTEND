@@ -1,13 +1,16 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
+import MetricCard from "./MetricCard";
+import { BarChart3 } from "lucide-react";
 
 export interface StatItem {
   name: string;
   stat: string;
   change?: string;
   changeType?: "positive" | "negative";
+  icon?: any;
+  colorClass?: string;
 }
 
 interface Stats03Props {
@@ -21,28 +24,15 @@ export default function Stats03({ data }: Stats03Props) {
 
   return (
     <div className="w-full">
-      <dl className={cn("grid grid-cols-1 gap-6 sm:grid-cols-2 w-full", gridCols)}>
+      <dl className={cn("grid grid-cols-1 gap-4 sm:grid-cols-2 w-full", gridCols)}>
         {data.map((item) => (
-          <Card key={item.name} className="p-6 rounded-[24px] border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
-            <CardContent className="p-0">
-              <dt className="text-xs font-medium text-slate-500 mb-2">{item.name}</dt>
-              <dd className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-slate-900 tracking-tight tabular-nums pb-1">
-                  {item.stat}
-                </span>
-                {item.change && (
-                  <span
-                    className={cn(
-                      "text-[10px] font-bold",
-                      item.changeType === "positive" ? "text-emerald-600" : "text-rose-600"
-                    )}
-                  >
-                    {item.changeType === "positive" ? '+' : ''}{item.change}
-                  </span>
-                )}
-              </dd>
-            </CardContent>
-          </Card>
+          <MetricCard
+            key={item.name}
+            title={item.name}
+            value={item.stat}
+            icon={item.icon || BarChart3}
+            colorClass={item.colorClass || (item.changeType === "positive" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400" : "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400")}
+          />
         ))}
       </dl>
     </div>

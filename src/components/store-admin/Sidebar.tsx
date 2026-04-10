@@ -13,9 +13,11 @@ import {
     ChevronRight,
     Package,
     Layers,
-    Settings2
+    Settings2,
+    X
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useSidebar } from '@/components/ui/sidebar';
 
 const menuItems = [
     { name: 'Dashboard', icon: Columns2, path: '/store-admin/dashboard' },
@@ -38,116 +40,128 @@ const menuItems = [
     { name: 'Store Settings', icon: Settings, path: '/store-admin/settings' },
 ];
 
-interface SidebarProps {
-    isOpen: boolean;
-    onClose: () => void;
-}
-
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar() {
     const { logout } = useAuthStore();
+    const { collapsed, isMobileOpen, closeMobile } = useSidebar();
     const [inventoryOpen, setInventoryOpen] = React.useState(true);
 
     return (
-        <aside className={`w-64 bg-[#262255] border-r border-[#262255]/20 text-slate-200 h-screen fixed top-0 left-0 flex flex-col z-50 transition-transform duration-300 ease-in-out ${
-            isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}>
-            {/* Close button (Mobile only) */}
-            <button
-                onClick={onClose}
-                className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-            >
-                <ChevronRight size={20} className="rotate-180" />
-            </button>
+        <>
+            {/* Mobile backdrop overlay */}
+            {isMobileOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+                    onClick={closeMobile}
+                ></div>
+            )}
 
-            {/* Brand */}
-            <div className="p-6 border-b border-slate-100/10 dark:border-slate-800/50">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-[#262255] rounded-xl flex items-center justify-center shadow-indigo-100 shadow-xl border border-indigo-500/20">
-                        <Columns2 size={24} className="text-white" />
-                    </div>
-                    <div>
-                        <h1 className="font-bold text-xl text-white tracking-tight leading-none">Hybrid POS</h1>
-                        <p className="text-[10px] font-medium text-slate-300 mt-1 uppercase tracking-widest">STORE ADMIN</p>
-                    </div>
-                </div>
-            </div>
+            <aside className={`bg-[#262255] border-r border-[#2A2760]/20 text-slate-300 h-screen fixed top-0 left-0 flex flex-col z-50 transition-all duration-300 ease-in-out ${
+                isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+            } ${collapsed ? 'w-20' : 'w-64'}`}>
+                {/* Close button (Mobile only) */}
+                <button
+                    onClick={closeMobile}
+                    className="lg:hidden absolute top-4 right-4 p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-lg transition-colors"
+                >
+                    <X size={20} />
+                </button>
 
-            {/* Nav */}
-            <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto custom-scrollbar">
-                {menuItems.map((item, idx) => {
-                    if (item.children) {
-                        return (
-                            <div key={idx} className="space-y-1">
-                                <button
-                                    onClick={() => setInventoryOpen(!inventoryOpen)}
-                                    className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all hover:bg-[#2A2760] text-slate-300 hover:text-white group"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <item.icon size={20} className="text-slate-400 group-hover:text-white transition-colors" />
-                                        <span className="font-medium text-sm tracking-tight">{item.name}</span>
-                                    </div>
-                                    {inventoryOpen ? <ChevronDown size={14} className="text-slate-400 group-hover:text-[#262255]" /> : <ChevronRight size={14} className="text-slate-400 group-hover:text-[#262255]" />}
-                                </button>
-                                {inventoryOpen && (
-                                    <div className="pl-12 space-y-1 border-l-2 border-slate-100 ml-6 py-1">
-                                        {item.children.map((child, cIdx) => (
-                                            <NavLink
-                                                key={cIdx}
-                                                to={child.path}
-                                                className={({ isActive }) =>
-                                                    `block py-2 px-2 text-sm font-medium rounded-lg transition-all hover:text-white hover:bg-[#2A2760] ${isActive ? 'text-white bg-[#2A2760]' : 'text-slate-400'}`
-                                                }
-                                            >
-                                                {child.name}
-                                            </NavLink>
-                                        ))}
-                                    </div>
-                                )}
+                {/* Brand */}
+                <div className={`p-6 border-b border-white/10 transition-all duration-300 ${collapsed ? 'px-4' : 'px-6'}`}>
+                    <div className="flex items-center gap-3">
+                        <div className="min-w-10 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
+                            <Columns2 size={24} className="text-white" />
+                        </div>
+                        {!collapsed && (
+                            <div className="overflow-hidden whitespace-nowrap transition-all duration-300">
+                                <h1 className="font-bold text-xl text-white tracking-tight leading-none">Hybrid <span className="text-indigo-400">POS</span></h1>
+                                <p className="text-[10px] font-medium text-indigo-300/60 mt-1 uppercase tracking-widest">STORE ADMIN</p>
                             </div>
-                        );
-                    }
-
-                    return (
-                        <NavLink
-                            key={idx}
-                            to={item.path}
-                            className={({ isActive }) =>
-                                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative ${isActive
-                                    ? "bg-[#2A2760] text-white shadow-lg shadow-indigo-900/30"
-                                    : "hover:bg-[#2A2760] hover:text-white text-slate-300"
-                                }`
-                            }
-                        >
-                            {({ isActive }) => (
-                                <>
-                                    <item.icon size={20} className={isActive ? "text-white" : "text-slate-400 group-hover:text-white transition-colors"} />
-                                    <span className="font-medium text-sm tracking-tight">{item.name}</span>
-                                </>
-                            )}
-                        </NavLink>
-                    );
-                })}
-            </nav>
-
-            {/* User */}
-            <div className="p-4 border-t border-slate-100/10 dark:border-slate-800/50">
-                <div className="bg-[#2A2760] rounded-2xl p-4 flex items-center gap-3 border border-[#2A2760]/20">
-                    <div className="w-10 h-10 rounded-full bg-[#262255] flex items-center justify-center text-white font-black shadow-indigo-100 shadow-md border-2 border-white">
-                        AM
+                        )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">Anzal Manager</p>
-                        <p className="text-[10px] text-slate-300 font-medium uppercase truncate">KARACHI BRANCH</p>
-                    </div>
-                    <button
-                        onClick={logout}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                        title="Logout"
-                    >
-                        <LogOut size={18} />
-                    </button>
                 </div>
-            </div>
-        </aside>
+
+                {/* Nav */}
+                <nav className="flex-1 px-4 py-8 space-y-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
+                    {menuItems.map((item, idx) => {
+                        if (item.children) {
+                            return (
+                                <div key={idx} className="space-y-1">
+                                    <button
+                                        onClick={() => setInventoryOpen(!inventoryOpen)}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all hover:bg-white/10 text-slate-300 hover:text-white group ${collapsed ? 'px-2 justify-center' : ''}`}
+                                        title={collapsed ? item.name : ""}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <item.icon size={20} className="text-slate-400 group-hover:text-white transition-colors min-w-5" />
+                                            {!collapsed && <span className="font-medium text-sm tracking-tight">{item.name}</span>}
+                                        </div>
+                                        {!collapsed && (inventoryOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
+                                    </button>
+                                    {inventoryOpen && !collapsed && (
+                                        <div className="pl-12 space-y-1 border-l-2 border-white/10 ml-6 py-1">
+                                            {item.children.map((child, cIdx) => (
+                                                <NavLink
+                                                    key={cIdx}
+                                                    to={child.path}
+                                                    className={({ isActive }) =>
+                                                        `block py-2 px-2 text-sm font-medium rounded-lg transition-all hover:text-white hover:bg-white/5 ${isActive ? 'text-white bg-white/10' : 'text-slate-400'}`
+                                                    }
+                                                >
+                                                    {child.name}
+                                                </NavLink>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }
+
+                        return (
+                            <NavLink
+                                key={idx}
+                                to={item.path}
+                                title={collapsed ? item.name : ""}
+                                className={({ isActive }) =>
+                                    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative ${collapsed ? 'px-2 justify-center' : ''} ${isActive
+                                        ? "bg-white/10 text-white shadow-lg shadow-black/20"
+                                        : "hover:bg-white/10 text-slate-300 hover:text-white"
+                                    }`
+                                }
+                            >
+                                {({ isActive }) => (
+                                    <>
+                                        <item.icon size={20} className={isActive ? "text-white" : "text-slate-400 group-hover:text-white transition-colors min-w-5"} />
+                                        {!collapsed && <span className="font-medium text-sm tracking-tight">{item.name}</span>}
+                                    </>
+                                )}
+                            </NavLink>
+                        );
+                    })}
+                </nav>
+
+                {/* User */}
+                <div className={`p-4 border-t border-white/10 transition-all duration-300 ${collapsed ? 'px-2' : 'px-4'}`}>
+                    <div className={`bg-white/5 rounded-2xl p-4 flex items-center gap-3 border border-white/5 ${collapsed ? 'flex-col p-2' : ''}`}>
+                        <div className="min-w-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-black border border-white/20 shadow-sm">
+                            AM
+                        </div>
+                        {!collapsed && (
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-white truncate">Anzal Manager</p>
+                                <p className="text-[10px] text-indigo-300/60 font-medium uppercase truncate">KARACHI BRANCH</p>
+                            </div>
+                        )}
+                        <button
+                            onClick={logout}
+                            className={`p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-xl transition-all ${collapsed ? 'mt-2' : ''}`}
+                            title="Logout"
+                        >
+                            <LogOut size={18} />
+                        </button>
+                    </div>
+                </div>
+            </aside>
+        </>
     );
 }

@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react"
 import InventoryHeader from "@/components/store-admin/InventoryHeader"
-import InventoryFilters from "@/components/store-admin/InventoryFilters"
-import InventoryTable from "@/components/store-admin/InventoryTable"
 import { fetchInventoryLogs } from "@/api/inventory.api";
+import { DataTable } from '@/components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
+import { Search, ShoppingCart, RefreshCw, AlertTriangle, Box, User, ArrowUpRight, ArrowDownRight, Package } from 'lucide-react';
 
 export interface InventoryMovement {
   id: string
@@ -20,9 +21,6 @@ const InventoryManagementPage = () => {
   // Filter States
   const [searchQuery, setSearchQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("All Movements")
-  const [timeFilter, setTimeFilter] = useState("All Time")
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5;
 
   const [inventoryDataRes, setInventoryDataRes] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +59,88 @@ const InventoryManagementPage = () => {
     image: m.product?.image ? `http://localhost:3005${m.product.image}` : null
   }));
 
+  const columns: ColumnDef<InventoryMovement>[] = [
+    {
+        header: "Product",
+        accessorKey: "productName",
+        cell: ({ row }) => (
+            <div className="flex items-center gap-4 min-w-[200px]">
+                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden shadow-sm">
+                    {row.original.image ? (
+                        <img src={row.original.image} alt={row.original.productName} className="w-full h-full object-cover" />
+                    ) : (
+                        <Box size={20} className="text-slate-300" />
+                    )}
+                </div>
+                <div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.productName}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">SKU: {row.original.sku}</p>
+                </div>
+            </div>
+        )
+    },
+    {
+        header: "Movement",
+        accessorKey: "quantityChange",
+        cell: ({ row }) => {
+            const change = row.original.quantityChange;
+            const isPositive = change > 0;
+            return (
+                <div className="text-center font-black">
+                    <span className={cn(
+                        "flex items-center justify-center gap-1.5 text-xs tabular-nums uppercase tracking-widest px-3 py-1 rounded-lg border",
+                        isPositive 
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
+                            : "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
+                    )}>
+                        {isPositive ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
+                        {isPositive ? '+' : ''}{change}
+                    </span>
+                </div>
+            )
+        }
+    },
+    {
+        header: "Type",
+        accessorKey: "changeType",
+        cell: ({ row }) => (
+            <div className="text-center">
+                <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-[2px]">
+                    {row.original.changeType}
+                </span>
+            </div>
+        )
+    },
+    {
+        header: "Reference",
+        accessorKey: "referenceId",
+        cell: ({ row }) => (
+            <div className="text-center">
+                <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">#{row.original.referenceId}</span>
+            </div>
+        )
+    },
+    {
+        header: "Operator",
+        accessorKey: "user",
+        cell: ({ row }) => (
+            <div className="flex items-center gap-2 justify-center">
+                <User size={12} className="text-slate-300" />
+                <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{row.original.user}</span>
+            </div>
+        )
+    },
+    {
+        header: "Timestamp",
+        accessorKey: "timestamp",
+        cell: ({ row }) => (
+            <div className="text-right pr-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {row.original.timestamp}
+            </div>
+        )
+    }
+  ];
+
   const filteredMovements = movements.filter(m => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q ||
@@ -80,30 +160,45 @@ const InventoryManagementPage = () => {
   return (
     <div className="animate-in fade-in duration-500 space-y-10">
       <InventoryHeader />
-      <InventoryFilters
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        typeFilter={typeFilter}
-        onTypeChange={setTypeFilter}
-        timeFilter={timeFilter}
-        onTimeChange={setTimeFilter}
-      />
-      {error ? (
-        <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
-          <p className="text-[10px] font-black text-rose-500 mb-2 uppercase tracking-[4px]">Stock Link Error</p>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{(error as any)?.message || 'Unable to synchronize inventory data.'}</p>
-          <button onClick={() => refetch()} className="mt-8 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Retry Sync</button>
-        </div>
-      ) : (
-        <InventoryTable 
-          movements={paginatedMovements} 
-          loading={loading}
-          currentPage={currentPage}
-          totalCount={totalCount}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+        <DataTable 
+            columns={columns} 
+            data={filteredMovements}
+            isLoading={loading}
+            onRefresh={loadMovements}
+            placeholder="Search movements..."
+            headerActions={
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Search logs..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                        />
+                    </div>
+                    <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl h-10 px-2">
+                        {['All Movements', 'Sale', 'Restock', 'Adjustment'].map((m) => (
+                            <button
+                                key={m}
+                                onClick={() => setTypeFilter(m)}
+                                className={cn(
+                                    "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                    typeFilter === m
+                                        ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                        : "text-slate-400 hover:text-blue-600"
+                                )}
+                            >
+                                {m === 'All Movements' ? 'All' : m}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            }
         />
-      )}
+      </div>
     </div>
   )
 }

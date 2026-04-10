@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import StockOverviewCards from '@/components/store-admin/StockOverviewCards';
-import StockTable from '@/components/store-admin/StockTable';
 import { fetchProducts } from '@/api/products.api';
 import { fetchFullInventory } from '@/api/inventory.api';
-import { Search, Download, Plus } from 'lucide-react';
+import { Search, Download, Plus, Box, Filter } from 'lucide-react';
+import { DataTable } from '@/components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
 
 const StockLevelsPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -67,6 +69,114 @@ const StockLevelsPage = () => {
         outOfStockItems: inventory.filter((i: any) => i.currentStock === 0).length
     };
 
+    const columns: ColumnDef<any>[] = [
+        {
+            header: "ID",
+            cell: ({ row }) => (
+                <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
+                    {String(row.index + 1).padStart(2, '0')}
+                </div>
+            )
+        },
+        {
+            header: "Product Details",
+            accessorKey: "productName",
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex flex-shrink-0 items-center justify-center overflow-hidden shadow-sm group-hover:border-blue-600/20 transition-all">
+                            {item.image ? (
+                                <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-700">
+                                    <Box size={20} strokeWidth={1.5} />
+                                </div>
+                            )}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">{item.productName}</p>
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[2px] mt-0.5 truncate leading-none">SKU: {item.sku}</p>
+                        </div>
+                    </div>
+                );
+            }
+        },
+        {
+            header: "Category",
+            accessorKey: "category",
+            cell: ({ row }) => (
+                <div className="text-center">
+                    <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-[2px]">
+                        {row.getValue("category") || 'General'}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: "Stock",
+            accessorKey: "currentStock",
+            cell: ({ row }) => {
+                const item = row.original;
+                return (
+                    <div className="text-right">
+                        <span className={cn(
+                            "text-[11px] font-black uppercase tracking-widest tabular-nums",
+                            item.currentStock === 0 ? "text-rose-600" : item.currentStock <= item.reorderLevel ? "text-amber-600" : "text-slate-900 dark:text-slate-100"
+                        )}>
+                            {item.currentStock}
+                        </span>
+                    </div>
+                );
+            }
+        },
+        {
+            header: "Reorder",
+            accessorKey: "reorderLevel",
+            cell: ({ row }) => (
+                <div className="text-right">
+                    <span className="text-slate-400 dark:text-slate-500 text-[11px] font-black uppercase tracking-widest tabular-nums leading-none">
+                        {row.getValue<number>("reorderLevel")}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: "Status",
+            cell: ({ row }) => {
+                const item = row.original;
+                const current = item.currentStock;
+                const reorder = item.reorderLevel;
+                
+                if (current === 0) {
+                    return (
+                        <div className="flex justify-center">
+                            <span className="px-2.5 py-1 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] leading-tight border border-rose-100 dark:border-rose-950/50">
+                                Out of Stock
+                            </span>
+                        </div>
+                    );
+                }
+                if (current <= reorder) {
+                    return (
+                        <div className="flex justify-center">
+                            <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] leading-tight border border-amber-100 dark:border-amber-950/50">
+                                Low Stock
+                            </span>
+                        </div>
+                    );
+                }
+                return (
+                    <div className="flex justify-center">
+                        <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] leading-tight border border-emerald-100 dark:border-emerald-950/50">
+                            Healthy
+                        </span>
+                    </div>
+                );
+            }
+        }
+    ];
+
     const filteredInventory = (() => {
         let result = [...inventory];
 
@@ -118,41 +228,47 @@ const StockLevelsPage = () => {
             <StockOverviewCards stats={stats} loading={loading} />
 
             {/* Filters & Table Section */}
-            <div className="space-y-6">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-[20px] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors duration-300">
-                    {/* Search */}
-                    <div className="relative flex-1 max-w-md">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search by product name or SKU..."
-                            className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:bg-white dark:focus:bg-slate-900 focus:ring-4 focus:ring-[#2563EB]/5 focus:border-[#2563EB]/30 outline-none transition-all font-medium text-slate-700 dark:text-slate-200"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
-                    </div>
-
-                    {/* Status Filter Chips */}
-                    <div className="flex items-center gap-2 p-1 bg-slate-50 dark:bg-slate-800 rounded-xl">
-                        {['All', 'OK', 'Low', 'Out'].map((filter) => (
-                            <button
-                                key={filter}
-                                onClick={() => setActiveFilter(filter)}
-                                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${activeFilter === filter
-                                    ? 'bg-white dark:bg-slate-700 text-[#2563EB] dark:text-blue-400 shadow-sm border border-[#2563EB]/10 dark:border-blue-400/20'
-                                    : 'text-slate-400 dark:text-slate-500 hover:text-[#2563EB] dark:hover:text-blue-400'
-                                    }`}
-                            >
-                                {filter}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Table Area with Premium Header */}
-                <div className="border-t-4 border-black">
-                    <StockTable items={filteredInventory} loading={loading} />
-                </div>
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
+                <DataTable 
+                    columns={columns} 
+                    data={filteredInventory}
+                    isLoading={loading}
+                    onRefresh={loadData}
+                    placeholder="Search inventory..."
+                    hidePagination={false}
+                    manualPagination={false}
+                    exportFilename="Stock-Levels-Report"
+                    headerActions={
+                        <div className="flex items-center gap-3">
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Search product, SKU..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl h-10 px-2">
+                                {['All', 'OK', 'Low', 'Out'].map((filter) => (
+                                    <button
+                                        key={filter}
+                                        onClick={() => setActiveFilter(filter)}
+                                        className={cn(
+                                            "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                            activeFilter === filter
+                                                ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                                : "text-slate-400 dark:text-slate-550 hover:text-blue-600 dark:hover:text-blue-400"
+                                        )}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    }
+                />
             </div>
         </div>
     );

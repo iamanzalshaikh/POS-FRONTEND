@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LogOut, ChevronLeft, ChevronRight, Menu, X } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
+import { ModeToggle } from '../mode-toggle';
 
 interface DashboardLayoutProps {
   sidebarContent: React.ReactNode;
@@ -44,7 +45,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans antialiased overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans antialiased overflow-hidden transition-colors duration-300">
       
       {/* Mobile Sidebar Overlay */}
       {isMobileOpen && (
@@ -103,7 +104,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           ${isSidebarOpen ? 'lg:pl-64' : 'lg:pl-20'}
         `}
       >
-        <header className="bg-white border-b border-slate-200 px-6 lg:px-10 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 lg:px-10 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm transition-colors">
           <div className="flex items-center space-x-4">
             <button 
               onClick={() => setIsMobileOpen(true)}
@@ -112,11 +113,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
               <Menu size={24} />
             </button>
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{title}</h1>
-              <p className="text-slate-500 text-sm font-medium hidden sm:block mt-1">{subtitle}</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">{title}</h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm font-medium hidden sm:block mt-1">{subtitle}</p>
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            <ModeToggle />
             {headerExtra}
             <div className={`${accentStyles[accentColor]} px-3 py-1 lg:px-4 lg:py-1.5 rounded-full text-[10px] lg:text-xs tracking-wide font-bold border uppercase shadow-sm`}>
               {(role || 'USER').replace('_', ' ')}
@@ -127,7 +129,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           </div>
         </header>
 
-        <div className="p-6 lg:p-10 flex-1 overflow-auto bg-slate-50">
+        <div className="p-6 lg:p-10 flex-1 overflow-auto bg-slate-50 dark:bg-slate-950/50">
           {children}
         </div>
       </main>

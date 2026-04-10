@@ -3,13 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { authApi } from '../service/api';
 import { getDeviceFingerprint } from '../utils/fingerprint';
-import { Shield, Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  // Load remembered credentials on mount
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('remember_me_email');
+    const savedRememberMe = localStorage.getItem('remember_me_check');
+    
+    if (savedEmail) {
+      setEmail(savedEmail);
+    }
+    if (savedRememberMe === 'true') {
+      setRememberMe(true);
+    }
+  }, []);
 
   const { setAuth, isAuthenticated, user: authUser } = useAuthStore();
   const navigate = useNavigate();
@@ -18,7 +33,7 @@ const LoginPage: React.FC = () => {
   React.useEffect(() => {
     if (isAuthenticated && authUser) {
       switch (authUser.role) {
-        case 'SUPER_ADMIN': navigate('/admin/dashboard', { replace: true }); break;
+        case 'SUPER_ADMIN': navigate('/super-admin/dashboard', { replace: true }); break;
         case 'STORE_ADMIN': navigate('/store-admin/dashboard', { replace: true }); break;
         case 'CASHIER': navigate('/cashier', { replace: true }); break;
         case 'ACCOUNTANT': navigate('/accountant', { replace: true }); break;
@@ -67,6 +82,15 @@ const LoginPage: React.FC = () => {
       if (response.data.success) {
         const { user, accessToken, refreshToken } = response.data.data;
 
+        // Handle Remember Me persistence
+        if (rememberMe) {
+          localStorage.setItem('remember_me_email', email);
+          localStorage.setItem('remember_me_check', 'true');
+        } else {
+          localStorage.removeItem('remember_me_email');
+          localStorage.setItem('remember_me_check', 'false');
+        }
+
         if (refreshToken) {
           localStorage.setItem('refresh-token', refreshToken);
         }
@@ -113,29 +137,29 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-100 via-slate-50 to-white">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50 via-slate-50 to-white">
       <div className="w-full max-w-md">
         <div className="text-center mb-10 animate-fade-in-down">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 shadow-xl shadow-indigo-600/30 mb-6 group hover:scale-105 transition-transform cursor-pointer">
-            <Shield className="text-slate-900 w-8 h-8 group-hover:rotate-12 transition-transform" />
+            <Shield className="text-white w-8 h-8 group-hover:rotate-12 transition-transform" />
           </div>
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">POS <span className="text-indigo-600">SaaS</span></h1>
-          <p className="text-slate-500 font-semibold tracking-wide text-sm">ENTERPRISE RESOURCE PLANNING</p>
+          <h1 className="text-3xl font-extrabold text-indigo-600 tracking-tight mb-1">POS <span className="text-slate-900">SaaS</span></h1>
+          <p className="text-slate-500 font-semibold tracking-wider text-[11px] uppercase">Enterprise Resource Planning</p>
         </div>
 
-        <div className="bg-white border border-slate-200/60 p-8 rounded-3xl shadow-xl shadow-slate-200/50 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500"></div>
+        <div className="bg-white border border-slate-200/80 p-7 rounded-[2.5rem] shadow-2xl shadow-slate-200/60 relative overflow-hidden ring-1 ring-slate-100">
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 via-purple-400 to-indigo-500"></div>
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Email Address</label>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
               <div className="relative group/input">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 group-focus-within/input:text-indigo-600 transition-colors" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 group-focus-within/input:text-indigo-600 transition-colors" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-11 pr-4 py-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all placeholder:text-slate-500 font-medium"
+                  className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 pl-11 pr-4 py-3 rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-sm font-medium"
                   placeholder="admin@pos.com"
                   required
                 />
@@ -143,18 +167,44 @@ const LoginPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Password</label>
+              <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Password</label>
               <div className="relative group/input">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5 group-focus-within/input:text-indigo-600 transition-colors" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 group-focus-within/input:text-indigo-600 transition-colors" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-11 pr-4 py-3.5 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all placeholder:text-slate-500 font-medium"
+                  className="w-full bg-slate-50/50 border border-slate-200 text-slate-900 pl-11 pr-12 py-3 rounded-2xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 text-sm font-medium"
                   placeholder="••••••••"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors p-1"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
+            </div>
+
+            <div className="flex items-center justify-between px-1">
+              <label className="flex items-center space-x-2 cursor-pointer group">
+                <div className="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <div className="w-5 h-5 border-2 border-slate-200 rounded-md bg-white peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-all flex items-center justify-center">
+                    <svg className={`w-3.5 h-3.5 text-white transition-opacity ${rememberMe ? 'opacity-100' : 'opacity-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="text-[13px] font-semibold text-slate-500 group-hover:text-slate-600 transition-colors">Remember me</span>
+              </label>
             </div>
 
             {error && (
@@ -167,21 +217,21 @@ const LoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-slate-900 font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 active:scale-[0.98] flex items-center justify-center space-x-2"
+              className="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white text-[13px] font-bold py-3 rounded-2xl transition-all shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/30 active:scale-[0.98] flex items-center justify-center space-x-2"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>AUTHENTICATING...</span>
+                  <span className="tracking-widest capitalize">Authenticating...</span>
                 </>
               ) : (
-                <span>SIGN IN TO DASHBOARD</span>
+                <span className="tracking-widest font-bold">SIGN IN TO DASHBOARD</span>
               )}
             </button>
           </form>
 
           <div className="mt-8 text-center border-t border-slate-100 pt-6">
-            <p className="text-slate-500 text-sm font-medium">
+            <p className="text-slate-400 text-[12px] font-medium">
               Forgot password? <a href="#" className="text-indigo-600 font-bold hover:underline">Contact Support</a>
             </p>
           </div>

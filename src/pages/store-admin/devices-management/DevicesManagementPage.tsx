@@ -1,27 +1,22 @@
 import { useEffect, useState } from "react"
 import { getDeviceFingerprint } from "@/utils/fingerprint"
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
-
 import DevicesHeader from "@/components/store-admin/DevicesHeader"
 import AddTerminalModal from "@/components/store-admin/AddTerminalModal"
-import DevicesFilters, { type StatusFilter, type ViewFilter } from "@/components/store-admin/DevicesFilters"
-import DevicesTable from "@/components/store-admin/DevicesTable"
-import DevicesPagination from "@/components/store-admin/DevicesPagination"
-import StatsCards from "@/components/global-components/StatsCards"
+import MetricCard from "@/components/global-components/MetricCard";
+import { DataTable } from '@/components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
+import { Monitor, Wifi, WifiOff, Trash2, Shield, User, Clock, Search, Link2, Laptop } from 'lucide-react';
 
 import * as deviceApi from "@/api/devices.api";
 import type { Device } from "./types/device.types"
 
 export default function DevicesManagementPage() {
-    const [sidebarOpen, setSidebarOpen] = useState(false)
     const [terminalModalOpen, setTerminalModalOpen] = useState(false)
-    const [page, setPage] = useState(1)
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
-    const [viewFilter, setViewFilter] = useState<ViewFilter>("all")
+    const [statusFilter, setStatusFilter] = useState<string>("all")
+    const [viewFilter, setViewFilter] = useState<string>("all")
     const [currentFingerprint, setCurrentFingerprint] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
-    const limit = 10
 
     const [terminalsDataRes, setTerminalsDataRes] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -93,71 +88,201 @@ export default function DevicesManagementPage() {
             t.serialNumber.toLowerCase().includes(q)
         return matchesView && matchesStatus && matchesSearch
     })
-    const paginated = filtered.slice((page - 1) * limit, page * limit)
-    const total = filtered.length
+
+    const columns: ColumnDef<Device>[] = [
+        {
+            header: "ID",
+            cell: ({ row }) => (
+                <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
+                    {(row.index + 1).toString().padStart(2, '0')}
+                </div>
+            )
+        },
+        {
+            header: "Terminal Hub",
+            accessorKey: "name",
+            cell: ({ row }) => {
+                const device = row.original;
+                const isThisDevice = currentFingerprint && device.deviceFingerprint === currentFingerprint;
+                return (
+                    <div className="flex items-center gap-4 min-w-[180px]">
+                        <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all",
+                            device.status === 'online' ? "bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400" : "bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-900 dark:border-slate-800"
+                        )}>
+                            <Laptop size={20} strokeWidth={2} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{device.name}</p>
+                                {isThisDevice && (
+                                    <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded-[4px] text-[8px] font-black uppercase tracking-widest">THIS DEVICE</span>
+                                )}
+                            </div>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{device.type} SYSTEM</p>
+                        </div>
+                    </div>
+                );
+            }
+        },
+        {
+            header: "Hardware ID",
+            accessorKey: "serialNumber",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <Shield size={12} className="text-slate-300" />
+                    <span className="text-[10px] font-mono font-black text-slate-500 dark:text-slate-400">{row.original.serialNumber}</span>
+                </div>
+            )
+        },
+        {
+            header: "User",
+            accessorKey: "connectedTo",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <User size={12} className="text-slate-300" />
+                    <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{row.original.connectedTo || "Unassigned"}</span>
+                </div>
+            )
+        },
+        {
+            header: "Status",
+            accessorKey: "status",
+            cell: ({ row }) => {
+                const isOnline = row.original.status === 'online';
+                return (
+                    <div className="flex justify-center">
+                        <span className={cn(
+                            "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border flex items-center gap-2",
+                            isOnline
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50"
+                                : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900 dark:border-slate-800"
+                        )}>
+                            {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
+                            {row.original.status}
+                        </span>
+                    </div>
+                );
+            }
+        },
+        {
+            header: "Last Heartbeat",
+            accessorKey: "lastHeartbeat",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2 justify-center">
+                    <Clock size={12} className="text-slate-300" />
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none text-center">{row.original.lastHeartbeat}</span>
+                </div>
+            )
+        },
+        {
+            id: "actions",
+            header: "Management",
+            cell: ({ row }) => (
+                <div className="flex justify-center items-center gap-2">
+                    <button 
+                        onClick={() => handleDelete(row.original.id)}
+                        className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90 border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50 shadow-sm"
+                        title="Deactivate Device"
+                    >
+                        <Trash2 size={16} />
+                    </button>
+                </div>
+            )
+        }
+    ];
 
     return (
-        <div className="min-h-screen bg-[#F7F9FC] dark:bg-slate-950 flex text-slate-900 dark:text-slate-100 transition-all duration-500">
-            {/* Mobile Backdrop */}
-            {sidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
-                    onClick={() => setSidebarOpen(false)}
-                ></div>
-            )}
+        <div className="animate-fade-in space-y-10">
+            <DevicesHeader
+                onAddTerminal={() => setTerminalModalOpen(true)}
+                terminalCount={terminals.length}
+            />
 
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+                <MetricCard 
+                    title="Hardware Hub" 
+                    value={String(terminals.length)} 
+                    icon={Monitor} 
+                    colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                />
+                <MetricCard 
+                    title="Online Terminals" 
+                    value={String(terminals.filter((t: any) => t.status === 'online').length)} 
+                    icon={Wifi} 
+                    colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                />
+                <MetricCard 
+                    title="System Offline" 
+                    value={String(terminals.filter((t: any) => t.status === 'offline').length)} 
+                    icon={WifiOff} 
+                    colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
+                />
+                <MetricCard 
+                    title="Active Registries" 
+                    value={String(terminals.filter((t: any) => t.connectedTo).length)} 
+                    icon={User} 
+                    colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                />
+            </div>
 
-            <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+                <DataTable 
+                    columns={columns} 
+                    data={filtered}
+                    isLoading={loading}
+                    onRefresh={refetchTerminals}
+                    placeholder="Search equipment..."
+                    headerActions={
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Search serials, names..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl h-10 px-2 text-muted-foreground">
+                                {['all', 'online', 'offline'].map((f) => (
+                                    <button
+                                        key={f}
+                                        onClick={() => setStatusFilter(f)}
+                                        className={cn(
+                                            "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                            statusFilter === f
+                                                ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                                : "text-slate-400 hover:text-blue-600"
+                                        )}
+                                    >
+                                        {f}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setViewFilter(viewFilter === 'all' ? 'this_device' : 'all')}
+                                className={cn(
+                                    "h-10 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border shadow-sm",
+                                    viewFilter === 'this_device'
+                                        ? "bg-blue-600 text-white border-blue-600"
+                                        : "bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-blue-600 hover:text-blue-600"
+                                )}
+                            >
+                                <Link2 size={14} />
+                                {viewFilter === 'this_device' ? 'Single Link' : 'All Links'}
+                            </button>
+                        </div>
+                    }
+                />
+            </div>
 
-                <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in space-y-10">
-                    <DevicesHeader
-                        onAddTerminal={() => setTerminalModalOpen(true)}
-                        terminalCount={terminals.length}
-                    />
-
-                    <div className="mt-8">
-                        <StatsCards data={[
-                            { name: "Connected Hardware", stat: String(terminals.length), change: "+2", changeType: "positive" },
-                            { name: "Online Devices", stat: String(terminals.filter((t: any) => t.status === 'online').length), change: "100%", changeType: "positive" },
-                            { name: "Offline / Alerts", stat: String(terminals.filter((t: any) => t.status === 'offline').length), change: "0%", changeType: "negative" },
-                            { name: "POS Terminals", stat: String(terminals.filter((t: any) => t.type === 'POS').length), change: "+1", changeType: "positive" },
-                        ]} />
-                    </div>
-
-                    <AddTerminalModal
-                        isOpen={terminalModalOpen}
-                        onClose={() => setTerminalModalOpen(false)}
-                        onSuccess={() => { refetchTerminals(); setTerminalModalOpen(false); }}
-                    />
-
-                    <DevicesFilters
-                        statusFilter={statusFilter}
-                        onStatusFilterChange={(v) => { setStatusFilter(v); setPage(1); }}
-                        viewFilter={viewFilter}
-                        onViewFilterChange={(v) => { setViewFilter(v); setPage(1); }}
-                        searchQuery={searchQuery}
-                        onSearchQueryChange={(v) => { setSearchQuery(v); setPage(1); }}
-                    />
-
-            {loading ? (
-                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
-                    <div className="w-12 h-12 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 mt-6 uppercase tracking-[4px] animate-pulse leading-none">Scanning Hardware...</p>
-                </div>
-            ) : error ? (
-                <div className="bg-white dark:bg-slate-900 rounded-[32px] p-24 flex flex-col items-center justify-center border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-300">
-                    <p className="text-[10px] font-black text-rose-500 mb-2 uppercase tracking-[4px]">Connection Failure</p>
-                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{(error as any)?.message || 'Unable to reach the backend services.'}</p>
-                    <button onClick={() => refetchTerminals()} className="mt-8 px-8 py-3 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all">Retry Link</button>
-                </div>
-            ) : (
-                <div className="space-y-8 animate-fade-in">
-                    <DevicesTable data={paginated} onDelete={handleDelete} />
-                    <DevicesPagination page={page} setPage={setPage} total={total} />
-                </div>
-            )}
+            <AddTerminalModal
+                isOpen={terminalModalOpen}
+                onClose={() => setTerminalModalOpen(false)}
+                onSuccess={() => { refetchTerminals(); setTerminalModalOpen(false); }}
+            />
         </div>
     )
 }

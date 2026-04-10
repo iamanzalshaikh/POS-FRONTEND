@@ -1,5 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { 
+  AlertCircle, 
+  DollarSign, 
+  TrendingUp, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  ShoppingCart, 
+  PackageOpen, 
+  Undo2, 
+  BadgePercent 
+} from 'lucide-react';
 import DashboardGrid from './components/DashboardGrid';
 import MonthlyActivityChart from '@/components/global-components/monthly-activity-chart';
 import StatsCards from '@/components/global-components/StatsCards';
@@ -7,6 +17,8 @@ import StatsCards from '@/components/global-components/StatsCards';
 import CategoryPieChart from './components/CategoryPieChart';
 import ActiveDevicesPanel from './components/ActiveDevicesPanel';
 import TopProductsTable from './components/TopProductsTable';
+import MetricCard from '@/components/global-components/MetricCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/format';
@@ -174,11 +186,43 @@ export default function StoreAdminDashboard() {
 
   if (loading && !data) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium text-slate-400 uppercase tracking-widest animate-pulse">Initializing Console...</p>
+      <div className="animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <div className="p-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex gap-2">
+             <Skeleton className="h-8 w-16 rounded-xl" />
+             <Skeleton className="h-8 w-16 rounded-xl" />
+             <Skeleton className="h-8 w-16 rounded-xl" />
+          </div>
         </div>
+
+        <DashboardGrid>
+          <div className="xl:col-span-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-32 rounded-[32px]" />
+              ))}
+            </div>
+          </div>
+
+          <div className="xl:col-span-8">
+            <Skeleton className="h-[360px] rounded-[32px]" />
+          </div>
+
+          <div className="xl:col-span-4">
+            <Skeleton className="h-[360px] rounded-[32px]" />
+          </div>
+
+          <div className="xl:col-span-8">
+            <Skeleton className="h-[400px] rounded-[32px]" />
+          </div>
+          <div className="xl:col-span-4">
+            <Skeleton className="h-[400px] rounded-[32px]" />
+          </div>
+        </DashboardGrid>
       </div>
     );
   }
@@ -198,47 +242,10 @@ export default function StoreAdminDashboard() {
     );
   }
 
-  const statsData = [
-    {
-      name: "Total Revenue",
-      stat: formatCurrency(data.metrics?.[0]?.value ?? 0),
-      change: "+12.5%",
-      changeType: "positive" as const,
-      linkTo: "/store-admin/reports"
-    },
-    {
-      name: "Active Sales",
-      stat: `${Number(data.metrics?.[1]?.value ?? 0).toLocaleString()}`,
-      change: "+5.1%",
-      changeType: "positive" as const,
-      linkTo: "/store-admin/sales"
-    },
-    {
-      name: "Inventory Alerts",
-      stat: `${Number(data.metrics?.[2]?.value ?? 0).toLocaleString()}`,
-      change: "0%",
-      changeType: "positive" as const,
-      linkTo: "/store-admin/inventory/stocks"
-    },
-    {
-      name: "Total Refunds",
-      stat: `${Number(data.metrics?.[3]?.value ?? 0).toLocaleString()}`,
-      change: "-2.1%",
-      changeType: "negative" as const,
-      linkTo: "/store-admin/sales"
-    },
-    {
-      name: "Total Discounts",
-      stat: formatCurrency(data.metrics?.[4]?.value ?? 0),
-      change: "+2.1%",
-      changeType: "positive" as const,
-      linkTo: "/store-admin/reports"
-    }
-  ];
 
   return (
     <div className="animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Console Overview</h1>
           <p className="text-slate-500 dark:text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">Real-time Analytics & Performance</p>
@@ -263,44 +270,99 @@ export default function StoreAdminDashboard() {
 
       <DashboardGrid>
         <div className="xl:col-span-12">
-          <StatsCards data={statsData} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-2">
+            <MetricCard
+              title="Revenue"
+              value={formatCurrency(data.metrics?.[0]?.value ?? 0)}
+              change={12.5}
+              isPositive={true}
+              icon={DollarSign}
+              colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+            />
+            <MetricCard
+              title="Transactions"
+              value={Number(data.metrics?.[1]?.value ?? 0).toLocaleString()}
+              change={5.1}
+              isPositive={true}
+              icon={ShoppingCart}
+              colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+            />
+            <MetricCard
+              title="Low Stock"
+              value={Number(data.metrics?.[2]?.value ?? 0).toLocaleString()}
+              change={0}
+              isPositive={true}
+              icon={PackageOpen}
+              colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+            />
+            <MetricCard
+              title="Refunds"
+              value={Number(data.metrics?.[3]?.value ?? 0).toLocaleString()}
+              change={2.1}
+              isPositive={false}
+              icon={Undo2}
+              colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
+            />
+            <MetricCard
+              title="Discounts"
+              value={formatCurrency(data.metrics?.[4]?.value ?? 0)}
+              change={3.2}
+              isPositive={true}
+              icon={BadgePercent}
+              colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+            />
+          </div>
         </div>
 
         {/* Unified Activity Chart */}
         <div className="xl:col-span-8">
           <MonthlyActivityChart
             title="Revenue Performance"
-            subtitle={`Consolidated data for ${dateRange}`}
             data={(() => {
-              // Get last 6 months for a continuous X-axis
-              interface MonthPoint { month: string; monthIndex: number; year: number; activity: number; }
-              const months: MonthPoint[] = [];
-              const now = new Date();
-              for (let i = 5; i >= 0; i--) {
-                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                months.push({ 
-                  month: d.toLocaleDateString('en-US', { month: 'short' }),
-                  monthIndex: d.getMonth(),
-                  year: d.getFullYear(),
-                  activity: 0 
+              const { startDate, endDate } = calculateDateRange(dateRange);
+              const start = new Date(startDate);
+              const end = new Date(endDate);
+              const points: { label: string; dateStr: string; activity: number }[] = [];
+
+              if (dateRange === 'Today') {
+                // Hourly points
+                for (let i = 0; i < 24; i++) {
+                  const hour = i.toString().padStart(2, '0') + ':00';
+                  points.push({ label: hour, dateStr: hour, activity: 0 });
+                }
+                // Map data (assuming backend gives hourly or we just sum into hours)
+                data?.dailySales.forEach(d => {
+                    const date = new Date(d.date);
+                    const hour = date.getHours();
+                    if (points[hour]) points[hour].activity += d.sales;
+                });
+              } else {
+                // Daily points for 7D or 30D
+                let curr = new Date(start);
+                while (curr <= end) {
+                  const dStr = curr.toISOString().split('T')[0];
+                  points.push({ 
+                    label: curr.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+                    dateStr: dStr,
+                    activity: 0 
+                  });
+                  curr.setDate(curr.getDate() + 1);
+                }
+
+                // Map data
+                data?.dailySales.forEach(d => {
+                  const match = points.find(p => p.dateStr === d.date);
+                  if (match) match.activity += d.sales;
                 });
               }
 
-              // Merge from backend weekly Revenue (aggregated by month)
-              data?.weeklyRevenue.forEach(d => {
-                const date = new Date(d.week);
-                const match = months.find(m => m.monthIndex === date.getMonth() && m.year === date.getFullYear());
-                if (match) {
-                  match.activity += d.revenue;
-                }
-              });
-
-              return months.map(({ month, activity }) => ({ month, activity }));
+              return points.map(({ label, activity }) => ({ month: label, activity }));
             })()}
             isLoading={dashLoading}
             height={260}
             isCurrency={true}
             unit="PKR"
+            subtitle={dateRange === 'Today' ? "Hourly Revenue Flow" : `Daily Performance (${dateRange})`}
           />
         </div>
 

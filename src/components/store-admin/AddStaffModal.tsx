@@ -1,6 +1,7 @@
 import { X, User, Mail, Shield, Lock, Monitor, Eye, EyeOff } from 'lucide-react';
 import type { StaffMember, CreateStaffInput } from '../../pages/store-admin/staff-management/types/staff.types';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { terminalsApi } from '../../service/api';
 
 interface Terminal {
@@ -37,8 +38,9 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
 
     useEffect(() => {
         if (isOpen) {
+            document.body.style.overflow = 'hidden';
             if (editMember) {
-                // Extract terminal IDs from assignedTerminals
+                // ... rest of the same logic
                 const terminalIds = editMember.assignedTerminals?.map(t => t.id) || [];
                 setFormData({
                     name: editMember.name,
@@ -53,7 +55,12 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
             }
             setError(null);
             setShowPassword(false);
+        } else {
+            document.body.style.overflow = 'unset';
         }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
     }, [isOpen, editMember]);
 
     useEffect(() => {
@@ -114,31 +121,34 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
             setError(result.error || `Failed to ${editMember ? 'update' : 'create'} staff.`);
         }
     };
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 md:p-8">
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm animate-fade-in" onClick={handleClose}></div>
-            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[32px] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh] animate-fade-in">
-                <div className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30 shrink-0">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden uppercase">
+            <div 
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-fade-in" 
+                onClick={handleClose}
+            ></div>
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[32px] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh] animate-fade-in border border-white/5 dark:border-white/10">
+                <div className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 transition-colors shrink-0">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">{editMember ? 'Edit Staff Details' : 'Add New Staff'}</h2>
-                        <p className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase tracking-widest mt-1">{editMember ? 'Modify identity or permissions' : 'Onboard Cashier or Accountant'}</p>
+                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{editMember ? 'Edit Personnel' : 'Add New Staff'}</h2>
+                        <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">{editMember ? 'Identity & System Permissions' : 'Onboard Cashier or Accountant'}</p>
                     </div>
-                    <button onClick={handleClose} type="button" className="p-3 hover:bg-white dark:hover:bg-slate-800 rounded-2xl text-slate-400 dark:text-slate-500 transition-all active:scale-95">
+                    <button onClick={handleClose} type="button" className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl text-slate-400 dark:text-slate-500 transition-all active:scale-95">
                         <X className="w-6 h-6" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1">
+                <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
                     {error && (
-                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-700 text-sm font-medium">
+                        <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 rounded-2xl text-rose-700 dark:text-rose-400 text-xs font-black uppercase tracking-widest leading-relaxed">
                             {error}
                         </div>
                     )}
                     <div className="grid grid-cols-1 gap-6">
                         <div className="space-y-2">
-                            <label className="text-xs font-medium uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
-                            <div className="relative">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Name</label>
+                            <div className="relative group">
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                 <input
                                     required
                                     type="text"
@@ -151,9 +161,9 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-medium uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
-                            <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address</label>
+                            <div className="relative group">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                 <input
                                     required
                                     type="email"
@@ -166,49 +176,59 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-xs font-medium uppercase tracking-widest text-slate-400 ml-1">Role</label>
-                            <div className="relative">
-                                <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                            <label className="text-xs font-medium uppercase tracking-widest text-slate-400 ml-1">Access Role</label>
+                            <div className="relative group">
+                                <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                 <select
                                     value={formData.role}
                                     onChange={e => {
                                         const role = e.target.value as 'CASHIER' | 'ACCOUNTANT';
                                         setFormData({ ...formData, role, assignedTerminalIds: role === 'ACCOUNTANT' ? undefined : formData.assignedTerminalIds });
                                     }}
-                                    className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-xs appearance-none cursor-pointer text-slate-900 dark:text-white"
+                                    className="w-full pl-12 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[10px] appearance-none cursor-pointer text-slate-900 dark:text-white"
                                 >
                                     <option value="CASHIER">Cashier</option>
                                     <option value="ACCOUNTANT">Accountant</option>
                                 </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
                             </div>
                         </div>
                         {formData.role === 'CASHIER' && (
                             <div className="space-y-2">
-                                <label className="text-xs font-medium uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
-                                    <Monitor className="w-4 h-4" /> Assign Terminal
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-2">
+                                    Assign Terminal
                                 </label>
-                                <div className="relative">
-                                    <Monitor className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                                <div className="relative group">
+                                    <Monitor className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                     <select
                                         value={formData.assignedTerminalIds?.[0] || ""}
                                         onChange={e => {
                                             const val = e.target.value;
                                             setFormData({ ...formData, assignedTerminalIds: val ? [val] : undefined });
                                         }}
-                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-xs appearance-none cursor-pointer"
+                                        className="w-full pl-12 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[10px] appearance-none cursor-pointer text-slate-900 dark:text-white"
                                     >
                                         <option value="">No Terminal Assigned</option>
                                         {terminals.map(t => (
                                             <option key={t.id} value={t.id}>{t.deviceName}</option>
                                         ))}
                                     </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         )}
 
 
                         <div className="space-y-2">
-                            <label className="text-xs font-medium uppercase tracking-widest text-slate-400 ml-1">Password {editMember ? '(Leave blank to keep same)' : '(required)'}</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Password {editMember ? '(Blank to keep current)' : '(Required)'}</label>
                             <div className="relative group">
                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                                 <input
@@ -217,55 +237,65 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                                     placeholder="••••••••"
                                     value={formData.password}
                                     onChange={e => setFormData({ ...formData, password: e.target.value })}
-                                    className="w-full pl-12 pr-12 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-900 placeholder:text-slate-300"
+                                    className="w-full pl-12 pr-12 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-900 dark:text-white placeholder:text-slate-300"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white rounded-xl text-slate-400 hover:text-slate-600 transition-all active:scale-95"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all active:scale-95"
                                 >
                                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                 </button>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-medium ml-1">{PASSWORD_HINT}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium ml-1">{PASSWORD_HINT}</p>
                         </div>
 
                         {editMember && (
                             <div className="space-y-2">
-                                <label className="text-xs font-medium uppercase tracking-widest text-slate-400 ml-1">Account Status</label>
-                                <div className="relative">
-                                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Account Status</label>
+                                <div className="relative group">
+                                    <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                     <select
                                         value={formData.isActive ? "active" : "inactive"}
                                         onChange={e => setFormData({ ...formData, isActive: e.target.value === "active" })}
-                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-xs appearance-none cursor-pointer text-slate-900 dark:text-white"
+                                        className="w-full pl-12 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[10px] appearance-none cursor-pointer text-slate-900 dark:text-white"
                                     >
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
                                     </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex gap-4 pt-4">
+                    <div className="flex gap-4 pt-4 shrink-0">
                         <button
                             type="button"
                             onClick={handleClose}
-                            className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-[20px] font-bold uppercase tracking-widest text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+                            className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-95 border border-slate-100 dark:border-slate-700"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 py-4 bg-indigo-900 text-white rounded-[20px] font-bold uppercase tracking-widest text-xs hover:bg-indigo-600 shadow-lg shadow-indigo-900/25 transition-all active:scale-95 disabled:opacity-50"
+                            className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50 border border-blue-500 flex items-center justify-center"
                         >
-                            {loading ? (editMember ? 'Saving...' : 'Creating...') : (editMember ? 'Save Changes' : 'Create Staff')}
+                            {loading ? (
+                                <span className="animate-pulse">Authorizing Protocol...</span>
+                            ) : (
+                                <span>{editMember ? 'Update Profile' : 'Onboard Staff'}</span>
+                            )}
                         </button>
                     </div>
                 </form>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

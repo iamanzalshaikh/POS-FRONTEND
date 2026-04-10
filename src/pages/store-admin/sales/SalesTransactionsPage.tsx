@@ -2,13 +2,10 @@ import { useState, useEffect } from "react"
 import SalesHeader from "@/components/store-admin/SalesHeader"
 import SalesFilters from "@/components/store-admin/SalesFilters"
 import SalesTable from "@/components/store-admin/SalesTable"
-import Sidebar from '@/components/store-admin/Sidebar'
-import TopNavbar from '@/components/store-admin/TopNavbar'
 
 import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api"
 
 const SalesTransactionsPage = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Filters state
   const [search, setSearch] = useState("")
@@ -77,53 +74,38 @@ const SalesTransactionsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] dark:bg-slate-950 transition-colors duration-500 flex">
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-
-        <main className="p-4 md:p-8 lg:p-10 w-full animate-fade-in space-y-6">
-          <SalesHeader
-            onDateRangeChange={(start, end) => {
-              setStartDate(start)
-              setEndDate(end)
-              setPage(1)
-            }}
-          />
-          <SalesFilters
-            search={search}
-            onSearchChange={(v) => { setSearch(v); setPage(1); }}
-            status={paymentStatus}
-            onStatusChange={(v) => { setPaymentStatus(v); setPage(1); }}
-            paymentMethod={paymentMethod}
-            onPaymentMethodChange={(v) => { setPaymentMethod(v); setPage(1); }}
-            dateRange={{ start: startDate, end: endDate }}
-            onDateRangeChange={(start, end) => {
-              setStartDate(start)
-              setEndDate(end)
-              setPage(1)
-            }}
-          />
-          <SalesTable
-            transactions={transactions}
-            loading={loading}
-            page={page}
-            total={total}
-            limit={limit}
-            onPageChange={setPage}
-            onCancel={handleCancelSale}
-            onRefund={handleRefundSale}
-          />
-        </main>
-      </div>
+    <div className="animate-fade-in space-y-6">
+      <SalesHeader
+        onDateRangeChange={(start, end) => {
+          setStartDate(start)
+          setEndDate(end)
+          setPage(1)
+        }}
+      />
+      <SalesFilters
+        search={search}
+        onSearchChange={(v) => { setSearch(v); setPage(1); }}
+        status={paymentStatus}
+        onStatusChange={(v) => { setPaymentStatus(v); setPage(1); }}
+        paymentMethod={paymentMethod}
+        onPaymentMethodChange={(v) => { setPaymentMethod(v); setPage(1); }}
+        dateRange={{ start: startDate, end: endDate }}
+        onDateRangeChange={(start, end) => {
+          setStartDate(start)
+          setEndDate(end)
+          setPage(1)
+        }}
+      />
+      <SalesTable
+        transactions={transactions}
+        loading={loading}
+        page={page}
+        total={total}
+        limit={limit}
+        onPageChange={setPage}
+        onCancel={handleCancelSale}
+        onRefund={handleRefundSale}
+      />
     </div>
   )
 }

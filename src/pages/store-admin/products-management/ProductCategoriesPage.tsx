@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
-import CategoriesTable from "@/components/store-admin/CategoriesTable"
 import AddCategoryModal from "@/components/store-admin/AddCategoryModal"
-import { CheckCircle2, Plus, Search } from "lucide-react"
+import { CheckCircle2, Plus, Search, Layers, Box, Hash, Trash2 } from "lucide-react"
 import { getCategories } from "@/api/category.api";
+import { DataTable } from '@/components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
 
 const ProductCategoriesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -29,6 +31,75 @@ const ProductCategoriesPage = () => {
   }, []);
   
   const categories = (categoriesRes as any)?.data || (Array.isArray(categoriesRes) ? categoriesRes : []);
+
+  const filtered = categories.filter((c: any) => 
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const columns: ColumnDef<any>[] = [
+    {
+        header: "ID",
+        cell: ({ row }) => (
+            <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
+                {String(row.index + 1).padStart(2, '0')}
+            </div>
+        )
+    },
+    {
+        header: "Hierarchy",
+        accessorKey: "name",
+        cell: ({ row }) => (
+            <div className="flex items-center gap-4 min-w-[200px]">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm transition-all group-hover:scale-110">
+                    <Layers size={20} />
+                </div>
+                <div>
+                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.name}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[240px] truncate leading-none">
+                        {row.original.description || "No classification details provided."}
+                    </p>
+                </div>
+            </div>
+        )
+    },
+    {
+        header: "Items Linked",
+        cell: ({ row }) => (
+            <div className="flex justify-center">
+                <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-[2px] flex items-center gap-2 border border-transparent">
+                    <Box size={12} />
+                    {row.original._count?.products || 0} PRODUCTS
+                </span>
+            </div>
+        )
+    },
+    {
+        header: "Slug",
+        accessorKey: "slug",
+        cell: ({ row }) => (
+            <div className="text-center">
+                <span className="text-[10px] font-mono font-black text-slate-300 dark:text-slate-600 py-1 px-2 border border-slate-50 dark:border-slate-800 rounded-lg">
+                    /{row.original.slug || row.original.name.toLowerCase().replace(/\s+/g, '-')}
+                </span>
+            </div>
+        )
+    },
+    {
+        id: "actions",
+        header: "Actions",
+        cell: () => (
+            <div className="flex justify-center items-center gap-2">
+                <button 
+                    disabled
+                    className="p-2.5 text-slate-200 dark:text-slate-800 cursor-not-allowed opacity-50"
+                >
+                    <Trash2 size={16} />
+                </button>
+            </div>
+        )
+    }
+  ];
 
   // Auto-dismiss success toast
   useEffect(() => {
@@ -67,26 +138,28 @@ const ProductCategoriesPage = () => {
         </button>
       </div>
 
-      {/* Inline Search */}
-      <div className="relative group max-w-md">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 p-1.5 bg-slate-50 rounded-lg group-focus-within:bg-indigo-50 transition-colors">
-          <Search size={16} className="text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
-        </div>
-        <input
-          type="text"
-          placeholder="Filter categories by name or description..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-14 pr-6 py-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 focus:border-indigo-500/50 rounded-3xl text-sm font-medium transition-all shadow-sm outline-none placeholder:text-slate-400 placeholder:italic focus:ring-4 focus:ring-indigo-500/5"
-        />
-      </div>
-
-      {/* Table Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden min-h-[400px]">
-        <CategoriesTable
-          categories={categories}
-          loading={loading}
-          searchQuery={searchQuery}
+      {/* Management Ledger Area */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+        <DataTable 
+            columns={columns} 
+            data={filtered}
+            isLoading={loading}
+            onRefresh={fetchCategories}
+            placeholder="Search categories..."
+            headerActions={
+                <div className="flex items-center gap-3">
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Find collections..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[280px]"
+                        />
+                    </div>
+                </div>
+            }
         />
       </div>
 

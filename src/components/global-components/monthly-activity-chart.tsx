@@ -1,7 +1,5 @@
-"use client";
-
 import React from 'react';
-import { Bar, BarChart, XAxis } from 'recharts';
+import { Area, AreaChart, XAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 
 import {
   type ChartConfig,
@@ -12,8 +10,8 @@ import {
 
 const chartConfig = {
   activity: {
-    label: 'Activity',
-    color: 'var(--chart-1)',
+    label: 'Revenue',
+    color: 'hsl(var(--chart-1))',
   },
 } satisfies ChartConfig;
 
@@ -76,31 +74,59 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
           <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">{title}</h3>
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{subtitle}</p>
         </div>
+        <div className="flex items-center gap-2">
+           <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shadow-[0_0_8px_rgba(79,70,229,0.5)]"></span>
+           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Flow</span>
+        </div>
       </div>
 
-      <div style={{ height }} className="overflow-hidden">
-        <ChartContainer config={chartConfig}>
-            <BarChart data={displayData}>
-              <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={10} />
-              <Bar dataKey="activity" fill="var(--chart-1)" radius={4} />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value: any) => (
-                      <div className="flex min-w-[130px] items-center text-xs text-muted-foreground">
-                        <div className="ml-auto flex items-baseline gap-0.5 font-mono font-medium text-foreground tabular-nums">
-                          {isCurrency ? `₨ ${Number(value).toLocaleString()}` : value}
-                          <span className="font-normal text-muted-foreground ml-1">{unit}</span>
-                        </div>
-                      </div>
-                    )}
-                    hideLabel
-                  />
+      <div style={{ height }} className="w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={displayData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f1f5f9" />
+            <XAxis 
+              dataKey="month" 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+              tickMargin={10} 
+            />
+            <Tooltip
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-slate-900 text-white p-3 rounded-2xl shadow-xl border border-slate-800/50 backdrop-blur-md">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{payload[0].payload.month}</p>
+                      <p className="text-sm font-black">
+                        {isCurrency ? `₨ ${Number(payload[0].value).toLocaleString()}` : payload[0].value}
+                        <span className="text-[10px] font-medium text-slate-400 ml-1.5 uppercase tracking-tighter">{unit}</span>
+                      </p>
+                    </div>
+                  );
                 }
-                cursor={false}
-              />
-            </BarChart>
-        </ChartContainer>
+                return null;
+              }}
+            />
+            <Area
+              type="monotone"
+              dataKey="activity"
+              stroke="#4F46E5"
+              strokeWidth={4}
+              fillOpacity={1}
+              fill="url(#colorActivity)"
+              animationDuration={2000}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
