@@ -57,17 +57,28 @@ export default function GlobalPieChart({
       )}
         <ChartContainer className={`${compact ? 'h-[200px]' : 'h-[280px]'} w-full`} config={config}>
             <PieChart>
-              {config && Object.keys(config).length > 0 ? (
-                <ChartTooltip
-                  content={<ChartTooltipContent hideLabel nameKey={dataKey} />}
-                />
-              ) : (
-                <Tooltip
-                  contentStyle={{ borderRadius: '24px', border: '1px solid #F1F5F9', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.05)', padding: '16px', background: 'rgba(255, 255, 255, 0.98)', backdropFilter: 'blur(8px)' }}
-                  itemStyle={{ fontWeight: 900, fontSize: '14px', color: '#0F172A' }}
-                  labelStyle={{ fontWeight: 900, fontSize: '10px', textTransform: 'uppercase', letterSpacing: '2px', color: '#94A3B8', marginBottom: '8px' }}
-                />
-              )}
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const color = payload[0].payload.color || `var(--chart-${(payload[0].payload.index % 5) + 1})`;
+                    return (
+                      <div 
+                        className="px-4 py-3 rounded-2xl shadow-xl border-none text-white backdrop-blur-md transition-all duration-300"
+                        style={{ backgroundColor: color }}
+                      >
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">{payload[0].name}</p>
+                        <div className="flex items-baseline gap-1.5">
+                          <p className="text-sm font-black">{Number(payload[0].value).toLocaleString()}</p>
+                          <p className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">
+                            {total > 0 ? `(${( (Number(payload[0].value) / total) * 100).toFixed(1)}%)` : ''}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Pie
                 data={data}
                 cx="50%"

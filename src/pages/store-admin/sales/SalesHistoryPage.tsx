@@ -1,9 +1,12 @@
-import { useState, useEffect } from "react";
-import { Download, Plus } from "lucide-react";
-import SalesFilters from "@/components/store-admin/SalesFilters";
-import SalesTable from "@/components/store-admin/SalesTable";
-import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
+import React, { useState, useEffect } from 'react';
+import { Download, Plus, Search, Filter, Calendar, CreditCard, CheckCircle2, XCircle, TrendingUp, AlertCircle } from "lucide-react";
+import MetricCard from '@/components/global-components/MetricCard';
+import { DataTable } from '@/components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from "@/utils/format";
 import ChartAreaAxes from "@/components/global-components/chart-line-dots";
+import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
 
 import { getDashboardSummary } from "@/api/dashboard.api";
 import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api";
@@ -11,16 +14,12 @@ import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api";
 const SalesHistoryPage = () => {
     // Filters state
     const [search, setSearch] = useState("");
-    const [status, setStatus] = useState("All Status");
+    const [statusFilter, setStatusFilter] = useState("All Status");
     const [paymentMethod, setPaymentMethod] = useState("All Methods");
     const [dateRange, setDateRange] = useState({
         start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
         end: new Date().toISOString().split('T')[0]
     });
-
-    // Pagination state
-    const [page, setPage] = useState(1);
-    const [limit] = useState(10);
 
     const [salesDataRes, setSalesDataRes] = useState<any>(null);
     const [salesLoading, setSalesLoading] = useState(true);
@@ -28,14 +27,12 @@ const SalesHistoryPage = () => {
     const [summaryLoading, setSummaryLoading] = useState(true);
 
     const params: any = {
-        page,
-        limit,
         startDate: dateRange.start,
         endDate: dateRange.end
     };
 
     if (search) params.search = search;
-    if (status !== 'All Status') params.paymentStatus = status;
+    if (statusFilter !== 'All Status') params.paymentStatus = statusFilter;
     if (paymentMethod !== 'All Methods') params.paymentMethod = paymentMethod;
 
     const loadSales = async () => {
@@ -67,7 +64,7 @@ const SalesHistoryPage = () => {
 
     useEffect(() => {
         loadSales();
-    }, [page, search, status, paymentMethod, dateRange]);
+    }, [search, statusFilter, paymentMethod, dateRange]);
 
     useEffect(() => {
         loadSummary();
@@ -90,6 +87,102 @@ const SalesHistoryPage = () => {
         date: d.date,
         revenue: Number(d.revenue || 0)
     })) || [];
+
+    const columns: ColumnDef<any>[] = [
+        {
+            header: "ID",
+            cell: ({ row }) => (
+                <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
+                    {String(row.index + 1).padStart(2, '0')}
+                </div>
+            )
+        },
+        {
+            header: "Transaction",
+            accessorKey: "invoiceNumber",
+            cell: ({ row }) => (
+                <div className="min-w-[120px]">
+                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">#{row.original.invoiceNumber || row.original.id?.slice(-8)}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                        <Calendar size={10} className="text-slate-400" />
+                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(row.original.createdAt).toLocaleDateString()}</p>
+                    </div>
+                </div>
+            )
+        },
+        {
+            header: "Customer",
+            accessorKey: "customerName",
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400">
+                        {String(row.original.customerName || 'C').charAt(0)}
+                    </div>
+                    <span className="text-[10px] font-black tracking-widest uppercase text-slate-600 dark:text-slate-400">{row.original.customerName || 'Walk-in'}</span>
+                </div>
+            )
+        },
+        {
+            header: "Amount",
+            accessorKey: "totalAmount",
+            cell: ({ row }) => (
+                <div className="text-right">
+                    <span className="text-[12px] font-black uppercase tracking-widest tabular-nums text-slate-900 dark:text-white">
+                        {formatCurrency(row.original.totalAmount)}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: "Payment",
+            accessorKey: "paymentMethod",
+            cell: ({ row }) => (
+                <div className="flex justify-center">
+                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] border border-blue-100 dark:border-blue-900/50">
+                        {row.original.paymentMethod}
+                    </span>
+                </div>
+            )
+        },
+        {
+            header: "Status",
+            accessorKey: "paymentStatus",
+            cell: ({ row }) => {
+                const s = String(row.original.paymentStatus).toLowerCase();
+                return (
+                    <div className="flex justify-center">
+                        <span className={cn(
+                            "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[2px] border leading-tight",
+                            s === 'completed' || s === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" :
+                            s === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
+                            "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
+                        )}>
+                            {s}
+                        </span>
+                    </div>
+                );
+            }
+        },
+        {
+            id: "actions",
+            header: "Actions",
+            cell: ({ row }) => (
+                <div className="flex justify-center items-center gap-2">
+                    <button 
+                        onClick={() => {
+                            if (window.confirm("Cancel this sale?")) {
+                                cancelSale(row.original.id, "Cancelled by admin").then(() => loadSales());
+                            }
+                        }}
+                        className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90"
+                        title="Cancel Sale"
+                    >
+                        <AlertCircle size={16} />
+                    </button>
+                </div>
+            )
+        }
+    ];
 
     const loading = salesLoading;
 
@@ -136,45 +229,50 @@ const SalesHistoryPage = () => {
                 </div>
             </div>
 
-            {/* Filters & Detailed View */}
-            <div className="space-y-8 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Transaction Ledger</h2>
-                    <span className="px-4 py-1.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                        {total} Entries Found
-                    </span>
-                </div>
-
-                <SalesFilters
-                    search={search}
-                    onSearchChange={setSearch}
-                    status={status}
-                    onStatusChange={setStatus}
-                    paymentMethod={paymentMethod}
-                    onPaymentMethodChange={setPaymentMethod}
-                    dateRange={dateRange}
-                    onDateRangeChange={(start: string, end: string) => setDateRange({ start, end })}
-                />
-
-                <SalesTable
-                    transactions={transactions}
-                    loading={loading}
-                    page={page}
-                    total={total}
-                    limit={limit}
-                    onPageChange={setPage}
-                    onCancel={async (id) => {
-                        if (window.confirm("Cancel this sale?")) {
-                            await cancelSale(id, "Cancelled by admin");
-                            await loadSales();
-                        }
-                    }}
-                    onRefund={async (id) => {
-                        if (window.confirm("Refund this sale?")) {
-                            await refundSale(id, "Refunded by admin");
-                            await loadSales();
-                        }
-                    }}
+            {/* Detailed Ledger Area */}
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+                <DataTable 
+                    columns={columns} 
+                    data={transactions}
+                    isLoading={loading}
+                    onRefresh={loadSales}
+                    placeholder="Search ledger..."
+                    headerActions={
+                        <div className="flex flex-wrap items-center gap-3">
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Search invoice, client..."
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                />
+                            </div>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
+                            >
+                                <option value="All Status">State: All</option>
+                                <option value="paid">Paid</option>
+                                <option value="pending">Pending</option>
+                                <option value="refunded">Refunded</option>
+                            </select>
+                            <input
+                                type="date"
+                                value={dateRange.start}
+                                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                            />
+                            <input
+                                type="date"
+                                value={dateRange.end}
+                                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                            />
+                        </div>
+                    }
                 />
             </div>
         </div>

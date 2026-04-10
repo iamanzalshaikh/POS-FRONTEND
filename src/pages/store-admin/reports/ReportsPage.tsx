@@ -7,6 +7,7 @@ import InventoryReportTables from "@/components/store-admin/Reports/InventoryRep
 import * as reportsApi from "@/api/reports.api";
 import { AlertTriangle, FileText } from "lucide-react";
 import { formatCurrency } from "@/utils/format";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const ReportsPage = () => {
     const [activeTab, setActiveTab] = useState<'sales' | 'inventory'>('sales');
@@ -108,9 +109,20 @@ const ReportsPage = () => {
             />
 
             {loading ? (
-                <div className="flex flex-col items-center justify-center py-24 gap-4 animate-pulse">
-                    <div className="w-12 h-12 border-4 border-slate-200 dark:border-slate-800 border-t-blue-600 rounded-full animate-spin"></div>
-                    <p className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Compiling Data Stream...</p>
+                <div className="space-y-10 animate-fade-in">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <Skeleton key={i} className="h-32 rounded-[32px]" />
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        <div className="lg:col-span-8">
+                            <Skeleton className="h-[400px] rounded-[32px]" />
+                        </div>
+                        <div className="lg:col-span-4">
+                            <Skeleton className="h-[400px] rounded-[32px]" />
+                        </div>
+                    </div>
                 </div>
             ) : error ? (
                 <div className="bg-white dark:bg-slate-900 p-12 rounded-[40px] border border-slate-100 dark:border-slate-800 shadow-xl text-center max-w-lg mx-auto mt-12 animate-in zoom-in-95 duration-500 transition-colors duration-300">

@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowLeft, Cpu, Network, Info, Shield, Printer } from 'lucide-react';
-import Sidebar from '@/components/store-admin/Sidebar';
-import TopNavbar from '@/components/store-admin/TopNavbar';
 
 type ScannerConnection = 'USB' | 'Bluetooth' | 'Network' | 'None';
 type FormData = {
@@ -27,7 +25,6 @@ import * as deviceApi from '@/api/devices.api';
 
 export default function RegisterDevicePage() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [formData, setFormData] = useState<FormData>(initialForm);
   const [localError, setLocalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -86,127 +83,113 @@ export default function RegisterDevicePage() {
   const iconCls = 'p-2 bg-blue-50 text-blue-600 rounded-lg';
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA] flex">
-      {sidebarOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[55] lg:hidden" onClick={() => setSidebarOpen(false)} />
+    <div className="max-w-4xl mx-auto w-full animate-fade-in">
+      <div className="mb-8 pl-4">
+        <button
+          onClick={() => navigate('/store-admin/devices')}
+          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-[10px] font-black uppercase tracking-[3px] flex items-center gap-2 mb-4 group transition-all"
+        >
+          <ArrowLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
+          Hardware Hub
+        </button>
+        <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Register Hardware</h1>
+        <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Initialize and authorize native terminal node</p>
+      </div>
+
+      {error && (
+        <div className="mb-8 p-5 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/50 rounded-[28px] flex items-center gap-4 text-rose-600 dark:text-rose-400 animate-in slide-in-from-top-4 duration-500">
+          <AlertCircle className="w-6 h-6 flex-shrink-0" />
+          <p className="text-xs font-black uppercase tracking-widest leading-loose">{error}</p>
+        </div>
       )}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col min-h-screen w-full lg:pl-64">
-        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-
-        <main className="flex-1 p-6 lg:p-10 w-full">
-          <div className="max-w-4xl mx-auto w-full">
-            <div className="mb-8">
-              <button
-                onClick={() => navigate('/store-admin/devices')}
-                className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-2 mb-4"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Devices
-              </button>
-              <h1 className="text-2xl font-semibold text-gray-800">Register New Device</h1>
-              <p className="text-gray-500 mt-1">Configure and authorize a new hardware terminal for your store.</p>
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-50 dark:border-slate-800 p-10 space-y-12 transition-colors duration-300">
+        {/* Device Information */}
+        <div className="space-y-8">
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-50 dark:border-slate-800">
+            <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl"><Cpu className="w-5 h-5" /></div>
+            <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[3px]">Hardware Intel</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Terminal Alias</label>
+              <input type="text" name="deviceName" value={formData.deviceName} onChange={handleChange} placeholder="e.g. COUNTER-01" className="w-full pl-4 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold text-slate-900 dark:text-white" />
             </div>
-
-            {error && (
-              <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-3 text-rose-700">
-                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                <p className="font-medium">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 space-y-12">
-              {/* Device Information */}
-              <div className="space-y-6">
-                <div className={sectionCls}>
-                  <div className={iconCls}><Cpu className="w-5 h-5" /></div>
-                  <h3 className="text-lg font-medium text-gray-800">Device Information</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className={labelCls}>Device Name</label>
-                    <input type="text" name="deviceName" value={formData.deviceName} onChange={handleChange} placeholder="e.g., Counter-3" className={inputCls} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Serial Number</label>
-                    <input type="text" name="serialNumber" value={formData.serialNumber} onChange={handleChange} placeholder="SN-XXXX" className={inputCls} />
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Device Type</label>
-                    <select name="deviceType" value={formData.deviceType} onChange={handleChange} className={inputCls + ' bg-white'}>
-                      <option value="POS Terminal">POS Terminal</option>
-                      <option value="Self Checkout">Self Checkout</option>
-                      <option value="Mobile POS">Mobile POS</option>
-                      <option value="Kiosk">Kiosk</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Connection Details */}
-              <div className="space-y-6">
-                <div className={sectionCls}>
-                  <div className={iconCls}><Network className="w-5 h-5" /></div>
-                  <h3 className="text-lg font-medium text-gray-800">Connection Details</h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className={labelCls}>IP Address</label>
-                    <input type="text" name="ipAddress" value={formData.ipAddress} onChange={handleChange} placeholder="192.168.1.10" className={inputCls} />
-                    <p className="text-[11px] text-gray-400">Format: xxx.xxx.xxx.xxx</p>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Scanner Connection</label>
-                    <select name="scannerConnection" value={formData.scannerConnection} onChange={handleChange} className={inputCls + ' bg-white'}>
-                      <option value="USB">USB</option>
-                      <option value="Bluetooth">Bluetooth</option>
-                      <option value="Network">Network</option>
-                      <option value="None">None</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className={labelCls}>Primary Printer</label>
-                    <select name="printerType" value={formData.printerType} onChange={handleChange} className={inputCls + ' bg-white'}>
-                      <option value="Thermal 80mm">Thermal 80mm</option>
-                      <option value="Thermal 58mm">Thermal 58mm</option>
-                      <option value="Network Printer">Network Printer</option>
-                      <option value="None">None</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-100 mt-8">
-                <button type="button" onClick={() => navigate('/store-admin/devices')} className="px-6 py-2.5 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 font-medium" disabled={loading}>
-                  Cancel
-                </button>
-                <button type="submit" disabled={loading} className="px-8 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-blue-400 disabled:cursor-not-allowed flex items-center gap-2">
-                  {loading ? (
-                    <><div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />Registering...</>
-                  ) : (
-                    'Register Device'
-                  )}
-                </button>
-              </div>
-            </form>
-
-            {/* Info cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-              {[
-                { icon: Info, text: 'Ensure the device IP is static to avoid connection issues with printers.', bg: 'bg-blue-50', iconColor: 'text-blue-600' },
-                { icon: Shield, text: 'Serial numbers are unique and can only be registered once per account.', bg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-                { icon: Printer, text: 'Check printer drivers are installed before registering the device.', bg: 'bg-amber-50', iconColor: 'text-amber-600' },
-              ].map((c, i) => (
-                <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm flex items-start gap-4">
-                  <div className={`p-2 ${c.bg} ${c.iconColor} rounded-lg`}><c.icon className="w-5 h-5" /></div>
-                  <p className="text-sm text-gray-600 leading-relaxed font-medium">{c.text}</p>
-                </div>
-              ))}
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Serial ID</label>
+              <input type="text" name="serialNumber" value={formData.serialNumber} onChange={handleChange} placeholder="SN-XXXX" className="w-full pl-4 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold text-slate-900 dark:text-white" />
+            </div>
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Machine Class</label>
+              <select name="deviceType" value={formData.deviceType} onChange={handleChange} className="w-full pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[10px] appearance-none cursor-pointer text-slate-900 dark:text-white">
+                <option value="POS Terminal">POS Terminal</option>
+                <option value="Self Checkout">Self Checkout</option>
+                <option value="Mobile POS">Mobile POS</option>
+                <option value="Kiosk">Kiosk</option>
+              </select>
             </div>
           </div>
-        </main>
+        </div>
+
+        {/* Connection Details */}
+        <div className="space-y-8">
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-50 dark:border-slate-800">
+            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl"><Network className="w-5 h-5" /></div>
+            <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[3px]">Network Protocol</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Static IP</label>
+              <input type="text" name="ipAddress" value={formData.ipAddress} onChange={handleChange} placeholder="192.168.1.XX" className="w-full pl-4 pr-4 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-bold text-slate-900 dark:text-white" />
+            </div>
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Scanner IO</label>
+              <select name="scannerConnection" value={formData.scannerConnection} onChange={handleChange} className="w-full pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[10px] appearance-none cursor-pointer text-slate-900 dark:text-white">
+                <option value="USB">USB Connection</option>
+                <option value="Bluetooth">Bluetooth Sync</option>
+                <option value="Network">Network Access</option>
+                <option value="None">None</option>
+              </select>
+            </div>
+            <div className="space-y-2.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Primary Sloution</label>
+              <select name="printerType" value={formData.printerType} onChange={handleChange} className="w-full pl-4 pr-10 py-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[10px] appearance-none cursor-pointer text-slate-900 dark:text-white">
+                <option value="Thermal 80mm">Thermal 80mm</option>
+                <option value="Thermal 58mm">Thermal 58mm</option>
+                <option value="Network Printer">Network Printer</option>
+                <option value="None">None</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-end gap-5 pt-8 border-t border-slate-50 dark:border-slate-800 mt-8">
+          <button type="button" onClick={() => navigate('/store-admin/devices')} className="px-8 py-4 border border-slate-100 dark:border-slate-700 text-slate-400 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95" disabled={loading}>
+            Cancel
+          </button>
+          <button type="submit" disabled={loading} className="px-10 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-blue-700 shadow-lg shadow-blue-500/20 shadow-blue-500 transition-all active:scale-95 disabled:opacity-50 border border-blue-500 flex items-center gap-3">
+            {loading ? (
+              <span className="animate-pulse">Authorizing Protocol...</span>
+            ) : (
+              'Register Registry'
+            )}
+          </button>
+        </div>
+      </form>
+
+      {/* Info cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+        {[
+          { icon: Info, text: 'Static IP mapping is recommended for stable printer connectivity.', bg: 'bg-blue-50 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
+          { icon: Shield, text: 'HWIDs are immutable once authorized across the node registry.', bg: 'bg-emerald-50 dark:bg-emerald-900/30', iconColor: 'text-emerald-600 dark:text-emerald-400' },
+          { icon: Printer, text: 'Validate driver compatibility before finalizing hardware link.', bg: 'bg-amber-50 dark:bg-amber-900/30', iconColor: 'text-amber-600 dark:text-amber-400' },
+        ].map((c, i) => (
+          <div key={i} className="bg-white dark:bg-slate-900 border border-slate-50 dark:border-slate-800 rounded-[28px] p-6 shadow-sm flex items-start gap-4 transition-all hover:shadow-md">
+            <div className={`p-3 ${c.bg} ${c.iconColor} rounded-2xl flex-shrink-0 animate-pulse`}><c.icon className="w-5 h-5" /></div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-black uppercase tracking-widest">{c.text}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

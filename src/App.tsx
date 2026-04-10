@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useAuthStore } from './store/useAuthStore';
 
 // UI Components
+import { ThemeProvider } from '@/components/theme-provider';
 import PageLoader from '@/components/ui/PageLoader';
 import HomeRedirect from '@/components/shared/HomeRedirect';
 import StoreAdminLayout from '@/components/layout/StoreAdminLayout';
@@ -63,69 +64,71 @@ const App: React.FC = () => {
   };
 
   return (
-    <Router>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={
-            isAuthenticated && user
-              ? <Navigate to={getDashboardRoute(user.role)} replace />
-              : <LoginPage />
-          } />
-          <Route path="/unauthorized" element={<Unauthorized />} />
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <Router>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={
+              isAuthenticated && user
+                ? <Navigate to={getDashboardRoute(user.role)} replace />
+                : <LoginPage />
+            } />
+            <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* Role-Specific Protected Routes */}
+            {/* Role-Specific Protected Routes */}
 
-          <Route element={<ProtectedRoute allowedRoles={['STORE_ADMIN', 'SUPER_ADMIN']} />}>
-            <Route element={<StoreAdminLayout />}>
-              <Route path="/store-admin/dashboard" element={<StoreAdminDashboard />} />
-              <Route path="/store-admin/staff" element={<StaffManagementPage />} />
-              <Route path="/store-admin/staff/:id" element={<StaffDetailPage />} />
-              <Route path="/store-admin/inventory" element={<InventoryManagement />} />
-              <Route path="/store-admin/inventory/stocks" element={<StockLevelsPage />} />
-              <Route path="/store-admin/inventory/adjustments" element={<StockAdjustmentPage />} />
-              <Route path="/store-admin/inventory/products" element={<ProductsManagementPage />} />
-              <Route path="/store-admin/inventory/products/add" element={<AddProductPage />} />
-              <Route path="/store-admin/settings" element={<SettingsPage />} />
-              <Route path="/store-admin/devices" element={<DevicesManagementPage />} />
-              <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
-              <Route path="/store-admin/categories" element={<ProductCategories />} />
-              <Route path="/store-admin/reports" element={<ReportsPage />} />
+            <Route element={<ProtectedRoute allowedRoles={['STORE_ADMIN', 'SUPER_ADMIN']} />}>
+              <Route element={<StoreAdminLayout />}>
+                <Route path="/store-admin/dashboard" element={<StoreAdminDashboard />} />
+                <Route path="/store-admin/staff" element={<StaffManagementPage />} />
+                <Route path="/store-admin/staff/:id" element={<StaffDetailPage />} />
+                <Route path="/store-admin/inventory" element={<InventoryManagement />} />
+                <Route path="/store-admin/inventory/stocks" element={<StockLevelsPage />} />
+                <Route path="/store-admin/inventory/adjustments" element={<StockAdjustmentPage />} />
+                <Route path="/store-admin/inventory/products" element={<ProductsManagementPage />} />
+                <Route path="/store-admin/inventory/products/add" element={<AddProductPage />} />
+                <Route path="/store-admin/settings" element={<SettingsPage />} />
+                <Route path="/store-admin/devices" element={<DevicesManagementPage />} />
+                <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
+                <Route path="/store-admin/categories" element={<ProductCategories />} />
+                <Route path="/store-admin/reports" element={<ReportsPage />} />
 
-              <Route path="/store-admin" element={<Navigate to="/store-admin/dashboard" replace />} />
+                <Route path="/store-admin" element={<Navigate to="/store-admin/dashboard" replace />} />
+              </Route>
             </Route>
-          </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['CASHIER', 'STORE_ADMIN', 'SUPER_ADMIN']} />}>
-            <Route path="/cashier/*" element={<CashierDashboard />} />
-          </Route>
+            <Route element={<ProtectedRoute allowedRoles={['CASHIER', 'STORE_ADMIN', 'SUPER_ADMIN']} />}>
+              <Route path="/cashier/*" element={<CashierDashboard />} />
+            </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['ACCOUNTANT', 'STORE_ADMIN', 'SUPER_ADMIN']} />}>
-            <Route path="/accountant/*" element={<AccountantDashboard />} />
-          </Route>
+            <Route element={<ProtectedRoute allowedRoles={['ACCOUNTANT', 'STORE_ADMIN', 'SUPER_ADMIN']} />}>
+              <Route path="/accountant/*" element={<AccountantDashboard />} />
+            </Route>
 
-          {/* Legacy Admin Redirects */}
-          <Route path="/admin/*" element={<Navigate to="/super-admin/dashboard" replace />} />
+            {/* Legacy Admin Redirects */}
+            <Route path="/admin/*" element={<Navigate to="/super-admin/dashboard" replace />} />
 
-          {/* New Super Admin Panel (Production SaaS) */}
-          <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
-          <Route element={<SuperAdminLayout />}>
-            <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
-            <Route path="/super-admin/stores" element={<StoresListPage />} />
-            <Route path="/super-admin/stores/create" element={<CreateStorePage />} />
-            <Route path="/super-admin/stores/:id" element={<StoreDetailsPage />} />
-            <Route path="/super-admin/stores/:id/users" element={<StoreDetailsPage />} />
-            <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
-            <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
-            <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
-          </Route>
+            {/* New Super Admin Panel (Production SaaS) */}
+            <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
+            <Route element={<SuperAdminLayout />}>
+              <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
+              <Route path="/super-admin/stores" element={<StoresListPage />} />
+              <Route path="/super-admin/stores/create" element={<CreateStorePage />} />
+              <Route path="/super-admin/stores/:id" element={<StoreDetailsPage />} />
+              <Route path="/super-admin/stores/:id/users" element={<StoreDetailsPage />} />
+              <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
+              <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+              <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
+            </Route>
 
-          {/* Intelligent Redirect Handling */}
-          <Route path="/" element={<HomeRedirect />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </Router>
+            {/* Intelligent Redirect Handling */}
+            <Route path="/" element={<HomeRedirect />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </Router>
+    </ThemeProvider>
   );
 };
 

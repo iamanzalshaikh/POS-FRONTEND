@@ -83,7 +83,7 @@ export const fetchTopProducts = () => {
  * - Inventory stock initialization
  * - Inventory log entry
  */
-export const createProduct = async (data: CreateProductData) => {
+export const createProduct = async (data: CreateProductData | FormData) => {
   console.log('📦 [Products API] Creating product:', data);
   try {
     const response = await api.post("/products", data);
