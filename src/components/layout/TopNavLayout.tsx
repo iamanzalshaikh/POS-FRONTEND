@@ -1,7 +1,15 @@
 import React from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import TopNavLink from '../ui/TopNavLink';
-import { Bell, Search, Hexagon } from 'lucide-react';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Bell, Search, Hexagon, User, LogOut, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface TopNavLayoutProps {
@@ -12,11 +20,6 @@ interface TopNavLayoutProps {
 const TopNavLayout: React.FC<TopNavLayoutProps> = ({ children, navLinks }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased">
@@ -47,7 +50,7 @@ const TopNavLayout: React.FC<TopNavLayoutProps> = ({ children, navLinks }) => {
               <input 
                 type="text" 
                 placeholder="Search data, stores..."
-                className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-100 outline-none w-64 placeholder:text-slate-500 font-medium"
+                className="pl-10 pr-4 py-2 bg-slate-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-100 outline-none w-64 placeholder:text-slate-500 font-medium transition-all"
               />
             </div>
             
@@ -56,17 +59,44 @@ const TopNavLayout: React.FC<TopNavLayoutProps> = ({ children, navLinks }) => {
               <span className="absolute top-0 right-0 w-2 h-2 bg-indigo-600 rounded-full border border-white"></span>
             </button>
             
-            <button className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center text-xs font-bold font-serif italic">
-              ?
-            </button>
-
-            <button 
-              onClick={handleLogout}
-              className="w-8 h-8 rounded-full bg-amber-100 border-2 border-slate-200 overflow-hidden ml-2 hover:border-slate-300 transition-colors"
-              title="Logout"
-            >
-              <img src={`https://ui-avatars.com/api/?name=${user?.name || 'Admin'}&background=random`} alt="User avatar" className="w-full h-full object-cover" />
-            </button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-2 outline-none group">
+                        <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center overflow-hidden group-hover:border-indigo-200 transition-all">
+                            <img 
+                                src={`https://ui-avatars.com/api/?name=${user?.name || 'Admin'}&background=6366f1&color=fff&bold=true`} 
+                                alt="User avatar" 
+                                className="w-full h-full object-cover" 
+                            />
+                        </div>
+                    </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 mt-2 p-1.5 rounded-xl border-slate-100 shadow-xl">
+                    <DropdownMenuLabel className="px-3 py-2">
+                        <p className="text-sm font-bold text-slate-900 leading-none">{user?.name || 'Admin'}</p>
+                        <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest mt-1.5">
+                            {user?.role?.replace('_', ' ') || 'Management'}
+                        </p>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-indigo-50 focus:text-indigo-600">
+                        <User size={18} />
+                        <span className="text-sm font-medium">Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer focus:bg-indigo-50 focus:text-indigo-600">
+                        <Settings size={18} />
+                        <span className="text-sm font-medium">Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                        onClick={() => logout()}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-rose-500 focus:bg-rose-50 focus:text-rose-600"
+                    >
+                        <LogOut size={18} />
+                        <span className="text-sm font-medium">Log out</span>
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </header>

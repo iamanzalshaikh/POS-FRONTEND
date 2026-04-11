@@ -1,12 +1,9 @@
-
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/useAuthStore';
+import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard,
     Store,
     ClipboardList,
     Settings,
-    LogOut,
     Shield
 } from "lucide-react";
 
@@ -18,13 +15,7 @@ const menuItems = [
 ];
 
 const SuperAdminSidebar = () => {
-    const { logout, user } = useAuthStore();
-    const navigate = useNavigate();
 
-    const handleLogout = async () => {
-        await logout();
-        navigate('/super-admin/login');
-    };
 
     return (
         <aside className="w-[260px] bg-[#262255] border-r border-[#262255]/20 text-slate-200 h-screen fixed left-0 top-0 flex flex-col z-50">
@@ -70,25 +61,6 @@ const SuperAdminSidebar = () => {
                 })}
             </nav>
 
-            {/* User Profile & Logout */}
-            <div className="p-4 border-t border-white/10">
-                <div className="bg-[#2A2760] rounded-2xl p-4 flex items-center gap-3 border border-white/5">
-                    <div className="w-10 h-10 rounded-full bg-[#312E81] flex items-center justify-center text-white font-bold border-2 border-white/20 shadow-sm">
-                        {(user?.name || 'SA')[0].toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{user?.name || 'Super Admin'}</p>
-                        <p className="text-[10px] text-indigo-300 font-medium uppercase truncate tracking-wide">Infrastructure</p>
-                    </div>
-                    <button
-                        onClick={handleLogout}
-                        className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all"
-                        title="Logout"
-                    >
-                        <LogOut size={18} />
-                    </button>
-                </div>
-            </div>
         </aside>
     );
 };

@@ -7,7 +7,6 @@ import { Columns2, Users, Boxes, ShoppingCart, Monitor, BarChart3, Settings, Lay
 
 const storeAdminMenu = [
     { name: 'Dashboard', icon: Columns2, path: '/store-admin/dashboard' },
-    { name: 'Staff Management', icon: Users, path: '/store-admin/staff' },
     {
         name: 'Inventory',
         icon: Boxes,
@@ -22,7 +21,8 @@ const storeAdminMenu = [
     { name: 'Sales History', icon: ShoppingCart, path: '/store-admin/sales' },
     { name: 'Devices', icon: Monitor, path: '/store-admin/devices' },
     { name: 'Reports', icon: BarChart3, path: '/store-admin/reports' },
-    { name: 'Store Settings', icon: Settings, path: '/store-admin/settings' },
+    { name: 'User Management', icon: Users, path: '/store-admin/staff' },
+    { name: 'Settings', icon: Settings, path: '/store-admin/settings' },
 ];
 
 export default function StoreAdminLayout() {
