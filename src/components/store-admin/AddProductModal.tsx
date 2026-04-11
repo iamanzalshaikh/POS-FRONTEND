@@ -1,4 +1,4 @@
-import { X, Package, Barcode, Plus, Tag, Archive, Percent, Layers, Inbox, UploadCloud, Info, DollarSign } from 'lucide-react';
+import { X, Package, Barcode, Plus, Tag, Archive, Percent, Layers, Inbox, UploadCloud, Info, DollarSign, CheckCircle2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { createProduct } from '@/api/products.api';
@@ -110,203 +110,179 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
     return createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
             <div 
-                className="fixed inset-0 bg-slate-900/60 backdrop-blur-md animate-fade-in" 
+                className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in" 
                 onClick={handleClose}
             ></div>
 
-            <div className="bg-white dark:bg-slate-900 w-full max-w-4xl rounded-[32px] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh] animate-fade-in border border-white/5 dark:border-white/10">
+            <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-2xl shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[95vh] animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900 shrink-0">
-                    <div>
-                        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Add New Product</h2>
-                        <p className="text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Inventory Management System</p>
+                <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                            <Package size={20} />
+                        </div>
+                        <h2 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">Add New Product</h2>
                     </div>
-                    <button onClick={handleClose} type="button" className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl text-slate-400 dark:text-slate-500 transition-all active:scale-95">
-                        <X className="w-6 h-6" />
+                    <button onClick={handleClose} type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1">
+                        <X size={20} />
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-                    <div className="p-8 space-y-10 overflow-y-auto flex-1 custom-scrollbar">
+                    <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
                         {error && (
-                            <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 rounded-2xl text-rose-700 dark:text-rose-400 text-xs font-black uppercase tracking-widest leading-relaxed">
+                            <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900 rounded-xl text-rose-700 dark:text-rose-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+                                <Info size={16} />
                                 {error}
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-                            {/* Left Column: Core Data */}
-                            <div className="space-y-8">
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-6 bg-blue-600 rounded-full"></div>
-                                        <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[3px]">Basic Information</h3>
-                                    </div>
-
-                                    <div className="space-y-5">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Product Name</label>
-                                            <div className="relative group">
-                                                <Package className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
-                                                <input 
-                                                    required 
-                                                    type="text" 
-                                                    value={name}
-                                                    onChange={(e) => setName(e.target.value)}
-                                                    placeholder="e.g. Premium Wireless Audio" 
-                                                    className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-900 dark:text-white"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">SKU</label>
-                                                <div className="relative group">
-                                                    <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
-                                                    <input 
-                                                        required 
-                                                        type="text" 
-                                                        value={sku}
-                                                        onChange={(e) => setSku(e.target.value)}
-                                                        placeholder="SKU-001" 
-                                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-900 dark:text-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Barcode</label>
-                                                <div className="relative group">
-                                                    <Barcode className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
-                                                    <input 
-                                                        type="text" 
-                                                        value={barcode}
-                                                        onChange={(e) => setBarcode(e.target.value)}
-                                                        placeholder="EAN-13" 
-                                                        className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-medium text-slate-900 dark:text-white"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Category Registry</label>
-                                            <div className="relative group">
-                                                <Layers className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
-                                                <select 
-                                                    value={categoryId}
-                                                    onChange={(e) => setCategoryId(e.target.value)}
-                                                    className="w-full pl-12 pr-10 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[10px] appearance-none cursor-pointer text-slate-900 dark:text-white"
-                                                >
-                                                    <option value="">No Collection Assigned</option>
-                                                    {categories.map(cat => (
-                                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                                    ))}
-                                                </select>
-                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                                                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                                                    </svg>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-6 bg-emerald-500 rounded-full"></div>
-                                        <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[3px]">Pricing Details</h3>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Buying Cost (Rs)</label>
-                                            <div className="relative group">
-                                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                                <input required type="number" step="0.01" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 outline-none transition-all font-black uppercase tracking-widest text-[11px] text-slate-900 dark:text-white" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Selling Price (Rs)</label>
-                                            <div className="relative group">
-                                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                                                <input required type="number" step="0.01" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all font-black uppercase tracking-widest text-[11px] text-blue-600 dark:text-blue-400" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                        {/* Section 1: Basic Information */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                                <Tag size={14} />
+                                <h3 className="text-[10px] font-black uppercase tracking-widest">Basic Information</h3>
                             </div>
-
-                            {/* Right Column: Inventory & Media */}
-                            <div className="space-y-8">
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-6 bg-amber-500 rounded-full"></div>
-                                        <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[3px]">Inventory Controls</h3>
+                            <div className="grid grid-cols-1 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">
+                                        Product Name <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input 
+                                        required 
+                                        type="text" 
+                                        value={name}
+                                        onChange={(e) => setName(e.target.value)}
+                                        placeholder="Enter product name" 
+                                        className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">
+                                            SKU <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input 
+                                            required 
+                                            type="text" 
+                                            value={sku}
+                                            onChange={(e) => setSku(e.target.value)}
+                                            placeholder="SKU-001" 
+                                            className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white"
+                                        />
                                     </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Initial Stock</label>
-                                            <div className="relative group">
-                                                <Archive className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-amber-500 transition-colors" />
-                                                <input required type="number" value={initialStock} onChange={e => setInitialStock(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all font-medium text-slate-900 dark:text-white" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Low-Stock Alert</label>
-                                            <div className="relative group">
-                                                <Inbox className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-amber-500 transition-colors" />
-                                                <input required type="number" value={reorderLevel} onChange={e => setReorderLevel(e.target.value)} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all font-medium text-slate-900 dark:text-white" />
-                                            </div>
-                                        </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">Barcode</label>
+                                        <input 
+                                            type="text" 
+                                            value={barcode}
+                                            onChange={(e) => setBarcode(e.target.value)}
+                                            placeholder="EAN-13" 
+                                            className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white"
+                                        />
                                     </div>
                                 </div>
-
-                                <div className="space-y-6">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-6 bg-indigo-500 rounded-full"></div>
-                                        <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-[3px]">Product Media</h3>
-                                    </div>
-
-                                    <div className="relative group h-[180px] border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[28px] flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden transition-all hover:border-blue-500/30 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                        {imagePreview ? (
-                                            <div className="relative w-full h-full">
-                                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                                <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                    <button type="button" onClick={() => { setImageFile(null); setImagePreview(''); }} className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/30 transition-all active:scale-95">
-                                                        <X size={20} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center">
-                                                <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 mb-3 shadow-sm group-hover:scale-110 transition-transform">
-                                                    <UploadCloud size={24} />
-                                                </div>
-                                                <p className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">Drop Image file</p>
-                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-1">PNG, JPG up to 2MB</p>
-                                                <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                            </div>
-                                        )}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">
+                                        Collection / Category <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <select 
+                                            required
+                                            value={categoryId}
+                                            onChange={(e) => setCategoryId(e.target.value)}
+                                            className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm appearance-none cursor-pointer text-slate-900 dark:text-white"
+                                        >
+                                            <option value="">Select Category</option>
+                                            {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Section 2: Financials */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                                <DollarSign size={14} />
+                                <h3 className="text-[10px] font-black uppercase tracking-widest">Financial Details</h3>
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">
+                                        Buying Cost (Rs) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input required type="number" step="0.01" value={purchasePrice} onChange={e => setPurchasePrice(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-bold text-sm text-slate-900 dark:text-white" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">
+                                        Selling Price (Rs) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input required type="number" step="0.01" value={sellingPrice} onChange={e => setSellingPrice(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-bold text-sm text-blue-600 dark:text-blue-400" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 3: Inventory & Media */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                                <Archive size={14} />
+                                <h3 className="text-[10px] font-black uppercase tracking-widest">Stock & Media</h3>
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">Initial Stock</label>
+                                    <input required type="number" value={initialStock} onChange={e => setInitialStock(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">Low Stock Alert</label>
+                                    <input required type="number" value={reorderLevel} onChange={e => setReorderLevel(e.target.value)} className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-amber-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white" />
+                                </div>
+                            </div>
+
+                            {/* Image Upload Area */}
+                            <div className="relative group h-[140px] border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all hover:bg-slate-100 dark:hover:bg-slate-800/50 overflow-hidden">
+                                {imagePreview ? (
+                                    <div className="relative w-full h-full">
+                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                        <button type="button" onClick={() => { setImageFile(null); setImagePreview(''); }} className="absolute top-2 right-2 p-2 bg-rose-500 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-all active:scale-95">
+                                            <X size={16} />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col items-center text-slate-400">
+                                        <UploadCloud size={28} strokeWidth={1.5} />
+                                        <p className="text-[10px] font-black uppercase tracking-widest mt-2">Upload Product Image</p>
+                                        <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="p-8 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-50 dark:border-slate-800 flex gap-4 shrink-0">
-                        <button type="button" onClick={handleClose} className="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-slate-50 dark:hover:bg-slate-700 transition-all active:scale-95 border border-slate-100 dark:border-slate-700">
+                    {/* Footer Actions */}
+                    <div className="p-6 shrink-0 border-t border-slate-100 dark:border-slate-800 flex gap-4 bg-white dark:bg-slate-900">
+                        <button
+                            type="button"
+                            onClick={handleClose}
+                            className="flex-1 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#1e293b] dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all active:scale-95"
+                        >
                             Cancel
                         </button>
-                        <button type="submit" disabled={loading} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-blue-700 shadow-lg shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50 border border-blue-500 flex items-center justify-center gap-2">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="flex-1 py-3 bg-[#2563eb] text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
                             {loading ? (
-                                <span className="animate-pulse">Authorizing...</span>
+                                <span className="animate-pulse">Saving...</span>
                             ) : (
                                 <>
-                                    <Plus className="w-4 h-4" />
-                                    Save Product Registry
+                                    <CheckCircle2 size={18} />
+                                    <span>Save Product Registry</span>
                                 </>
                             )}
                         </button>

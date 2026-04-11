@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { X, DollarSign, Calendar, FileText, Calculator, CheckCircle2, Loader2, AlertCircle, User } from 'lucide-react';
 import api from '../../api/api';
 
@@ -87,13 +88,15 @@ const TextField = React.memo(function TextField({
   readOnly = false,
 }: TextFieldProps) {
   return (
-    <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+    <div className="space-y-1.5">
+      <label className="text-[10px] font-black uppercase tracking-widest text-[#64748b] ml-1">
+        {label} {required && <span className="text-rose-500">*</span>}
       </label>
-      <div className="relative">
+      <div className="relative group">
         {Icon && (
-          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none">
+            <Icon size={16} />
+          </div>
         )}
         <input
           type={type}
@@ -101,12 +104,16 @@ const TextField = React.memo(function TextField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           readOnly={readOnly}
-          className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
-            readOnly ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : 'border-slate-300'
-          } ${error ? 'border-red-300 bg-red-50' : ''}`}
+          className={`w-full ${Icon ? 'pl-11' : 'pl-4'} pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all ${
+            readOnly ? 'bg-slate-100/50 dark:bg-slate-800/50 cursor-not-allowed border-transparent' : ''
+          } ${error ? 'border-rose-300 dark:border-rose-900/50 bg-rose-50/50' : ''}`}
         />
       </div>
-      {error && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{error}</p>}
+      {error && (
+        <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 ml-1 flex items-center gap-1 animate-in slide-in-from-left-2">
+          <AlertCircle size={10} /> {error}
+        </p>
+      )}
     </div>
   );
 });
@@ -133,19 +140,21 @@ const SelectField = React.memo(function SelectField({
   placeholder,
 }: SelectProps) {
   return (
-    <div>
-      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
+    <div className="space-y-1.5">
+      <label className="text-[10px] font-black uppercase tracking-widest text-[#64748b] ml-1">
+        {label} {required && <span className="text-rose-500">*</span>}
       </label>
-      <div className="relative">
+      <div className="relative group">
         {Icon && (
-          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none z-10" size={18} />
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none z-10">
+            <Icon size={16} />
+          </div>
         )}
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full ${Icon ? 'pl-10' : 'pl-4'} pr-4 py-2.5 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white ${
-            error ? 'border-red-300 bg-red-50' : 'border-slate-300'
+          className={`w-full ${Icon ? 'pl-11' : 'pl-4'} pr-10 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all ${
+            error ? 'border-rose-300 dark:border-rose-900/50 bg-rose-50/50' : ''
           }`}
         >
           <option value="">{placeholder || `Select ${label.toLowerCase()}`}</option>
@@ -153,8 +162,15 @@ const SelectField = React.memo(function SelectField({
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+        </div>
       </div>
-      {error && <p className="text-red-600 text-xs mt-1 flex items-center gap-1"><AlertCircle size={12} />{error}</p>}
+      {error && (
+        <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 ml-1 flex items-center gap-1 animate-in slide-in-from-left-2">
+          <AlertCircle size={10} /> {error}
+        </p>
+      )}
     </div>
   );
 });
@@ -380,87 +396,103 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
     yearOptions.push({ value: y, label: String(y) });
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
+      {/* Backdrop */}
+      <div 
+          className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in"
+          onClick={handleClose}
+      />
+      
+      {/* Modal Content */}
+      <div className="relative z-10 w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-3">
-            <DollarSign className="text-blue-600" size={24} />
-            Process Salary Payment
-          </h2>
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+              <DollarSign size={24} />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">
+                Payroll Processing
+              </h2>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70">
+                Authorized Salary Disbursement
+              </p>
+            </div>
+          </div>
           <button
             onClick={handleClose}
             disabled={isSubmitting}
-            className="p-2 hover:bg-slate-100 rounded-xl transition-colors disabled:opacity-50"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95"
           >
-            <X size={20} className="text-slate-500" />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
-            {/* Staff Selection */}
-            <div>
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <User size={16} />
-                Staff Information
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Form Content */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <form className="space-y-8">
+            {/* Section: Staff Registry */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-1 w-1 bg-blue-600 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Staff Registry</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <SelectField
                   label="Staff Member"
                   value={formData.staffId}
                   onChange={updateStaffId}
                   options={staffList.map((s) => ({
                     value: s.id,
-                    label: `${s.name} (${s.role}) - Rs.${Number(s.monthlySalary).toLocaleString()}`,
+                    label: `${s.name} (${s.role})`,
                   }))}
                   required
                   error={errors.staffId}
                   icon={User}
-                  placeholder="Select staff member"
                 />
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">
-                    Base Salary (Rs)
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#64748b] ml-1">
+                    Contract Salary
                   </label>
-                  <div className="w-full pl-4 pr-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-700 font-semibold">
-                    {calculations.baseSalary > 0 ? `Rs. ${calculations.baseSalary.toLocaleString()}` : '—'}
+                  <div className="w-full px-4 py-3 bg-slate-100/50 dark:bg-slate-800/50 border-2 border-transparent rounded-2xl text-[12px] font-black text-slate-900 dark:text-white">
+                    {calculations.baseSalary > 0 
+                      ? `PKR ${calculations.baseSalary.toLocaleString()}` 
+                      : '— SELECT STAFF —'}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Period & Payment Details */}
-            <div>
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Calendar size={16} />
-                Payment Period & Details
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Section: Fiscal Period */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-1 w-1 bg-blue-600 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Fiscal Period & Processing</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <SelectField
-                  label="Month"
+                  label="Cycle Month"
                   value={String(formData.month)}
                   onChange={updateMonth}
                   options={MONTHS}
                   required
                   error={errors.month}
                   icon={Calendar}
-                  placeholder="Select month"
                 />
                 <SelectField
-                  label="Year"
+                  label="Fiscal Year"
                   value={String(formData.year)}
                   onChange={updateYear}
                   options={yearOptions}
                   required
                   error={errors.year}
                   icon={Calendar}
-                  placeholder="Select year"
                 />
                 <TextField
-                  label="Payment Date"
+                  label="Disbursement Date"
                   type="date"
                   value={formData.paymentDate}
                   onChange={updatePaymentDate}
@@ -469,135 +501,136 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
                   icon={Calendar}
                 />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <TextField
-                  label="Reference Number (Optional)"
-                  value={formData.referenceNumber}
-                  onChange={updateReferenceNumber}
-                  placeholder="e.g., CHK-12345"
-                  icon={FileText}
-                />
-                <TextField
-                  label="Notes (Optional)"
-                  value={formData.notes}
-                  onChange={updateNotes}
-                  placeholder="Payment notes..."
-                  icon={FileText}
-                />
-              </div>
             </div>
 
-            {/* Bonus & Deductions */}
-            <div>
-              <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <Calculator size={16} />
-                Bonus & Deductions
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Section: Adjustments */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-1 w-1 bg-blue-600 rounded-full" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Adjustments & Ledger Notes</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <TextField
-                  label="Bonus / Allowances (Rs)"
+                  label="Performance Bonus (PKR)"
                   type="number"
                   value={formData.bonus}
                   onChange={updateBonus}
-                  placeholder="0"
+                  placeholder="0.00"
                   icon={DollarSign}
                 />
                 <TextField
-                  label="Extra Deductions (Rs)"
+                  label="Penalty Deductions (PKR)"
                   type="number"
                   value={formData.deductions}
                   onChange={updateDeductions}
-                  placeholder="0"
+                  placeholder="0.00"
                   icon={DollarSign}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <TextField
+                  label="Audit Reference"
+                  value={formData.referenceNumber}
+                  onChange={updateReferenceNumber}
+                  placeholder="e.g. CHK-102938"
+                  icon={FileText}
+                />
+                <TextField
+                  label="Ledger Notes"
+                  value={formData.notes}
+                  onChange={updateNotes}
+                  placeholder="..."
+                  icon={FileText}
                 />
               </div>
             </div>
 
-            {/* Salary Summary */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 border border-blue-200">
-              <h3 className="text-sm font-bold text-blue-800 uppercase tracking-widest mb-4 flex items-center gap-2">
-                <DollarSign size={16} />
-                Salary Summary
-              </h3>
+            {/* Section: Fiscal Summary Card */}
+            <div className="bg-slate-900 dark:bg-slate-800 rounded-[2.5rem] p-8 border border-slate-800 shadow-xl overflow-hidden relative group">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-blue-500/20 transition-all duration-700" />
+              
+              <div className="relative z-10">
+                <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
+                  <Calculator size={14} /> Fiscal Calculation Summary
+                </h3>
 
-              {/* Existing Payroll Warning */}
-              {existingPayroll && (
-                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={20} />
-                    <div>
-                      <p className="text-sm font-semibold text-amber-800">Payroll Already Exists</p>
-                      <p className="text-xs text-amber-700 mt-1">
-                        A payroll record already exists for this staff member in {MONTHS.find(m => m.value === formData.month)?.label} {formData.year}.
-                        <br />
-                        <strong>Currently paid:</strong> Rs. {existingPayroll.amountPaid.toLocaleString()} ({existingPayroll.status})
-                        <br />
-                        To update, use the "Edit" button in the payroll list instead of creating a new record.
-                      </p>
+                {/* Conflict Alert */}
+                {existingPayroll && (
+                  <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl animate-in shake duration-500">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                      <div className="text-[10px] font-bold text-amber-200 uppercase tracking-widest leading-normal">
+                        Conflict Detected: A payroll record already exists for this cycle ({MONTHS.find(m=>m.value===formData.month)?.label} {formData.year}). Currently paid: PKR {existingPayroll.amountPaid.toLocaleString()}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-blue-600 mb-1">Base Salary</p>
-                  <p className="text-lg font-bold text-slate-900">Rs. {calculations.baseSalary.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-600 mb-1">Gross Salary</p>
-                  <p className="text-lg font-bold text-slate-900">Rs. {calculations.grossSalary.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-blue-600 mb-1">Deductions</p>
-                  <p className="text-lg font-bold text-rose-600">- Rs. {calculations.deductions.toLocaleString()}</p>
-                </div>
-                <div className="bg-white rounded-xl p-3 border border-blue-200">
-                  <p className="text-xs font-semibold text-blue-600 mb-1">Net Salary</p>
-                  <p className="text-lg font-bold text-emerald-600">Rs. {calculations.netSalary.toLocaleString()}</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Base Salary</p>
+                    <p className="text-sm font-black text-white tabular-nums">PKR {calculations.baseSalary.toLocaleString()}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Adjustments</p>
+                    <p className={`text-sm font-black tabular-nums ${calculations.bonus > calculations.deductions ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {calculations.bonus - calculations.deductions >= 0 ? '+' : ''} PKR {(calculations.bonus - calculations.deductions).toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="col-span-2 md:col-span-1 border-l border-slate-800/50 pl-0 md:pl-8 flex flex-col justify-center">
+                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Final Net Payable</p>
+                    <p className="text-2xl font-black text-white tabular-nums tracking-tighter">
+                      PKR {calculations.netSalary.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-2xl">
-          <div className="flex gap-3">
+        {/* Footer Actions */}
+        <div className="px-10 py-8 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 shrink-0">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="flex-1 px-4 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl transition-colors disabled:opacity-50"
+              className="flex-1 py-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || !formData.staffId || !!existingPayroll}
-              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              className={`flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl ${
+                isSubmitting || !!existingPayroll 
+                  ? 'bg-slate-400 border-b-4 border-slate-500 cursor-not-allowed' 
+                  : 'bg-blue-600 border-b-4 border-blue-800 hover:bg-blue-700 shadow-blue-500/20'
+              }`}
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 size={18} className="animate-spin" />
-                  Processing...
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Transmitting...</span>
                 </>
               ) : existingPayroll ? (
                 <>
-                  <AlertCircle size={18} />
-                  Payroll Already Exists
+                  <AlertCircle size={16} />
+                  <span>Cycle Blocked</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle2 size={18} />
-                  Pay Salary
+                  <CheckCircle2 size={16} />
+                  <span>Authorize disbursement</span>
                 </>
               )}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

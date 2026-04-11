@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -377,40 +378,50 @@ const StaffManagementPage: React.FC = () => {
       />
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedStaff && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl max-w-sm w-full p-8 border border-slate-100 dark:border-slate-800">
+      {showDeleteModal && selectedStaff && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden">
+          <div 
+             className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in"
+             onClick={() => {
+               if (!isDeleting) {
+                 setShowDeleteModal(false);
+                 setSelectedStaff(null);
+               }
+             }}
+          />
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-sm w-full p-8 border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/30 rounded-2xl flex items-center justify-center mb-6 border border-rose-100 dark:border-rose-900/50">
                 <AlertCircle size={32} className="text-rose-600 dark:text-rose-500" />
               </div>
-              <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Delete Staff Member</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-                Are you sure you want to remove <strong>{selectedStaff.name}</strong>? This action cannot be undone.
+              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Terminate Account</h3>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70 mt-4 leading-relaxed">
+                You are about to purge <strong className="text-slate-900 dark:text-white">{selectedStaff.name}</strong> from the system registry. This operation is irreversible.
               </p>
             </div>
-            <div className="flex gap-3 mt-8">
+            <div className="flex gap-3 mt-10">
               <button
                 onClick={() => {
                   setShowDeleteModal(false);
                   setSelectedStaff(null);
                 }}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all disabled:opacity-50"
+                className="flex-1 px-4 py-4 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-widest text-[10px] rounded-2xl border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 active:scale-95"
               >
-                Cancel
+                Abort
               </button>
               <button
                 onClick={handleDeleteStaff}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-3 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-rose-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-[1.5] px-4 py-4 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-700 transition-all disabled:bg-slate-400 flex items-center justify-center gap-2 shadow-xl shadow-rose-500/20 active:scale-95 border-b-4 border-rose-800"
               >
                 {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                Delete
+                Confirm Purge
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

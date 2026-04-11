@@ -268,16 +268,28 @@ function DataTableComponent<TData, TValue>({
                         <TableHeader className={cn("bg-card/95 backdrop-blur-sm border-b border-border transition-colors", hidePagination && "sticky top-0 z-30")}>
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="bg-muted/50">
-                                    {headerGroup.headers.map((header) => (
-                                        <TableHead key={header.id} className="bg-card/95 font-black uppercase text-[10px] tracking-widest text-muted-foreground/80 h-16 py-5 text-center">
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(
-                                                    header.column.columnDef.header,
-                                                    header.getContext()
+                                    {headerGroup.headers.map((header) => {
+                                        const align = (header.column.columnDef.meta as any)?.align || 'center';
+                                        return (
+                                            <TableHead 
+                                                key={header.id} 
+                                                className={cn(
+                                                    "bg-slate-50/80 dark:bg-slate-800/80 font-black uppercase text-[10px] tracking-widest text-slate-500 dark:text-slate-400 py-4 px-4 transition-colors border-y border-slate-100 dark:border-slate-800",
+                                                    align === 'center' && "text-center",
+                                                    align === 'right' && "text-right",
+                                                    align === 'left' && "text-left",
+                                                    (header.column.columnDef.meta as any)?.className
                                                 )}
-                                        </TableHead>
-                                    ))}
+                                            >
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                        header.column.columnDef.header,
+                                                        header.getContext()
+                                                    )}
+                                            </TableHead>
+                                        );
+                                    })}
                                 </TableRow>
                             ))}
                         </TableHeader>
@@ -286,7 +298,7 @@ function DataTableComponent<TData, TValue>({
                             [...Array(10)].map((_, i) => (
                                 <TableRow key={i}>
                                     {columns.map((_, j) => (
-                                        <TableCell key={j} className="h-14 text-center">
+                                        <TableCell key={j} className="py-4 text-center">
                                             <Skeleton className="h-5 w-full rounded-lg" />
                                         </TableCell>
                                     ))}
@@ -297,15 +309,28 @@ function DataTableComponent<TData, TValue>({
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
+                                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group"
                                 >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} className="font-medium text-muted-foreground py-8 text-center">
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext()
-                                            )}
-                                        </TableCell>
-                                    ))}
+                                    {row.getVisibleCells().map((cell) => {
+                                        const align = (cell.column.columnDef.meta as any)?.align || 'center';
+                                        return (
+                                            <TableCell 
+                                                key={cell.id} 
+                                                className={cn(
+                                                    "font-medium text-muted-foreground py-3 px-4 transition-all",
+                                                    align === 'center' && "text-center",
+                                                    align === 'right' && "text-right",
+                                                    align === 'left' && "text-left",
+                                                    (cell.column.columnDef.meta as any)?.className
+                                                )}
+                                            >
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext()
+                                                )}
+                                            </TableCell>
+                                        );
+                                    })}
                                 </TableRow>
                             ))
                         ) : (

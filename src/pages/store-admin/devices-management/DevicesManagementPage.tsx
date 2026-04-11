@@ -99,50 +99,50 @@ export default function DevicesManagementPage() {
             )
         },
         {
-            header: "Terminal Hub",
+            header: "Device Name",
             accessorKey: "name",
+            meta: { align: 'left' },
             cell: ({ row }) => {
                 const device = row.original;
                 const isThisDevice = currentFingerprint && device.deviceFingerprint === currentFingerprint;
                 return (
-                    <div className="flex items-center gap-4 min-w-[180px]">
-                        <div className={cn(
-                            "w-12 h-12 rounded-2xl flex items-center justify-center border transition-all",
-                            device.status === 'online' ? "bg-emerald-50 border-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:border-emerald-900/50 dark:text-emerald-400" : "bg-slate-50 border-slate-200 text-slate-400 dark:bg-slate-900 dark:border-slate-800"
-                        )}>
-                            <Laptop size={20} strokeWidth={2} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{device.name}</p>
-                                {isThisDevice && (
-                                    <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded-[4px] text-[8px] font-black uppercase tracking-widest">THIS DEVICE</span>
-                                )}
-                            </div>
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{device.type} SYSTEM</p>
-                        </div>
+                    <div className="flex items-center gap-2">
+                        <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{device.name}</p>
+                        {isThisDevice && (
+                            <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded-[4px] text-[8px] font-black uppercase tracking-widest">THIS</span>
+                        )}
                     </div>
                 );
             }
         },
         {
+            header: "System Type",
+            accessorKey: "type",
+            meta: { align: 'left' },
+            cell: ({ row }) => (
+                <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                    {row.original.type} SYSTEM
+                </span>
+            )
+        },
+        {
             header: "Hardware ID",
             accessorKey: "serialNumber",
+            meta: { align: 'left' },
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <Shield size={12} className="text-slate-300" />
-                    <span className="text-[10px] font-mono font-black text-slate-500 dark:text-slate-400">{row.original.serialNumber}</span>
-                </div>
+                <span className="text-[10px] font-mono font-black text-slate-500 dark:text-slate-400">
+                    {row.original.serialNumber}
+                </span>
             )
         },
         {
             header: "User",
             accessorKey: "connectedTo",
+            meta: { align: 'left' },
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <User size={12} className="text-slate-300" />
-                    <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">{row.original.connectedTo || "Unassigned"}</span>
-                </div>
+                <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
+                    {row.original.connectedTo || "Unassigned"}
+                </span>
             )
         },
         {
@@ -153,12 +153,11 @@ export default function DevicesManagementPage() {
                 return (
                     <div className="flex justify-center">
                         <span className={cn(
-                            "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border flex items-center gap-2",
+                            "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border",
                             isOnline
                                 ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50"
                                 : "bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-900 dark:border-slate-800"
                         )}>
-                            {isOnline ? <Wifi size={10} /> : <WifiOff size={10} />}
                             {row.original.status}
                         </span>
                     </div>
@@ -169,9 +168,10 @@ export default function DevicesManagementPage() {
             header: "Last Heartbeat",
             accessorKey: "lastHeartbeat",
             cell: ({ row }) => (
-                <div className="flex items-center gap-2 justify-center">
-                    <Clock size={12} className="text-slate-300" />
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none text-center">{row.original.lastHeartbeat}</span>
+                <div className="text-center">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums leading-none">
+                        {row.original.lastHeartbeat}
+                    </span>
                 </div>
             )
         },

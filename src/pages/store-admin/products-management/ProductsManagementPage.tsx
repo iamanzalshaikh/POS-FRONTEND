@@ -116,58 +116,32 @@ export default function ProductsManagementPage() {
             )
         },
         {
-            header: "Image",
-            cell: ({ row }) => {
-                const product = row.original;
-                return (
-                    <div className="flex justify-center">
-                        <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden shadow-sm group-hover:border-blue-600/20 transition-all shrink-0">
-                            {product.image ? (
-                                <img 
-                                    src={`http://localhost:3005${product.image}`} 
-                                    alt={product.name} 
-                                    className="w-full h-full object-cover"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-700">
-                                    <Box size={20} strokeWidth={1.5} />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                );
-            }
+            header: "Product Name",
+            accessorKey: "name",
+            cell: ({ row }) => (
+                <div className="text-center">
+                    <p className="text-sm font-black text-[#1e293b] dark:text-white group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">
+                        {row.original.name}
+                    </p>
+                </div>
+            )
         },
         {
-            header: "Product Details",
-            accessorKey: "name",
-            cell: ({ row }) => {
-                const product = row.original;
-                return (
-                    <div className="min-w-[150px]">
-                        <div className="flex items-center gap-2">
-                            <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">
-                                {product.name}
-                            </p>
-                            <span className={cn(
-                                "px-1.5 py-0.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest border",
-                                product.isActive 
-                                    ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
-                                    : "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
-                            )}>
-                                {product.isActive ? 'Active' : 'Inactive'}
-                            </span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-[2px] mt-0.5">SKU: {product.sku || 'N/A'}</p>
-                    </div>
-                );
-            }
+            header: "SKU",
+            accessorKey: "sku",
+            cell: ({ row }) => (
+                <div className="text-center">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-[2px]">
+                        {row.original.sku || 'N/A'}
+                    </span>
+                </div>
+            )
         },
         {
             header: "Category",
             cell: ({ row }) => (
                 <div className="text-center">
-                    <span className="px-3 py-1 bg-slate-900 dark:bg-slate-800 text-white dark:text-slate-300 rounded-lg text-[9px] font-black uppercase tracking-[2px]">
+                    <span className="px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] border border-slate-100 dark:border-slate-800">
                         {row.original.category?.name || 'General'}
                     </span>
                 </div>
@@ -177,8 +151,8 @@ export default function ProductsManagementPage() {
             header: "Buying",
             accessorKey: "purchasePrice",
             cell: ({ row }) => (
-                <div className="text-right text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {formatCurrency(Number(row.getValue("purchasePrice")))}
+                <div className="text-center text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest tabular-nums">
+                    {Number(row.getValue("purchasePrice")).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
             )
         },
@@ -186,8 +160,24 @@ export default function ProductsManagementPage() {
             header: "Selling",
             accessorKey: "sellingPrice",
             cell: ({ row }) => (
-                <div className="text-right text-blue-600 dark:text-blue-400 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {formatCurrency(Number(row.getValue("sellingPrice")))}
+                <div className="text-center text-[#1e293b] dark:text-slate-300 text-[11px] font-black uppercase tracking-widest tabular-nums">
+                    {Number(row.getValue("sellingPrice")).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+            )
+        },
+        {
+            header: "Status",
+            accessorKey: "isActive",
+            cell: ({ row }) => (
+                <div className="flex justify-center text-center">
+                    <span className={cn(
+                        "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                        row.original.isActive 
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
+                            : "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
+                    )}>
+                        {row.original.isActive ? 'Active' : 'Inactive'}
+                    </span>
                 </div>
             )
         },
@@ -197,7 +187,7 @@ export default function ProductsManagementPage() {
                 const stock = row.original.stock ?? 0;
                 const reorder = row.original.reorderLevel || 10;
                 return (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center text-center">
                         <span className={cn(
                             "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[2px] border",
                             stock === 0 ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50" :

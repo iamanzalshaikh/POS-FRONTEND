@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   DollarSign,
@@ -334,130 +335,139 @@ const PayrollManagementPage: React.FC = () => {
       />
 
       {/* Update Payment Modal */}
-      {showPaymentModal && selectedPayroll && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl max-w-lg w-full p-8 border border-slate-100 dark:border-slate-800">
+      {showPaymentModal && selectedPayroll && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden">
+          <div 
+             className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in"
+             onClick={() => setShowPaymentModal(false)}
+          />
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8 border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl flex items-center justify-center border border-emerald-100 dark:border-emerald-900/50">
-                <DollarSign size={28} className="text-emerald-600 dark:text-emerald-500" />
+              <div className="w-14 h-14 bg-blue-50 dark:bg-blue-950/30 rounded-2xl flex items-center justify-center border border-blue-100 dark:border-blue-900/50">
+                <DollarSign size={28} className="text-blue-600 dark:text-blue-500" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight leading-none">Update Payment</h2>
+                <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Update Payment</h2>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                  {selectedPayroll.staff?.name} • {MONTHS[selectedPayroll.month - 1]} {selectedPayroll.year}
+                  {selectedPayroll.staff?.name} <span className="mx-2 opacity-30">|</span> {MONTHS[selectedPayroll.month - 1]} {selectedPayroll.year}
                 </p>
               </div>
             </div>
 
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border-2 border-slate-100 dark:border-slate-800">
                   <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Salary</p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(selectedPayroll.salary)}</p>
+                  <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest">{formatCurrency(selectedPayroll.salary)}</p>
                 </div>
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
-                  <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Amount Paid</p>
-                  <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(selectedPayroll.amountPaid)}</p>
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl border-2 border-emerald-100 dark:border-emerald-900/30">
+                  <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Previously Paid</p>
+                  <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{formatCurrency(selectedPayroll.amountPaid)}</p>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Payment Amount *</label>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-[#64748b] uppercase tracking-widest ml-1">Payment Amount (PKR) *</label>
                 <input
                   type="number"
                   value={paymentForm.amountPaid}
                   onChange={(e) => setPaymentForm({ ...paymentForm, amountPaid: Number(e.target.value) })}
                   min="0"
                   max={selectedPayroll.salary}
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[14px] font-black text-blue-600 dark:text-blue-400 tabular-nums focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
                 />
               </div>
 
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Notes</label>
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-black text-[#64748b] uppercase tracking-widest ml-1">Internal Audit Notes</label>
                 <textarea
                   value={paymentForm.notes}
                   onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
                   rows={3}
-                  placeholder="Payment details, reference numbers..."
-                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all resize-none"
+                  placeholder="Additional registry metadata..."
+                  className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 mt-10">
+            <div className="flex gap-4 mt-10">
               <button
                 onClick={() => setShowPaymentModal(false)}
-                className="flex-1 px-4 py-4 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-95"
+                className="flex-1 py-4 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-widest text-[10px] rounded-2xl border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all active:scale-95"
               >
-                Cancel
+                Abort
               </button>
               <button
                 onClick={handleUpdatePayment}
-                className="flex-1 px-4 py-4 bg-blue-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-blue-700 shadow-lg shadow-blue-400/20 transition-all active:scale-95 border border-blue-500"
+                className="flex-[1.5] py-4 bg-blue-600 hover:bg-blue-700 text-white border-b-4 border-blue-800 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl shadow-blue-500/20"
               >
-                Confirm Update
+                Confirm Disbursement
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* History Modal */}
-      {showHistoryModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-slate-100 dark:border-slate-800">
-            <div className="flex items-center justify-between p-8 border-b border-slate-100 dark:border-slate-800">
+      {showHistoryModal && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden">
+          <div 
+             className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in"
+             onClick={() => setShowHistoryModal(false)}
+          />
+          <div className="relative z-10 bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-10 py-8 border-b border-slate-100 dark:border-slate-800">
               <div>
-                <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Payroll History</h2>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Salary track record for this staff member</p>
+                <h2 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Financial History</h2>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Staff Remuneration Track Record</p>
               </div>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="p-3 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all"
+                className="w-10 h-10 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all text-slate-400 active:scale-95"
               >
-                <XCircle size={20} className="text-slate-400" />
+                <XCircle size={20} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
               {staffHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                <div className="flex flex-col items-center justify-center py-20 opacity-30">
                   <DollarSign size={48} className="text-slate-300" />
-                  <p className="text-sm font-black uppercase tracking-widest text-slate-400 mt-4">No records found</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-4">Registry Null</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {staffHistory.map((record) => {
                     const status = STATUS_CONFIG[record.status];
                     return (
-                      <div key={record.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-6 border border-slate-100 dark:border-slate-800 hover:border-blue-500/30 transition-all group">
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                      <div key={record.id} className="bg-slate-50 dark:bg-slate-800/50 rounded-3xl p-6 border-2 border-slate-100 dark:border-slate-800 group hover:border-blue-500/20 transition-all">
+                        <div className="flex items-center justify-between mb-6">
+                          <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest group-hover:text-blue-600 transition-colors">
                             {MONTHS[record.month - 1]} {record.year}
                           </span>
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${status.bg} ${status.color}`}>
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border ${status.bg} ${status.color} shadow-sm`}>
                             {status.icon}
                             {status.label}
                           </span>
                         </div>
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="grid grid-cols-3 gap-8">
                           <div>
-                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Salary</p>
-                            <p className="text-[11px] font-black text-slate-900 dark:text-white">{formatCurrency(record.salary)}</p>
+                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Entitlement</p>
+                            <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest">{formatCurrency(record.salary)}</p>
                           </div>
                           <div>
-                            <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1">Paid</p>
-                            <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400">{formatCurrency(record.amountPaid)}</p>
+                            <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-1.5">Fulfilled</p>
+                            <p className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{formatCurrency(record.amountPaid)}</p>
                           </div>
                           <div>
-                            <p className="text-[8px] font-black text-amber-400 uppercase tracking-widest mb-1">Balance</p>
-                            <p className="text-[11px] font-black text-amber-600 dark:text-amber-400">{formatCurrency(record.salary - record.amountPaid)}</p>
+                            <p className="text-[8px] font-black text-amber-400 uppercase tracking-widest mb-1.5">Outstanding</p>
+                            <p className="text-[11px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">{formatCurrency(record.salary - record.amountPaid)}</p>
                           </div>
                         </div>
                         {record.notes && (
-                          <div className="mt-4 pt-4 border-t border-slate-200/50 dark:border-slate-700/50">
-                            <p className="text-[9px] text-slate-500 dark:text-slate-400 italic">"{record.notes}"</p>
+                          <div className="mt-6 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 italic">" {record.notes} "</p>
                           </div>
                         )}
                       </div>
@@ -467,16 +477,17 @@ const PayrollManagementPage: React.FC = () => {
               )}
             </div>
 
-            <div className="p-8 border-t border-slate-100 dark:border-slate-800">
+            <div className="px-10 py-8 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="w-full px-4 py-4 bg-slate-900 dark:bg-slate-800 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-xl"
+                className="w-full py-4 bg-slate-950 dark:bg-slate-800 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-900 transition-all active:scale-95 shadow-xl shadow-slate-900/10 border-b-4 border-black"
               >
-                Done
+                Close History
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

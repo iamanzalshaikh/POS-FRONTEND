@@ -1,16 +1,14 @@
-import React from 'react';
-import { TrendingUp, CheckCircle2, XCircle, CreditCard } from 'lucide-react';
+import { TrendingUp, ShoppingBag, Percent, RotateCcw } from 'lucide-react';
 import { formatCurrency } from '@/utils/format';
 import MetricCard from '@/components/global-components/MetricCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface SalesSummaryCardsProps {
     data: {
-        totalAmount: number;
-        completedCount: number;
-        failedCount: number;
-        refundedCount?: number;
-        avgTicket?: number;
+        revenue: number;
+        salesCount: number;
+        discount: number;
+        refunds: number;
     };
     loading: boolean;
 }
@@ -35,27 +33,27 @@ const SalesSummaryCards: React.FC<SalesSummaryCardsProps> = ({ data, loading }) 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
             <MetricCard
-                title="Revenue"
-                value={formatCurrency(data.totalAmount)}
+                title="Total Revenue"
+                value={formatCurrency(data.revenue)}
                 icon={TrendingUp}
-                colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
-            />
-            <MetricCard
-                title="Avg Ticket"
-                value={formatCurrency(data.avgTicket || 0)}
-                icon={CreditCard}
-                colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
-            />
-            <MetricCard
-                title="Transactions"
-                value={data.completedCount}
-                icon={CheckCircle2}
                 colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
             />
             <MetricCard
-                title="Refunds"
-                value={data.refundedCount || 0}
-                icon={XCircle}
+                title="Sales Count"
+                value={`${data.salesCount} Orders`}
+                icon={ShoppingBag}
+                colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+            />
+            <MetricCard
+                title="Total Discount"
+                value={formatCurrency(data.discount)}
+                icon={Percent}
+                colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+            />
+            <MetricCard
+                title="Total Refunds"
+                value={formatCurrency(data.refunds)}
+                icon={RotateCcw}
                 colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
             />
         </div>
