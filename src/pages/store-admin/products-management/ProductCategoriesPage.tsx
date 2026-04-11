@@ -47,47 +47,49 @@ const ProductCategoriesPage = () => {
         )
     },
     {
-        header: "Hierarchy",
+        header: "Category Name",
         accessorKey: "name",
+        meta: { align: 'left' },
         cell: ({ row }) => (
-            <div className="flex items-center gap-4 min-w-[200px]">
-                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm transition-all group-hover:scale-110">
-                    <Layers size={20} />
-                </div>
-                <div>
-                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.name}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 max-w-[240px] truncate leading-none">
-                        {row.original.description || "No classification details provided."}
-                    </p>
-                </div>
-            </div>
+            <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate max-w-[200px]">
+                {row.original.name}
+            </p>
+        )
+    },
+    {
+        header: "Description",
+        accessorKey: "description",
+        meta: { align: 'left' },
+        cell: ({ row }) => (
+            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate max-w-[300px]">
+                {row.original.description || "No classification details provided."}
+            </p>
         )
     },
     {
         header: "Items Linked",
+        meta: { align: 'center' },
         cell: ({ row }) => (
-            <div className="flex justify-center">
-                <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-[2px] flex items-center gap-2 border border-transparent">
-                    <Box size={12} />
-                    {row.original._count?.products || 0} PRODUCTS
-                </span>
-            </div>
+            <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-[2px] flex items-center justify-center gap-2 border border-transparent">
+                <Box size={12} />
+                {row.original._count?.products || 0} PRODUCTS
+            </span>
         )
     },
     {
         header: "Slug",
         accessorKey: "slug",
+        meta: { align: 'center' },
         cell: ({ row }) => (
-            <div className="text-center">
-                <span className="text-[10px] font-mono font-black text-slate-300 dark:text-slate-600 py-1 px-2 border border-slate-50 dark:border-slate-800 rounded-lg">
-                    /{row.original.slug || row.original.name.toLowerCase().replace(/\s+/g, '-')}
-                </span>
-            </div>
+            <span className="text-[10px] font-mono font-black text-slate-300 dark:text-slate-600 py-1 px-2 border border-slate-50 dark:border-slate-800 rounded-lg">
+                /{row.original.slug || row.original.name.toLowerCase().replace(/\s+/g, '-')}
+            </span>
         )
     },
     {
         id: "actions",
         header: "Actions",
+        meta: { align: 'center' },
         cell: () => (
             <div className="flex justify-center items-center gap-2">
                 <button 

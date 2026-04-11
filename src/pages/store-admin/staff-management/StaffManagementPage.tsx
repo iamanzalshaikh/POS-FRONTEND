@@ -74,17 +74,17 @@ export default function StaffManagementPage() {
         {
             header: "Name",
             accessorKey: "name",
+            meta: { align: 'left' },
             cell: ({ row }) => (
-                <div className="text-center">
-                    <p className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">{row.getValue("name")}</p>
-                </div>
+                <p className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">{row.getValue("name")}</p>
             )
         },
         {
             header: "Email",
             accessorKey: "email",
+            meta: { align: 'left' },
             cell: ({ row }) => (
-                <div className="text-center font-bold text-[10px] lowercase text-slate-500 dark:text-slate-400 tracking-[0.05em]">
+                <div className="font-bold text-[10px] lowercase text-slate-500 dark:text-slate-400 tracking-[0.05em]">
                     {row.getValue<string>("email").toLowerCase()}
                 </div>
             )
@@ -111,13 +111,24 @@ export default function StaffManagementPage() {
             header: "Activity",
             cell: ({ row }) => {
                 const member = row.original;
+                const loginDate = member.lastLogin !== 'Never' ? new Date(member.lastLogin) : null;
+                const logoutDate = member.lastLogout !== 'Never' ? new Date(member.lastLogout) : null;
+                
+                // Logic: If login is more recent than logout, they are currently in an active session
+                const isActiveSession = loginDate && (!logoutDate || loginDate > logoutDate);
+
                 return (
                     <div className="flex flex-col items-center gap-1">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                             IN: {member.lastLogin || 'Never'}
                         </span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                            OUT: {member.lastLogout || 'Never'}
+                        <span className={cn(
+                            "text-[10px] font-black uppercase tracking-widest",
+                            isActiveSession 
+                                ? "text-emerald-500 animate-pulse" 
+                                : "text-slate-400 dark:text-slate-500"
+                        )}>
+                            OUT: {isActiveSession ? 'ACTIVE SESSION' : (member.lastLogout || 'Never')}
                         </span>
                     </div>
                 );

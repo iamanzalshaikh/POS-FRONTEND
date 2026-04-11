@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Edit2, Trash2 } from 'lucide-react';
+import { X, Edit2, Trash2, Shapes } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import {
   getExpenseCategories,
   createExpenseCategory,
@@ -130,66 +131,81 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh]">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
+      <div 
+        className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in" 
+        onClick={onClose}
+      ></div>
+
+      <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200">
-          <h2 className="text-xl font-bold text-slate-900">Manage Custom Categories</h2>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-          >
-            <X className="w-5 h-5" />
+        <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+               <Shapes size={24} />
+            </div>
+            <div>
+              <h2 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">
+                Category Directory
+              </h2>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70">
+                Resource Taxonomy Management
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} type="button" className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95">
+            <X size={20} />
           </button>
         </div>
 
         {/* Toast */}
         {toast && (
-          <div className="mx-6 mt-4 z-[100]">
+          <div className="mx-8 mt-4 z-[100]">
             <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
           </div>
         )}
 
         {/* Add New Category */}
-        <div className="p-6 border-b border-slate-200">
-          <label className="block text-sm font-semibold text-slate-700 mb-2">Add New Category</label>
-          <div className="flex gap-2">
+        <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+          <label className="text-[10px] font-black uppercase tracking-widest text-[#64748b] ml-1 mb-2 block">Create New Entry</label>
+          <div className="flex gap-3">
             <input
               type="text"
               value={newCategoryName}
               onChange={(e) => setNewCategoryName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-              placeholder="Enter category name"
-              className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+              placeholder="Enter category name..."
+              className="flex-1 px-5 py-3.5 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl focus:border-blue-500 outline-none transition-all font-bold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/5"
             />
             <button
               onClick={handleCreate}
               disabled={!newCategoryName.trim()}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+              className="px-8 py-3.5 bg-[#2563eb] hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all shadow-xl shadow-blue-500/20 active:scale-95 border-b-4 border-blue-800"
             >
-              Add
+              Initialize
             </button>
           </div>
         </div>
 
         {/* Categories List */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
           {loading ? (
-            <div className="text-center py-8">
-              <div className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-3"></div>
-              <p className="text-sm text-slate-500">Loading categories...</p>
+            <div className="text-center py-12">
+              <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-60">Synchronizing Ledger...</p>
             </div>
           ) : categories.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-slate-500">No custom categories yet</p>
+            <div className="text-center py-12 flex flex-col items-center gap-4 opacity-40">
+              <Shapes className="text-slate-300 dark:text-slate-700" size={48} />
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">No organizational entries found</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {categories.map((category) => (
                 <div
                   key={category.id}
-                  className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100"
+                  className="flex items-center gap-4 p-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-[1.5rem] group hover:border-blue-100 dark:hover:border-blue-900/50 transition-all"
                 >
                   {editingId === category.id ? (
                     <>
@@ -198,43 +214,50 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
                         value={editingName}
                         onChange={(e) => setEditingName(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleUpdate(category.id)}
-                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+                        className="flex-1 px-4 py-2 bg-slate-50 dark:bg-slate-900 border-2 border-blue-200 dark:border-blue-900 rounded-xl font-bold text-sm text-slate-900 dark:text-white outline-none"
                         autoFocus
                       />
-                      <button
-                        onClick={() => handleUpdate(category.id)}
-                        className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-all"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditingName('');
-                        }}
-                        className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-semibold rounded-lg transition-all"
-                      >
-                        Cancel
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleUpdate(category.id)}
+                          className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border-b-4 border-blue-800"
+                        >
+                          Commit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditingName('');
+                          }}
+                          className="px-5 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
+                        >
+                          Abort
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <>
-                      <span className="flex-1 text-sm font-semibold text-slate-900">{category.name}</span>
-                      <button
-                        onClick={() => {
-                          setEditingId(category.id);
-                          setEditingName(category.name);
-                        }}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(category.id)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                        <Shapes size={16} />
+                      </div>
+                      <span className="flex-1 text-xs font-black text-slate-700 dark:text-white uppercase tracking-widest">{category.name}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingId(category.id);
+                            setEditingName(category.name);
+                          }}
+                          className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-xl transition-all"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(category.id)}
+                          className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
@@ -244,17 +267,19 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-200">
+        <div className="px-10 py-8 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 shrink-0">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl transition-all"
+            className="w-full py-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 rounded-2xl hover:bg-slate-50 transition-all active:scale-95"
           >
-            Close
+            Dismiss Directory
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
+  
 };
 
 export default CategoryModal;

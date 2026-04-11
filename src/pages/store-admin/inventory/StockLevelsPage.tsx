@@ -79,35 +79,33 @@ const StockLevelsPage = () => {
             )
         },
         {
-            header: "Product Details",
+            header: "Product",
             accessorKey: "productName",
-            cell: ({ row }) => {
-                const item = row.original;
-                return (
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex flex-shrink-0 items-center justify-center overflow-hidden shadow-sm group-hover:border-blue-600/20 transition-all">
-                            {item.image ? (
-                                <img src={item.image} alt={item.productName} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-50 dark:bg-slate-900 text-slate-300 dark:text-slate-700">
-                                    <Box size={20} strokeWidth={1.5} />
-                                </div>
-                            )}
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-sm font-black text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors uppercase tracking-tight truncate">{item.productName}</p>
-                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[2px] mt-0.5 truncate leading-none">SKU: {item.sku}</p>
-                        </div>
-                    </div>
-                );
-            }
+            cell: ({ row }) => (
+                <div className="text-center">
+                    <p className="text-xs font-black text-[#1e293b] dark:text-white uppercase tracking-tight truncate">
+                        {row.getValue("productName")}
+                    </p>
+                </div>
+            )
+        },
+        {
+            header: "SKU",
+            accessorKey: "sku",
+            cell: ({ row }) => (
+                <div className="text-center">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[2px]">
+                        {row.getValue("sku")}
+                    </p>
+                </div>
+            )
         },
         {
             header: "Category",
             accessorKey: "category",
             cell: ({ row }) => (
                 <div className="text-center">
-                    <span className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-[2px]">
+                    <span className="px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-[2px] border border-slate-100 dark:border-slate-800">
                         {row.getValue("category") || 'General'}
                     </span>
                 </div>
@@ -119,10 +117,10 @@ const StockLevelsPage = () => {
             cell: ({ row }) => {
                 const item = row.original;
                 return (
-                    <div className="text-right">
+                    <div className="text-center">
                         <span className={cn(
                             "text-[11px] font-black uppercase tracking-widest tabular-nums",
-                            item.currentStock === 0 ? "text-rose-600" : item.currentStock <= item.reorderLevel ? "text-amber-600" : "text-slate-900 dark:text-slate-100"
+                            item.currentStock === 0 ? "text-rose-600" : item.currentStock <= item.reorderLevel ? "text-amber-600" : "text-[#1e293b] dark:text-slate-100"
                         )}>
                             {item.currentStock}
                         </span>
@@ -134,7 +132,7 @@ const StockLevelsPage = () => {
             header: "Reorder",
             accessorKey: "reorderLevel",
             cell: ({ row }) => (
-                <div className="text-right">
+                <div className="text-center">
                     <span className="text-slate-400 dark:text-slate-500 text-[11px] font-black uppercase tracking-widest tabular-nums leading-none">
                         {row.getValue<number>("reorderLevel")}
                     </span>
@@ -150,7 +148,7 @@ const StockLevelsPage = () => {
                 
                 if (current === 0) {
                     return (
-                        <div className="flex justify-center">
+                        <div className="flex justify-center text-center">
                             <span className="px-2.5 py-1 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] leading-tight border border-rose-100 dark:border-rose-950/50">
                                 Out of Stock
                             </span>
@@ -159,7 +157,7 @@ const StockLevelsPage = () => {
                 }
                 if (current <= reorder) {
                     return (
-                        <div className="flex justify-center">
+                        <div className="flex justify-center text-center">
                             <span className="px-2.5 py-1 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] leading-tight border border-amber-100 dark:border-amber-950/50">
                                 Low Stock
                             </span>
@@ -167,7 +165,7 @@ const StockLevelsPage = () => {
                     );
                 }
                 return (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center text-center">
                         <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] leading-tight border border-emerald-100 dark:border-emerald-950/50">
                             Healthy
                         </span>

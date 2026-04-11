@@ -27,10 +27,10 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
 }) => {
   if (loading) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="py-12 text-center text-slate-400">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm font-bold">Loading products...</p>
+      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] overflow-hidden p-20 shadow-none">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Synchronizing Product Registry...</p>
         </div>
       </div>
     );

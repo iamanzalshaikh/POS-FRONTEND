@@ -160,170 +160,153 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
 
   // Show blocking modal
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
       {/* Backdrop - cannot click outside */}
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in" />
       
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-lg mx-4">
-        <div className="rounded-3xl border border-amber-200 bg-white shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-lg mx-auto">
+        <div className="rounded-[2.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
           {/* Header */}
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20">
-                  <AlertTriangle size={20} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-extrabold text-white">
-                    Device Required
-                  </h2>
-                  <p className="text-xs font-medium text-white/80">
-                    Connect to a POS terminal to continue
-                  </p>
-                </div>
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <Monitor size={20} />
               </div>
-              
-              {/* Status Badge */}
-              <div className="flex items-center space-x-1.5 rounded-full bg-white/20 px-3 py-1.5">
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-white">
-                  No Device
-                </span>
+              <div>
+                <h2 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">
+                  Terminal Authorization
+                </h2>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70">
+                  Secure device connection required
+                </p>
               </div>
+            </div>
+            
+            {/* Status Badge */}
+            <div className="flex items-center space-x-1.5 rounded-full bg-rose-50 dark:bg-rose-950/30 px-3 py-1.5">
+              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400">
+                LOCKED
+              </span>
             </div>
           </div>
 
           {/* Content */}
-          <div className="p-6">
+          <div className="p-8 overflow-y-auto custom-scrollbar">
             {isLoading ? (
               /* Loading State */
-              <div className="flex flex-col items-center py-8">
-                <Loader2 size={40} className="text-amber-500 animate-spin mb-4" />
-                <p className="text-sm font-semibold text-slate-700">
-                  Checking for available devices...
-                </p>
-                <p className="text-xs text-slate-500 mt-2">
-                  Please wait while we search for POS terminals
+              <div className="flex flex-col items-center py-12">
+                <div className="relative mb-6">
+                  <div className="w-16 h-16 border-4 border-blue-50 dark:border-blue-900/30 rounded-full"></div>
+                  <div className="absolute inset-0 w-16 h-16 border-4 border-t-blue-600 rounded-full animate-spin"></div>
+                </div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                  Scanning for terminals...
                 </p>
               </div>
             ) : error ? (
               /* Error State */
               <div className="space-y-4">
-                <div className="flex items-start space-x-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-                  <XCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex items-center gap-3 p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/50 rounded-2xl">
+                  <XCircle size={20} className="text-rose-600 flex-shrink-0" />
                   <div>
-                    <p className="text-sm font-bold text-red-900">Connection Error</p>
-                    <p className="text-xs text-red-700 mt-1">{error}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-700 dark:text-rose-400">Connection Error</p>
+                    <p className="text-[10px] font-bold text-rose-600/70 mt-0.5">{error}</p>
                   </div>
                 </div>
                 <button
                   onClick={loadAvailableDevices}
-                  className="w-full inline-flex items-center justify-center space-x-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900 hover:bg-amber-100 transition-all"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all"
                 >
-                  <RefreshCcw size={16} />
-                  <span>Retry</span>
+                  <RefreshCcw size={14} />
+                  <span>Retry Discovery</span>
                 </button>
               </div>
             ) : availableDevices.length === 0 ? (
               /* No Devices Available */
               <div className="space-y-6">
-                <div className="text-center py-4">
-                  <div className="inline-flex rounded-full bg-amber-100 p-4 text-amber-600 mb-4">
-                    <Monitor size={32} />
+                <div className="text-center py-6">
+                  <div className="inline-flex rounded-[2.5rem] bg-slate-50 dark:bg-slate-800/50 p-8 text-slate-200 dark:text-slate-700 mb-4">
+                    <Monitor size={56} />
                   </div>
-                  <h3 className="text-lg font-extrabold text-slate-900 mb-2">
-                    No Active Devices Available
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">
+                    No Terminals Discovered
                   </h3>
-                  <p className="text-sm font-medium text-slate-600">
-                    There are currently no POS terminals available for connection.
-                    Please contact your store administrator to activate a device.
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-relaxed max-w-xs mx-auto">
+                    All terminal registries are either offline or currently occupied.
+                    Please contact system admin for deployment.
                   </p>
                 </div>
 
                 {/* Info Box */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start space-x-3">
-                    <AlertTriangle size={18} className="text-slate-500 flex-shrink-0 mt-0.5" />
-                    <div className="text-xs text-slate-600">
-                      <p className="font-bold mb-1">Why am I seeing this?</p>
-                      <p>
-                        All POS terminals are either offline, inactive, or already in use by other cashiers.
-                        You cannot access the POS system without a connected device.
-                      </p>
-                    </div>
+                <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle size={16} className="text-slate-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 leading-normal">
+                      Security Protocol: You cannot access the point of sale interface without an authenticated and free terminal connection.
+                    </p>
                   </div>
                 </div>
 
-                {/* Last Checked */}
-                <div className="text-center text-xs text-slate-500">
-                  <p>
-                    Last checked: <span className="font-medium">{lastChecked.toLocaleTimeString()}</span>
-                  </p>
-                  <p className="mt-1">
-                    Automatically checking every 5 seconds...
+                <div className="text-center">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">
+                    Auto-scanning in 5s... last check: {lastChecked.toLocaleTimeString()}
                   </p>
                 </div>
               </div>
             ) : (
-              /* Devices Available - Show Selection (Free vs In use) */
+              /* Devices Available */
               <div className="space-y-4">
-                <div className="flex items-center space-x-2 text-sm font-bold text-slate-700">
-                  <Monitor size={18} className="text-emerald-600" />
-                  <span>Select a POS Terminal</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="h-1 w-1 bg-blue-600 rounded-full" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Available Registries</span>
                 </div>
 
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-1 custom-scrollbar">
                   {availableDevices.map((device) => {
                     const isInUse = !!device.currentUserId;
-                    const inUseBy = device.currentUser?.name || 'Another cashier';
+                    const inUseBy = device.currentUser?.name || 'Authorized Staff';
                     return (
                       <button
                         key={device.id}
                         disabled={isSelecting || isInUse}
                         onClick={() => !isInUse && handleSelectDevice(device)}
-                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all disabled:cursor-not-allowed group
+                        className={`w-full flex items-center justify-between p-4 rounded-3xl border-2 transition-all disabled:opacity-50
                           ${isInUse 
-                            ? 'border-slate-200 bg-slate-50 opacity-75' 
-                            : 'border-slate-200 bg-white hover:border-emerald-500 hover:bg-emerald-50'}`}
+                            ? 'border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/30' 
+                            : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.98]'}`}
                       >
-                        <div className="flex items-center space-x-3">
-                          <div className={`flex h-10 w-10 items-center justify-center rounded-lg transition-all
-                            ${isInUse ? 'bg-amber-500/10 text-amber-600' : 'bg-emerald-500/10 text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white'}`}>
-                            <Monitor size={18} />
+                        <div className="flex items-center gap-4">
+                          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all
+                            ${isInUse ? 'bg-slate-100 dark:bg-slate-800 text-slate-400' : 'bg-blue-50 dark:bg-blue-950/30 text-blue-600'}`}>
+                            <Monitor size={22} />
                           </div>
                           <div className="text-left">
-                            <p className="text-sm font-bold text-slate-900">
-                              {device.deviceName || 'POS Terminal'}
+                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                              {device.deviceName || 'UNNAMED TERMINAL'}
                             </p>
-                            <p className="text-[11px] text-slate-500 font-mono">
-                              {device.deviceType || 'POS'} • {device.id.slice(-6).toUpperCase()}
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                              ID: {device.id.slice(-8).toUpperCase()} • {device.deviceType || 'GENERIC'}
                             </p>
-                            {isInUse && (
-                              <div className="flex items-center space-x-1 mt-1 text-amber-700">
-                                <User size={12} />
-                                <span className="text-[10px] font-semibold">In use by {inUseBy}</span>
-                              </div>
-                            )}
-                            {!isInUse && (
-                              <div className="flex items-center space-x-1 mt-1 text-emerald-600">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                <span className="text-[10px] font-bold">Free</span>
-                              </div>
-                            )}
                           </div>
                         </div>
                         
-                        {isSelecting ? (
-                          <Loader2 size={18} className="text-emerald-500 animate-spin" />
-                        ) : isInUse ? (
-                          <span className="text-[10px] font-medium text-slate-400"> unavailable</span>
-                        ) : (
-                          <div className="flex items-center space-x-1 text-emerald-600">
-                            <CheckCircle2 size={18} />
-                            <span className="text-xs font-bold">Select</span>
-                          </div>
-                        )}
+                        <div className="shrink-0">
+                          {isSelecting ? (
+                            <Loader2 size={18} className="text-blue-500 animate-spin" />
+                          ) : isInUse ? (
+                            <div className="flex flex-col items-end">
+                              <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Occupied By</span>
+                              <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400">{inUseBy}</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
+                              <CheckCircle2 size={12} />
+                              <span className="text-[9px] font-black uppercase tracking-widest">Connect</span>
+                            </div>
+                          )}
+                        </div>
                       </button>
                     );
                   })}
@@ -332,34 +315,28 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
             )}
           </div>
 
-          {/* Footer - Logout Button (always visible) */}
-          <div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
+          {/* Footer */}
+          <div className="mt-auto border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-8 py-6">
             <div className="flex items-center justify-between">
-              <div className="text-xs text-slate-500">
-                {user && (
-                  <span>
-                    Logged in as <span className="font-semibold text-slate-700">{user.name || user.email}</span>
-                  </span>
-                )}
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Authenticated As</p>
+                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{user?.name || user?.email || 'N/A'}</p>
               </div>
               <button
                 onClick={handleLogout}
                 disabled={isSelecting || isLoading}
-                className="inline-flex items-center space-x-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 hover:bg-red-50 hover:border-red-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 py-3 px-6 bg-white dark:bg-slate-800 border-2 border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95"
               >
-                <LogOut size={16} />
-                <span>Logout</span>
+                <LogOut size={14} />
+                <span>Disconnect</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Help Text Below Modal */}
-        <div className="text-center mt-4">
-          <p className="text-xs text-white/60">
-            You cannot access the POS system without connecting to a device
-          </p>
-        </div>
+        <p className="text-center text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mt-8 animate-pulse">
+          Secure Cloud Terminal Authorization Framework
+        </p>
       </div>
     </div>
   );

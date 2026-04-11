@@ -63,6 +63,7 @@ const InventoryManagementPage = () => {
     {
         header: "Product",
         accessorKey: "productName",
+        meta: { align: 'left' },
         cell: ({ row }) => (
             <div className="flex items-center gap-4 min-w-[200px]">
                 <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex items-center justify-center overflow-hidden shadow-sm">
@@ -133,8 +134,9 @@ const InventoryManagementPage = () => {
     {
         header: "Timestamp",
         accessorKey: "timestamp",
+        meta: { align: 'right' },
         cell: ({ row }) => (
-            <div className="text-right pr-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 {row.original.timestamp}
             </div>
         )

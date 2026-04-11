@@ -75,12 +75,18 @@ const SalesHistoryPage = () => {
 
     const reportData = dashboardDataRes?.data || dashboardDataRes;
 
+    // Calculate metrics locally from transaction ledger
     const summary = {
-        totalAmount: Number(reportData?.summary?.totalRevenue || 0),
-        completedCount: Number(reportData?.summary?.totalTransactions || 0),
-        failedCount: Number(reportData?.summary?.failedTransactions || 0),
-        refundedCount: Number(reportData?.summary?.totalRefunds || 0),
-        avgTicket: Number(reportData?.summary?.averageTicketSize || 0)
+        revenue: transactions
+            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()))
+            .reduce((sum: number, t: any) => sum + Number(t.totalAmount || 0), 0),
+        salesCount: transactions
+            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()))
+            .length,
+        discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discount || 0), 0),
+        refunds: transactions
+            .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded')
+            .reduce((sum: number, t: any) => sum + Number(t.totalAmount || 0), 0)
     };
 
     const chartsData = reportData?.charts?.revenueByDate?.map((d: any) => ({
@@ -100,6 +106,7 @@ const SalesHistoryPage = () => {
         {
             header: "Transaction",
             accessorKey: "invoiceNumber",
+            meta: { align: 'left' },
             cell: ({ row }) => (
                 <div className="min-w-[120px]">
                     <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">#{row.original.invoiceNumber || row.original.id?.slice(-8)}</p>
@@ -113,6 +120,7 @@ const SalesHistoryPage = () => {
         {
             header: "Customer",
             accessorKey: "customerName",
+            meta: { align: 'left' },
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400">
@@ -125,12 +133,11 @@ const SalesHistoryPage = () => {
         {
             header: "Amount",
             accessorKey: "totalAmount",
+            meta: { align: 'right' },
             cell: ({ row }) => (
-                <div className="text-right">
-                    <span className="text-[12px] font-black uppercase tracking-widest tabular-nums text-slate-900 dark:text-white">
-                        {formatCurrency(row.original.totalAmount)}
-                    </span>
-                </div>
+                <span className="text-[12px] font-black uppercase tracking-widest tabular-nums text-slate-900 dark:text-white">
+                    {formatCurrency(row.original.totalAmount)}
+                </span>
             )
         },
         {
@@ -249,28 +256,46 @@ const SalesHistoryPage = () => {
                                     className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
                                 />
                             </div>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
-                            >
-                                <option value="All Status">State: All</option>
-                                <option value="paid">Paid</option>
-                                <option value="pending">Pending</option>
-                                <option value="refunded">Refunded</option>
-                            </select>
-                            <input
-                                type="date"
-                                value={dateRange.start}
-                                onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
-                            />
-                            <input
-                                type="date"
-                                value={dateRange.end}
-                                onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
-                            />
+                            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                                {[
+                                    { label: 'Today', range: 0 },
+                                    { label: 'Weekly', range: 7 },
+                                    { label: 'Monthly', range: 30 }
+                                ].map((r) => {
+                                    const start = new Date(new Date().setDate(new Date().getDate() - r.range)).toISOString().split('T')[0];
+                                    const end = new Date().toISOString().split('T')[0];
+                                    const isActive = dateRange.start === start && dateRange.end === end;
+                                    return (
+                                        <button
+                                            key={r.label}
+                                            onClick={() => setDateRange({ start, end })}
+                                            className={cn(
+                                                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                                isActive
+                                                    ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                                    : "text-slate-400 hover:text-blue-600"
+                                            )}
+                                        >
+                                            {r.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    value={dateRange.start}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                    className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+                                />
+                                <span className="text-slate-300 dark:text-slate-700 font-black">—</span>
+                                <input
+                                    type="date"
+                                    value={dateRange.end}
+                                    onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                    className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+                                />
+                            </div>
                         </div>
                     }
                 />
