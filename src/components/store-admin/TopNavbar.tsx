@@ -1,7 +1,15 @@
-import { PanelLeftOpen, PanelLeftClose } from 'lucide-react';
+import { PanelLeftOpen, PanelLeftClose, User, LogOut, Settings, CircleUser } from 'lucide-react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/store/useAuthStore';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TopNavbarProps {
     portalLabel?: string;
@@ -15,7 +23,7 @@ export default function TopNavbar({
     onMenuClick,
 }: TopNavbarProps) {
     const { collapsed, toggle, openMobile } = useSidebar();
-    const { user } = useAuthStore();
+    const { user, logout } = useAuthStore();
 
     return (
         <header className="h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-4 sm:px-8 flex items-center justify-between shadow-sm shadow-slate-100/50 dark:shadow-none transition-colors duration-300">
@@ -61,13 +69,44 @@ export default function TopNavbar({
                             <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold tracking-widest uppercase">ONLINE</p>
                         </div>
                     </div>
+                    
                     <div className="hidden md:block h-8 w-px bg-slate-100 dark:bg-slate-800"></div>
-                    <div className="hidden md:block text-right">
-                        <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{user?.name || 'User'}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-widest uppercase">
-                            {(user?.role || 'member').replace('_', ' ')}
-                        </p>
-                    </div>
+
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button className="flex items-center gap-3 p-1.5 px-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all outline-none group border border-transparent hover:border-slate-100 dark:hover:border-slate-800">
+                                <div className="hidden md:block text-right">
+                                    <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                        {user?.name || 'User'}
+                                    </p>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold tracking-widest uppercase">
+                                        {(user?.role || 'member').replace('_', ' ')}
+                                    </p>
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white dark:group-hover:bg-indigo-500 transition-all duration-300">
+                                    <CircleUser size={24} strokeWidth={1.5} />
+                                </div>
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 mt-2 p-1.5 rounded-xl border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
+                            <DropdownMenuLabel className="px-3 py-2">
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">My Account</p>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-slate-50 dark:bg-slate-800" />
+                            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors focus:bg-indigo-50 focus:text-indigo-600 dark:focus:bg-indigo-950/30 dark:focus:text-indigo-400">
+                                <User size={18} strokeWidth={1.5} />
+                                <span className="text-sm font-medium">Profile Details</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-slate-50 dark:bg-slate-800" />
+                            <DropdownMenuItem 
+                                onClick={() => logout()}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-rose-500 focus:bg-rose-50 focus:text-rose-600 dark:focus:bg-rose-950/30 dark:focus:text-rose-400 transition-colors"
+                            >
+                                <LogOut size={18} strokeWidth={1.5} />
+                                <span className="text-sm font-medium">Log out</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
         </header>

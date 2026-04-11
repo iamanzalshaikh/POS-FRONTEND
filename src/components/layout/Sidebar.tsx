@@ -1,6 +1,5 @@
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useAuthStore } from '../../store/useAuthStore';
 import {
     LayoutDashboard,
     Package,
@@ -9,14 +8,11 @@ import {
     Settings,
     ChevronDown,
     ChevronUp,
-    LogOut,
     BarChart3,
     ShoppingCart
 } from "lucide-react";
 
 export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
-    const { logout, user } = useAuthStore();
-    const navigate = useNavigate();
     const location = useLocation();
 
     // State to manage the Inventory dropdown
@@ -29,10 +25,6 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
         }
     }, [location.pathname]);
 
-    const handleLogout = async () => {
-        await logout();
-        navigate('/login');
-    };
 
     const mainButtons = [
         { name: "Dashboard", icon: LayoutDashboard, path: "/store-admin/dashboard" },
@@ -152,26 +144,6 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
                 ))}
             </nav>
 
-            {/* User Profile / Footer */}
-            <div className={`p-4 mt-auto border-t border-white/5`}>
-                <div className={`bg-[#2A2760] rounded-[24px] flex items-center transition-all ${collapsed ? 'p-2 justify-center' : 'p-4 gap-3'}`}>
-                    <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-sm border-2 border-white/10">
-                        {(user?.name || 'U').slice(0, 2).toUpperCase()}
-                    </div>
-                    {!collapsed && (
-                        <div className="flex-1 min-w-0">
-                            <p className="text-[13px] font-black text-white truncate tracking-tight">{user?.name || 'Anzal Manager'}</p>
-                            <p className="text-[10px] text-indigo-300 font-bold uppercase truncate tracking-widest mt-0.5">{user?.role === 'STORE_ADMIN' ? 'Store Manager' : (user?.role || 'Admin')}</p>
-                        </div>
-                    )}
-                    <button
-                        onClick={handleLogout}
-                        className="p-2 text-slate-400 hover:text-rose-400 transition-colors shrink-0"
-                    >
-                        <LogOut size={18} />
-                    </button>
-                </div>
-            </div>
         </aside>
     );
 }

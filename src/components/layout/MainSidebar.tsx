@@ -8,7 +8,6 @@ import {
     Monitor,
     BarChart3,
     Settings,
-    LogOut,
     ChevronDown,
     ChevronRight,
     Package,
@@ -16,7 +15,6 @@ import {
     Settings2,
     X
 } from 'lucide-react';
-import { useAuthStore } from '../../store/useAuthStore';
 import { useSidebar } from '@/components/ui/sidebar';
 
 interface MenuItem {
@@ -33,7 +31,6 @@ interface MainSidebarProps {
 }
 
 export default function MainSidebar({ menuItems, roleName, brandIcon: BrandIcon = Columns2 }: MainSidebarProps) {
-    const { logout, user } = useAuthStore();
     const { collapsed, isMobileOpen, closeMobile } = useSidebar();
     const [openSubmenu, setOpenSubmenu] = React.useState<string | null>("Inventory"); // Default to open Inventory if it exists
 
@@ -133,28 +130,7 @@ export default function MainSidebar({ menuItems, roleName, brandIcon: BrandIcon 
                     })}
                 </nav>
 
-                {/* User */}
-                <div className={`p-4 border-t border-white/10 transition-all duration-300 ${collapsed ? 'px-2' : 'px-4'}`}>
-                    <div className={`bg-white/5 rounded-2xl p-4 flex items-center gap-3 border border-white/5 ${collapsed ? 'flex-col p-2' : ''}`}>
-                        <div className="min-w-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-black border border-white/20 shadow-sm uppercase">
-                            {(user?.name || 'U')[0]}
-                        </div>
-                        {!collapsed && (
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm font-bold text-white truncate">{user?.name || 'User'}</p>
-                                <p className="text-[10px] text-indigo-300/60 font-medium uppercase truncate tracking-widest">{user?.role?.replace('_', ' ') || 'Member'}</p>
-                            </div>
-                        )}
-                        <button
-                            onClick={logout}
-                            className={`p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/20 rounded-xl transition-all ${collapsed ? 'mt-2' : ''}`}
-                            title="Logout"
-                        >
-                            <LogOut size={18} />
-                        </button>
-                    </div>
-                </div>
             </aside>
         </>
     );
-}
+}
