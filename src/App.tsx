@@ -32,6 +32,10 @@ const SettingsPage = lazy(() => import('@/pages/store-admin/settings/SettingsPag
 const StockAdjustmentPage = lazy(() => import('@/pages/store-admin/inventory/StockAdjustmentPage'));
 const ReportsPage = lazy(() => import('@/pages/store-admin/reports/ReportsPage'));
 const StaffDetailPage = lazy(() => import('@/pages/store-admin/staff-management/StaffDetailPage'));
+const SuppliersPage = lazy(() => import('@/pages/store-admin/purchasing/SuppliersPage'));
+const SupplierPurchasesListPage = lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchasesListPage'));
+const NewSupplierPurchasePage = lazy(() => import('@/pages/store-admin/purchasing/NewSupplierPurchasePage'));
+const SupplierPurchaseDetailPage = lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchaseDetailPage'));
 
 // Super Admin Revised Panel
 const SuperAdminLayout = lazy(() => import('@/components/layout/SuperAdminLayout'));
@@ -95,6 +99,10 @@ const App: React.FC = () => {
                   <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
                   <Route path="/store-admin/categories" element={<ProductCategories />} />
                   <Route path="/store-admin/reports" element={<ReportsPage />} />
+                  <Route path="/store-admin/purchasing/suppliers" element={<SuppliersPage />} />
+                  <Route path="/store-admin/purchasing/purchases" element={<SupplierPurchasesListPage />} />
+                  <Route path="/store-admin/purchasing/purchases/new" element={<NewSupplierPurchasePage />} />
+                  <Route path="/store-admin/purchasing/purchases/:id" element={<SupplierPurchaseDetailPage />} />
 
                   <Route path="/store-admin" element={<Navigate to="/store-admin/dashboard" replace />} />
                 </Route>

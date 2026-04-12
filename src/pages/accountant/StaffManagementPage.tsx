@@ -53,9 +53,12 @@ const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-PK', {
     style: 'currency',
     currency: 'PKR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount).replace('PKR', 'Rs').trim();
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+    .format(amount)
+    .replace('PKR', 'Rs')
+    .trim();
 };
 
 const formatDate = (dateString: string): string => {

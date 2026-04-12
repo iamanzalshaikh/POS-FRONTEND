@@ -147,6 +147,8 @@ export interface SalesTransaction {
   createdAt: string;
   isCancelled: boolean;
   isReversal: boolean;
+  /** Present on GET /sales — use for GST when header totalTax is 0 */
+  saleItems?: Array<{ tax?: number | string; subtotal?: number | string }>;
 }
 
 export interface SaleDetail {
@@ -465,6 +467,66 @@ export const getFinanceExpensesTrend = async (months?: number): Promise<Standard
   return withErrorHandling(
     () => api.get('/finance/expenses-trend', { params: { months: months || 12 } }),
     'Failed to fetch expense trend'
+  );
+};
+
+// ============================================================================
+// RECENT TRANSACTIONS (sales & refunds)
+// Endpoint: GET /finance/recent-transactions
+// ============================================================================
+
+export interface RecentFinanceTransaction {
+  id: string;
+  transactionType: 'SALE' | 'REFUND';
+  invoiceNumber: string;
+  offlineInvoiceNumber?: string | null;
+  subtotal: number;
+  discountAmount: number;
+  totalTax: number;
+  totalAmount: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  isReversal: boolean;
+  linkedSaleId?: string | null;
+  refundSaleId?: string | null;
+  isOffline: boolean;
+  createdAt: string;
+  cashier: { id: string; name: string } | null;
+  device: { id: string; deviceName: string } | null;
+  lineItemCount: number;
+}
+
+export interface RecentTransactionsData {
+  items: RecentFinanceTransaction[];
+  filters: { type: string };
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export const getRecentTransactions = async (params?: {
+  type?: 'all' | 'sale' | 'refund';
+  page?: number;
+  limit?: number;
+  startDate?: string;
+  endDate?: string;
+}): Promise<StandardApiResponse<RecentTransactionsData> | ApiError> => {
+  return withErrorHandling(
+    () =>
+      api.get<BackendApiResponse<RecentTransactionsData>>('/finance/recent-transactions', {
+        params: {
+          type: params?.type ?? 'all',
+          page: params?.page ?? 1,
+          limit: params?.limit ?? 30,
+          ...(params?.startDate && params?.endDate
+            ? { startDate: params.startDate, endDate: params.endDate }
+            : {}),
+        },
+      }),
+    'Failed to fetch recent transactions'
   );
 };
 

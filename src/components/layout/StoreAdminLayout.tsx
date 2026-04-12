@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/layout/MainSidebar';
 import TopNavbar from '@/components/store-admin/TopNavbar';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
-import { Columns2, Users, Boxes, ShoppingCart, Monitor, BarChart3, Settings, Layers, Package, Settings2 } from 'lucide-react';
+import { Columns2, Users, Boxes, ShoppingCart, Monitor, BarChart3, Settings, Layers, Package, Settings2, Truck, ClipboardList, PlusCircle } from 'lucide-react';
 
 const storeAdminMenu = [
     { name: 'Dashboard', icon: Columns2, path: '/store-admin/dashboard' },
@@ -16,6 +16,16 @@ const storeAdminMenu = [
             { name: 'Products', icon: Package, path: '/store-admin/inventory/products' },
             { name: 'Categories', icon: Layers, path: '/store-admin/categories' },
             { name: 'Adjustments', icon: Settings2, path: '/store-admin/inventory/adjustments' },
+        ]
+    },
+    {
+        name: 'Purchasing',
+        icon: Truck,
+        path: '/store-admin/purchasing/suppliers',
+        children: [
+            { name: 'Suppliers', icon: Truck, path: '/store-admin/purchasing/suppliers' },
+            { name: 'Purchases', icon: ClipboardList, path: '/store-admin/purchasing/purchases' },
+            { name: 'New purchase', icon: PlusCircle, path: '/store-admin/purchasing/purchases/new' },
         ]
     },
     { name: 'Sales History', icon: ShoppingCart, path: '/store-admin/sales' },

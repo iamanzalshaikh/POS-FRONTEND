@@ -65,13 +65,22 @@ export function enrichWithHierarchy(categories: Category[]): Category[] {
 }
 
 // ----------- API calls -----------
-export const getCategories = () => {
-  return api.get("/categories").then(res => res.data)
+export const getCategories = (params?: { tree?: boolean }) => {
+  return api
+    .get("/categories", { params: params?.tree ? { tree: "true" } : undefined })
+    .then((res) => res.data)
 }
 
-export const createCategory = (data: { name: string; description?: string; parentId?: string | null }) => {
-  const { parentId, ...apiData } = data
-  return api.post("/categories", apiData).then(res => res.data)
+export const createCategory = (data: {
+  name: string
+  description?: string
+  parentId?: string | null
+  slug?: string
+}) => {
+  const body: Record<string, unknown> = { name: data.name.trim() }
+  if (data.parentId) body.parentId = data.parentId
+  if (data.slug?.trim()) body.slug = data.slug.trim()
+  return api.post("/categories", body).then((res) => res.data)
 }
 
 export const updateCategory = (id: string, data: any) => {

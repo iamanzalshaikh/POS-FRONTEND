@@ -10,6 +10,7 @@ import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummar
 
 import { getDashboardSummary } from "@/api/dashboard.api";
 import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api";
+import { getSaleGrandTotal } from "@/utils/saleAmounts";
 
 const SalesHistoryPage = () => {
     // Filters state
@@ -79,14 +80,14 @@ const SalesHistoryPage = () => {
     const summary = {
         revenue: transactions
             .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()))
-            .reduce((sum: number, t: any) => sum + Number(t.totalAmount || 0), 0),
+            .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0),
         salesCount: transactions
             .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()))
             .length,
         discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discount || 0), 0),
         refunds: transactions
             .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded')
-            .reduce((sum: number, t: any) => sum + Number(t.totalAmount || 0), 0)
+            .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0)
     };
 
     const chartsData = reportData?.charts?.revenueByDate?.map((d: any) => ({
@@ -131,14 +132,24 @@ const SalesHistoryPage = () => {
             )
         },
         {
-            header: "Amount",
+            header: "Total",
             accessorKey: "totalAmount",
             meta: { align: 'right' },
-            cell: ({ row }) => (
-                <span className="text-[12px] font-black uppercase tracking-widest tabular-nums text-slate-900 dark:text-white">
-                    {formatCurrency(row.original.totalAmount)}
-                </span>
-            )
+            cell: ({ row }) => {
+                const t = row.original;
+                const grand = getSaleGrandTotal(t);
+                const tax = Number(t.totalTax ?? 0);
+                return (
+                <div className="text-right">
+                    <span className="text-[12px] font-black uppercase tracking-widest tabular-nums text-slate-900 dark:text-white block">
+                        {formatCurrency(grand)}
+                    </span>
+                    {tax > 0 && (
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">GST {formatCurrency(tax)}</span>
+                    )}
+                </div>
+                );
+            }
         },
         {
             header: "Payment",

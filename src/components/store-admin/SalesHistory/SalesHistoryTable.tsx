@@ -13,6 +13,7 @@ import {
     RotateCcw, 
     XCircle 
 } from 'lucide-react';
+import { getSaleGrandTotal, getSaleTaxTotal } from '@/utils/saleAmounts';
 
 interface SalesHistoryTableProps {
     transactions: any[];
@@ -123,9 +124,24 @@ const SalesHistoryTable: React.FC<SalesHistoryTableProps> = ({
                                         </span>
                                     </td>
                                     <td className="px-6 py-5">
-                                        <span className="text-sm font-black text-slate-900 tabular-nums">
-                                            ₹ {Number(tx.totalAmount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                        </span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-black text-slate-900 tabular-nums">
+                                                ₹{' '}
+                                                {getSaleGrandTotal(tx).toLocaleString(undefined, {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                })}
+                                            </span>
+                                            {getSaleTaxTotal(tx) > 0 && (
+                                                <span className="text-[10px] font-bold text-slate-500 mt-0.5">
+                                                    GST ₹{' '}
+                                                    {getSaleTaxTotal(tx).toLocaleString(undefined, {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    })}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-5">
                                         <div className="flex items-center gap-2">

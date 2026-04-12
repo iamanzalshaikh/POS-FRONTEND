@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getSalesTransactions } from '../../api/finance.api';
 import type { SalesTransaction } from '../../api/finance.api';
+import { getSaleGrandTotal } from '../../utils/saleAmounts';
 import BarChartLabelCustom from '../../components/global-components/BarChartLabelCustom';
 
 interface WeeklyData {
@@ -33,7 +34,6 @@ const FinancialOverview: React.FC = () => {
         if (response && 'success' in response && response.success) {
           const sales: SalesTransaction[] = (response as any).data || [];
           const validSales = sales.filter(s =>
-            s.totalAmount != null &&
             !(s as any).isCancelled &&
             (s.paymentStatus === 'PAID' || s.paymentStatus === 'COMPLETED')
           );
@@ -41,7 +41,7 @@ const FinancialOverview: React.FC = () => {
           const byDate: Record<string, number> = {};
           validSales.forEach(sale => {
             const dateKey = new Date(sale.createdAt).toISOString().split('T')[0];
-            byDate[dateKey] = (byDate[dateKey] || 0) + Number(sale.totalAmount);
+            byDate[dateKey] = (byDate[dateKey] || 0) + getSaleGrandTotal(sale);
           });
 
           weeklyRevenue = Object.entries(byDate)

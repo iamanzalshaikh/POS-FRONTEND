@@ -146,7 +146,12 @@ const Receipt: React.FC<ReceiptProps> = ({ receipt, onClose }) => {
               </div>
             )}
             <div className="flex justify-between text-xs text-slate-600">
-              <span>Tax (18%)</span>
+              <span>
+                Tax (GST)
+                {receipt.subtotal > 0.0001 && receipt.tax > 0.0001
+                  ? ` ${((receipt.tax / receipt.subtotal) * 100).toFixed(1)}%`
+                  : ''}
+              </span>
               <span>Rs {receipt.tax.toFixed(2)}</span>
             </div>
           </div>

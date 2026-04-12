@@ -247,9 +247,12 @@ export const formatCurrency = (amount: number): string => {
   return new Intl.NumberFormat('en-PK', {
     style: 'currency',
     currency: 'PKR',
-    maximumFractionDigits: 0,
-    minimumFractionDigits: 0,
-  }).format(amount).replace('PKR', 'Rs').trim();
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+    .format(amount)
+    .replace('PKR', 'Rs')
+    .trim();
 };
 
 /**
