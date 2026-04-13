@@ -4,7 +4,6 @@ import { ShoppingCart, Scan, Package, RotateCcw, Clock } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import DeviceAccessGate from '../../components/cashier/DeviceAccessGate';
 import POSInterface from './POSInterface';
-import ShiftTools from './ShiftTools';
 import DeviceSelection from './DeviceSelection';
 import ReceiptPage from './ReceiptPage';
 import ShiftSummaryPage from './ShiftSummaryPage';
@@ -47,7 +46,7 @@ const CashierDashboard: React.FC = () => {
             element={<Navigate to="/cashier/terminal" replace />}
           />
           <Route path="/devices" element={deviceId ? <Navigate to="/cashier/terminal" replace /> : <DeviceSelection />} />
-          <Route path="/terminal" element={<><POSInterface /><ShiftTools /></>} />
+          <Route path="/terminal" element={<POSInterface />} />
           <Route path="/offline-sales" element={<OfflineSalesPage />} />
           <Route path="/products" element={<ProductsListPage />} />
           <Route path="/receipt/:saleId" element={<ReceiptPage />} />

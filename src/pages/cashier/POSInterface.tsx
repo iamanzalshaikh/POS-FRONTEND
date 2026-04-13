@@ -57,6 +57,8 @@ type Product = {
   stock?: number;
   taxPercentage?: number;
   discountPercentage?: number;
+  category?: any;
+  inventoryStock?: { totalQuantity?: number };
 };
 
 type DiscountMode = 'amount' | 'percent';
@@ -656,60 +658,8 @@ const POSInterface: React.FC = () => {
   };
 
   return (
-    <>
-      {/* Hold Orders Section */}
-      {holdOrders.length > 0 && (
-        <div className="mb-8 animate-in slide-in-from-top duration-500">
-          <div className="flex items-center justify-between mb-4 px-2">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
-              <Clock size={14} className="text-indigo-500" />
-              Hold Orders <span className="bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] ml-1">{holdOrders.length}</span>
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {holdOrders.map((order) => (
-              <div
-                key={order.id}
-                className="p-5 rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-lg transition-all group relative overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-full -mr-8 -mt-8"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{order.id}</span>
-                    <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-lg">
-                      {order.items.length} Items
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xl font-black text-slate-900 dark:text-white tabular-nums">
-                      {formatCurrency(order.total)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleResumeOrder(order.id)}
-                      className="flex-1 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-sm"
-                    >
-                      Resume
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteHoldOrder(order.id)}
-                      className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-2xl transition-all"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="flex flex-col h-full overflow-hidden bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-500">
-
+    <div className="h-[calc(100vh-10rem)] overflow-hidden flex flex-col bg-slate-100 dark:bg-slate-950 p-0">
+      <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-none border-x lg:border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-500 overflow-hidden m-0">
       {/* Offline Banner */}
       {isOnline === false && (
         <div className="flex items-center justify-between px-6 py-3 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm font-medium">
@@ -792,10 +742,9 @@ const POSInterface: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-col overflow-hidden flex-1">
-        <div className="flex overflow-hidden flex-1">
-          {/* Left: Barcode Scan, Products & Cart */}
-          <section className="flex-1 flex flex-col gap-4 p-6 overflow-hidden border-r border-slate-200">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0">
+          {/* Left: Product Selection */}
+          <section className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/30">
             {/* Barcode Scanner */}
             <form onSubmit={handleScanSubmit} className="flex-shrink-0">
               <div className="relative">
@@ -832,199 +781,193 @@ const POSInterface: React.FC = () => {
               />
             </div>
 
-            {/* Cart Cards Section - shows added products as cards */}
-            {cart.length > 0 && (
-              <div className="flex-shrink-0 rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b border-slate-200">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600 flex items-center space-x-2">
-                    <ShoppingCart size={14} className="text-emerald-600" />
-                    <span>Added Products ({cart.length} items)</span>
-                  </h3>
-                </div>
-                <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-80 overflow-y-auto">
-                  {cart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col rounded-xl border border-blue-200 bg-blue-50 p-3 hover:shadow-md transition-shadow"
-                    >
-                      {/* Product Image Placeholder */}
-                      <div className="w-full h-20 bg-blue-100 rounded-lg mb-2 flex items-center justify-center border border-blue-200">
-                        <ShoppingCart size={24} className="text-blue-400" />
-                      </div>
+          
 
-                      {/* Product Name */}
-                      <h4 className="text-xs font-semibold text-slate-900 line-clamp-2 mb-2 flex-1">
-                        {item.name}
-                      </h4>
-
-                      {/* Price */}
-                      <div className="mb-2">
-                        <span className="text-[10px] text-slate-600">Price:</span>
-                        <div className="text-xs font-bold text-slate-900">
-                          {formatCurrency(item.price)}
-                        </div>
-                      </div>
-
-                      {/* Quantity Controls */}
-                      <div className="flex items-center justify-between mb-2 bg-white rounded-lg border border-blue-200 p-1">
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange(item.id, -1)}
-                          className="p-0.5 text-slate-500 hover:text-blue-600"
-                        >
-                          <Minus size={12} />
-                        </button>
-                        <span className="text-[10px] font-bold text-slate-900 w-6 text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleQuantityChange(item.id, 1)}
-                          className="p-0.5 text-slate-500 hover:text-blue-600"
-                        >
-                          <Plus size={12} />
-                        </button>
-                      </div>
-
-                      {/* Line Total */}
-                      <div className="mb-2 text-center">
-                        <span className="text-[9px] text-slate-600">Subtotal:</span>
-                        <div className="text-xs font-bold text-slate-900">
-                          {formatCurrency(item.price * item.quantity)}
-                        </div>
-                      </div>
-
-                      {/* Remove Button */}
+            {/* Internal Footer for Left Section: Hold Orders */}
+            <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50">
+{/* Hold Orders Section */}
+      {holdOrders.length > 0 && (
+        <div className="p-5 pb-0 mb-4 animate-in slide-in-from-top duration-500 overflow-hidden flex flex-col max-h-[220px]">
+          <div className="flex items-center justify-between mb-3 px-2 flex-shrink-0">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
+              <Clock size={14} className="text-indigo-500" />
+              Hold Orders <span className="bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] ml-1">{holdOrders.length}</span>
+            </h3>
+          </div>
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {holdOrders.map((order) => (
+                <div
+                  key={order.id}
+                  className="p-3.5 rounded-[1.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-full -mr-8 -mt-8"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{order.id.split('-').pop()}</span>
+                      <span className="text-[8px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-1.5 py-0.5 rounded-lg">
+                        {order.items.length} ITEMS
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
+                        {formatCurrency(order.total)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="w-full rounded-xl bg-red-50 border border-red-200 text-red-600 px-2 py-1.5 text-[9px] font-bold uppercase tracking-widest hover:bg-red-100 transition-all"
+                        onClick={() => handleResumeOrder(order.id)}
+                        className="flex-1 py-1.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-sm"
                       >
-                        <X size={10} className="inline mr-1" />
-                        Remove
+                        Resume
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteHoldOrder(order.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-xl transition-all"
+                      >
+                        <Trash2 size={12} />
                       </button>
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+    </section>
 
-            {/* Cart Table Section (Optional - can be kept for detailed view) */}
-            {cart.length > 0 && (
-              <div className="flex-shrink-0 rounded-2xl border border-slate-200 bg-white overflow-hidden max-h-48 overflow-y-auto hidden">
-                <div className="bg-slate-100 px-4 py-2 border-b border-slate-200 sticky top-0">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-slate-600 flex items-center space-x-2">
-                    <ShoppingCart size={14} className="text-emerald-600" />
-                    <span>Current Cart ({cart.length} items)</span>
-                  </h3>
-                </div>
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-2 text-left">Item</th>
-                      <th className="px-2 py-2 text-center w-32">Qty</th>
-                      <th className="px-4 py-2 text-right w-24">@Price</th>
-                      <th className="px-4 py-2 text-right w-28">Line Total</th>
-                      <th className="px-2 py-2 w-8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cart.map((item) => (
-                      <tr key={item.id} className="border-t border-slate-100 hover:bg-slate-50">
-                        <td className="px-4 py-2">
-                          <div className="text-[12px] font-semibold text-slate-900">
+    {/* Right: Added Products & Active Checkout Stack */}
+    <aside className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-white overflow-hidden flex-shrink-0">
+      <div className="flex-1 flex flex-col overflow-hidden border-b border-slate-200">
+        <div className="px-5 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
+                <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
+                  <ShoppingCart size={15} className="text-blue-600" />
+                  Added Products
+                </h3>
+                <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-[10px] font-bold">
+                  {cart.length}
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                {cart.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 py-10">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
+                      <ShoppingCart size={24} className="opacity-20" />
+                    </div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest opacity-60">Cart is empty</p>
+                  </div>
+                ) : (
+                  cart.map((item) => (
+                    <div
+                      key={item.id}
+                      className="group flex flex-col gap-2 p-2.5 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300"
+                    >
+                      <div className="flex gap-3">
+                        {/* Compact Thumbnail */}
+                        <div className="w-12 h-12 flex-shrink-0 bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden border border-slate-50 group-hover:bg-blue-50/50 transition-colors">
+                          <ShoppingCart size={16} className="text-slate-300 group-hover:text-blue-300 transition-colors" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-[12px] font-bold text-slate-800 truncate mb-0.5">
                             {item.name}
+                          </h4>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-tighter">Price:</span>
+                            <span className="text-[11px] font-black text-slate-900">{formatCurrency(item.price)}</span>
                           </div>
-                        </td>
-                        <td className="px-2 py-2 text-center">
-                          <div className="inline-flex items-center rounded-full border border-slate-200 bg-white">
-                            <button
-                              type="button"
-                              onClick={() => handleQuantityChange(item.id, -1)}
-                              className="p-1 text-slate-500 hover:text-emerald-500"
-                            >
-                              <Minus size={14} />
-                            </button>
-                            <span className="w-8 text-center text-xs font-bold">
-                              {item.quantity}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleQuantityChange(item.id, 1)}
-                              className="p-1 text-slate-500 hover:text-emerald-500"
-                            >
-                              <Plus size={14} />
-                            </button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 text-right text-[12px] font-semibold text-slate-700">
-                          {formatCurrency(item.price)}
-                        </td>
-                        <td className="px-4 py-2 text-right text-[12px] font-bold text-slate-900">
-                          {formatCurrency(item.price * item.quantity)}
-                        </td>
-                        <td className="px-2 py-2 text-center">
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all self-start"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                        {/* Quick Quantity Toggle */}
+                        <div className="flex items-center bg-slate-50 rounded-xl p-0.5 border border-slate-100">
                           <button
                             type="button"
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="p-1 text-slate-400 hover:text-red-500"
+                            onClick={() => handleQuantityChange(item.id, -1)}
+                            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all"
                           >
-                            <X size={14} />
+                            <Minus size={12} />
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+                          <span className="w-8 text-center text-[12px] font-black text-slate-900 tabular-nums">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleQuantityChange(item.id, 1)}
+                            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
 
-          {/* Right: Totals & Payment */}
-          <aside className="w-80 flex flex-col bg-white/50">
-            <div className="px-4 py-3 border-b border-slate-200 flex items-center space-x-2">
-              <ShoppingCart size={16} className="text-blue-600" />
-              <h2 className="text-sm font-bold">Active Cart</h2>
+                        {/* Line Total */}
+                        <div className="text-right">
+                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider leading-none mb-1">Subtotal</p>
+                          <p className="text-[13px] font-black text-indigo-600 tabular-nums leading-none">
+                            {formatCurrency(item.price * item.quantity)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="px-4 py-3 border-b border-slate-200 space-y-1.5 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="font-semibold text-slate-800">
+            {/* Bottom: Active Cart Totals & Checkout */}
+            <div className="flex-shrink-0 bg-white border-t border-slate-100 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
+              <div className="px-4 py-2 space-y-1">
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-500 font-medium">Subtotal</span>
+                <span className="font-bold text-slate-700">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Tax (GST)</span>
-                <span className="font-semibold text-slate-800">
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-500 font-medium">Tax (GST)</span>
+                <span className="font-bold text-slate-700">
                   {formatCurrency(tax)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Discount</span>
-                <span className="font-semibold text-slate-900">
+              <div className="flex justify-between items-center text-[11px]">
+                <span className="text-slate-500 font-medium">Discount</span>
+                <span className="font-bold text-slate-900">
                   -{formatCurrency(discountAmount)}
                 </span>
               </div>
-              <hr className="my-1.5 border-dashed border-slate-200" />
-              <div className="flex justify-between items-center text-base font-black">
+              <hr className="my-1 border-dashed border-slate-200" />
+              <div className="flex justify-between items-center text-[13px] font-black">
                 <span className="flex items-center space-x-1 text-slate-900">
-                  <Banknote size={16} />
-                  <span>Total</span>
+                  <Banknote size={14} />
+                  <span>TOTAL</span>
                 </span>
-                <span className="text-slate-900 text-lg font-bold">
+                <span className="text-slate-900 font-black">
                   {formatCurrency(total)}
                 </span>
               </div>
             </div>
 
             {/* Discount controls */}
-            <div className="p-4 border-b border-slate-200 space-y-3 text-xs">
+            <div className="px-4 py-1.5 border-t border-slate-100 space-y-1.5 text-[9px]">
               <div className="flex space-x-2">
                 <button
                   type="button"
                   onClick={() => setDiscountMode('amount')}
-                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-xl border px-2 py-1 font-bold uppercase tracking-widest ${
+                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-lg border px-2 py-0.5 font-bold uppercase tracking-widest ${
                     discountMode === 'amount'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-slate-200 text-slate-600 bg-white'
@@ -1036,13 +979,13 @@ const POSInterface: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setDiscountMode('percent')}
-                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-xl border px-2 py-1 font-bold uppercase tracking-widest ${
+                  className={`flex-1 inline-flex items-center justify-center space-x-1 rounded-lg border px-2 py-0.5 font-bold uppercase tracking-widest ${
                     discountMode === 'percent'
                       ? 'border-blue-500 bg-blue-50 text-blue-700'
                       : 'border-slate-200 text-slate-600 bg-white'
                   }`}
                 >
-                  <Percent size={13} />
+                  <Percent size={10} />
                   <span>Percent</span>
                 </button>
               </div>
@@ -1052,11 +995,11 @@ const POSInterface: React.FC = () => {
                   min={0}
                   value={discountValue || ''}
                   onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
-                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-100 focus:border-blue-400"
+                  className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-100 focus:border-blue-400"
                   placeholder={discountMode === 'amount' ? 'Rs. amount' : '% value'}
                 />
                 <span className="text-[11px] text-slate-500 font-semibold">
-                  APPLY DISCOUNT
+                  APPLY
                 </span>
               </div>
               {discountAmount > 0 && (
@@ -1070,9 +1013,12 @@ const POSInterface: React.FC = () => {
             </div>
 
             {/* Payment methods */}
-            <div className="p-4 border-b border-slate-200 space-y-3">
-              <div className="text-[11px] font-black uppercase tracking-widest text-slate-500 mb-1">
-                Payment Method
+            <div className="px-4 py-1.5 border-t border-slate-100 space-y-1.5">
+              <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-500">
+                <div className="flex items-center space-x-1">
+                  <CreditCard size={10} />
+                  <span>Method</span>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {[
@@ -1084,7 +1030,7 @@ const POSInterface: React.FC = () => {
                       key={value}
                       type="button"
                       onClick={() => setPaymentMethod(value)}
-                      className={`rounded-xl px-2 py-1.5 text-[11px] font-bold uppercase tracking-widest border ${
+                      className={`rounded-lg px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
                         paymentMethod === value
                           ? 'border-blue-500 bg-blue-50 text-blue-700'
                           : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
@@ -1096,31 +1042,31 @@ const POSInterface: React.FC = () => {
                 )}
               </div>
 
-              <div className="mt-3">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 mb-1">
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">
                   <span>Customer Notes</span>
                   <span className="text-slate-400">(optional)</span>
                 </div>
                 <textarea
-                  rows={3}
+                  rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Customer notes..."
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-900 resize-none focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-900 resize-none focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
                 />
               </div>
             </div>
 
             {/* Received Amount & Change Calculation */}
             {paymentMethod === 'CASH' && cart.length > 0 && (
-              <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50/50">
-                <div className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+              <div className="px-4 py-1.5 border-t border-slate-100 space-y-1.5 bg-slate-50/30">
+                <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">
                   <span>Payment Details</span>
                 </div>
 
                 {/* Received Amount Input */}
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 mb-1 block">
+                  <label className="text-[10px] font-bold text-slate-600 mb-0.5 block">
                     Amount Received
                   </label>
                   <input
@@ -1130,13 +1076,13 @@ const POSInterface: React.FC = () => {
                     value={receivedAmount}
                     onChange={(e) => setReceivedAmount(e.target.value)}
                     placeholder="Enter amount received"
-                    className="w-full rounded-lg border-2 border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
                   />
                 </div>
 
                 {/* Change Display */}
                 {receivedAmount && (
-                  <div className={`rounded-xl p-3 border-2 ${
+                  <div className={`rounded-lg p-2 border ${
                     hasInsufficientAmount
                       ? 'bg-red-50 border-red-200'
                       : hasExactAmount
@@ -1145,23 +1091,23 @@ const POSInterface: React.FC = () => {
                       ? 'bg-blue-50 border-blue-200'
                       : 'bg-slate-50 border-slate-200'
                   }`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
                         Bill Total
                       </span>
-                      <span className="text-sm font-bold text-slate-700">
+                      <span className="text-[11px] font-bold text-slate-700">
                         {formatCurrency(total)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
                         Received
                       </span>
-                      <span className="text-sm font-bold text-slate-700">
+                      <span className="text-[11px] font-bold text-slate-700">
                         {formatCurrency(receivedAmountNum)}
                       </span>
                     </div>
-                    <hr className={`my-2 border-dashed ${
+                    <hr className={`my-1 border-dashed ${
                       hasInsufficientAmount
                         ? 'border-red-200'
                         : hasExactAmount
@@ -1171,10 +1117,10 @@ const POSInterface: React.FC = () => {
                         : 'border-slate-200'
                     }`} />
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
                         {hasInsufficientAmount ? 'Shortage' : hasExactAmount ? 'Status' : 'Change'}
                       </span>
-                      <span className={`text-lg font-black ${
+                      <span className={`text-[13px] font-black ${
                         hasInsufficientAmount
                           ? 'text-red-600'
                           : hasExactAmount
@@ -1194,20 +1140,20 @@ const POSInterface: React.FC = () => {
                       </span>
                     </div>
                     {hasInsufficientAmount && (
-                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-red-600 font-bold">
-                        <AlertCircle size={12} />
+                      <div className="mt-1 flex items-center space-x-1 text-[9px] text-red-600 font-bold">
+                        <AlertCircle size={10} />
                         <span>Insufficient amount received</span>
                       </div>
                     )}
                     {hasExactAmount && (
-                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-slate-900 font-bold">
-                        <CheckCircle size={12} />
+                      <div className="mt-1 flex items-center space-x-1 text-[9px] text-slate-900 font-bold">
+                        <CheckCircle size={10} />
                         <span>Exact amount paid</span>
                       </div>
                     )}
                     {hasChange && (
-                      <div className="mt-2 flex items-center space-x-1 text-[10px] text-slate-900 font-bold">
-                        <CheckCircle size={12} />
+                      <div className="mt-1 flex items-center space-x-1 text-[9px] text-slate-900 font-bold">
+                        <CheckCircle size={10} />
                         <span>Return to customer</span>
                       </div>
                     )}
@@ -1216,80 +1162,51 @@ const POSInterface: React.FC = () => {
               </div>
             )}
 
-            {/* Action buttons - Compact layout */}
-            <div className="p-3 border-t border-slate-200 bg-slate-50/80 space-y-2">
-              {/* Hold Order Button */}
-              <button
-                type="button"
-                onClick={handleHoldOrder}
-                disabled={!cart.length}
-                className="w-full rounded-xl border-2 border-blue-500 bg-blue-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-100 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 flex items-center justify-center space-x-1.5 transition-all"
-              >
-                <Clock size={14} />
-                <span>Hold Current Order</span>
-              </button>
-
-              {/* Clear Cart & Complete Sale */}
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={handleClearCart}
-                  className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-100 flex items-center justify-center space-x-1"
-                >
-                  <Trash2 size={12} />
-                  <span>CLEAR</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={!canCompleteSale || isSubmitting}
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    await handleCompleteSale();
-                  }}
-                  title={!canCompleteSale ?
-                    `${!cart.length ? 'Add items to cart. ' : ''}${!paymentMethod ? 'Select payment method. ' : ''}${!deviceId ? 'Connect to terminal. ' : ''}`.trim()
-                    : ''}
-                  className={`rounded-xl px-2 py-2 text-[10px] font-black uppercase tracking-widest flex items-center justify-center space-x-1.5 transition-all ${
-                    !canCompleteSale || isSubmitting
-                      ? 'bg-blue-300 text-slate-500 cursor-not-allowed'
-                      : 'bg-blue-600 text-white shadow-md shadow-blue-600/30 hover:bg-blue-700 cursor-pointer'
-                  }`}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <CreditCard size={12} className="animate-pulse" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard size={12} />
-                      <span>COMPLETE</span>
-                    </>
-                  )}
-                </button>
               </div>
 
-              {/* Online/Offline Status */}
-              <div className="flex items-center justify-between text-[9px] font-medium text-slate-500 pt-1">
-                <div className="flex items-center space-x-1">
-                  {isOnline ? (
-                    <Wifi size={11} className="text-blue-600" />
-                  ) : (
-                    <WifiOff size={11} className="text-slate-400" />
-                  )}
-                  <span>
-                    {isOnline ? 'Online mode' : 'Offline mode'}
-                  </span>
+              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleHoldOrder}
+                    disabled={!cart.length}
+                    className="flex-1 rounded-lg border border-blue-200 bg-blue-50/50 px-2 py-1.5 text-[9px] font-black uppercase tracking-widest text-blue-700 hover:bg-blue-100 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+                  >
+                    <Clock size={12} />
+                    <span>HOLD</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearCart}
+                    className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 size={12} />
+                    <span>CLEAR</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!canCompleteSale || isSubmitting}
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      await handleCompleteSale();
+                    }}
+                    className={`flex-[1.5] rounded-lg px-2 py-1.5 text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all ${
+                      !canCompleteSale || isSubmitting
+                        ? 'bg-blue-400 text-white/50 cursor-not-allowed'
+                        : 'bg-blue-600 text-white shadow-md hover:bg-blue-700 active:scale-95'
+                    }`}
+                  >
+                    <CreditCard size={12} />
+                    <span>{isSubmitting ? 'Wait...' : 'COMPLETE'}</span>
+                  </button>
                 </div>
               </div>
-            </div>
-          </aside>
+            </aside>
         </div>
       </div>
     </div>
-    </>
-  );
+);
 };
 
 export default POSInterface;
