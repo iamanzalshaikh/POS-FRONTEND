@@ -9,11 +9,18 @@ import {
     ChevronDown,
     ChevronUp,
     BarChart3,
-    ShoppingCart
+    ShoppingCart,
+    Wallet,
 } from "lucide-react";
+import { useAuthStore } from '@/store/useAuthStore';
+import type { UserRole } from '@/types/auth';
+
+const FINANCE_PORTAL_ROLES: UserRole[] = ['STORE_ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT'];
 
 export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
     const location = useLocation();
+    const user = useAuthStore((s) => s.user);
+    const showFinancePortal = user?.role && FINANCE_PORTAL_ROLES.includes(user.role);
 
     // State to manage the Inventory dropdown
     const [isInventoryOpen, setIsInventoryOpen] = useState(false);
@@ -142,6 +149,24 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
                         {!collapsed && <span className="font-bold text-[13px] tracking-tight">{item.name}</span>}
                     </NavLink>
                 ))}
+
+                {showFinancePortal && (
+                    <NavLink
+                        to="/accountant"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 rounded-xl transition-all duration-200 px-4 py-3 group relative border border-transparent ${
+                                isActive || location.pathname.startsWith('/accountant')
+                                    ? "bg-[#2A2760] text-white shadow-lg shadow-indigo-900/20 border-white/10"
+                                    : "text-slate-400 hover:bg-[#2A2760] hover:text-white"
+                            }`
+                        }
+                    >
+                        <Wallet size={20} className="shrink-0" />
+                        {!collapsed && (
+                            <span className="font-bold text-[13px] tracking-tight">Accountant dashboard</span>
+                        )}
+                    </NavLink>
+                )}
             </nav>
 
         </aside>
