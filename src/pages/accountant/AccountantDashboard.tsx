@@ -112,7 +112,8 @@ const AccountantDashboard: React.FC = () => {
     { name: 'Expense Report', icon: FileSpreadsheet, path: '/accountant/expense-report' },
     { name: 'Staff', icon: Users, path: '/accountant/staff' },
     { name: 'Payroll', icon: Wallet, path: '/accountant/payroll' },
-    { name: 'Tax', icon: FileText, path: '/accountant/tax' },
+    // Temporarily disabled - can be re-enabled by uncommenting
+    // { name: 'Tax', icon: FileText, path: '/accountant/tax' },
     { name: 'P&L', icon: PieChart, path: '/accountant/pl' },
     { name: 'Monthly Close', icon: FileText, path: '/accountant/monthly-close' },
     { name: 'Export', icon: Download, path: '/accountant/export' },
