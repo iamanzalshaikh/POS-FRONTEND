@@ -124,10 +124,8 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
         </div>
       </div>
 
-      <div className="grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          variant="stacked"
-          compact
           title="Total revenue"
           value={formatCurrency(summary?.totalRevenue ?? 0)}
           icon={DollarSign}
@@ -136,40 +134,30 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
           colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
         <MetricCard
-          variant="stacked"
-          compact
           title="COGS"
           value={formatCurrency(summary?.cogs ?? 0)}
           icon={Package}
           colorClass="bg-slate-50 text-slate-700 dark:bg-slate-800/80 dark:text-slate-200"
         />
         <MetricCard
-          variant="stacked"
-          compact
           title="Gross profit"
           value={formatCurrency(summary?.grossProfit ?? 0)}
           icon={Scale}
           colorClass="bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300"
         />
         <MetricCard
-          variant="stacked"
-          compact
           title="Gross margin"
           value={marginDisplay}
           icon={Percent}
           colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-300"
         />
         <MetricCard
-          variant="stacked"
-          compact
           title="Operating expenses"
           value={formatCurrency(summary?.operatingExpenses ?? 0)}
           icon={Landmark}
           colorClass="bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
         />
         <MetricCard
-          variant="stacked"
-          compact
           title="Salaries"
           value={formatCurrency(summary?.salaries ?? 0)}
           icon={Wallet}
@@ -177,8 +165,6 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
           colorClass="bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-200"
         />
         <MetricCard
-          variant="stacked"
-          compact
           title="Total costs"
           value={formatCurrency(summary?.totalExpenses ?? 0)}
           icon={Calculator}
@@ -188,8 +174,6 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
           colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
         />
         <MetricCard
-          variant="stacked"
-          compact
           title="Net profit"
           value={formatCurrency(summary?.netProfit ?? 0)}
           icon={TrendingUp}
@@ -197,15 +181,14 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
           isPositive={summary != null ? summary.profitChange >= 0 : true}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
-        <MetricCard
-          variant="stacked"
-          compact
+        {/* Temporarily commented out - can be re-enabled later */}
+        {/* <MetricCard
           title="Tax liability"
           value={formatCurrency(summary?.taxLiability ?? 0)}
           icon={FileText}
           subtitle="On completed sales in period"
           colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
-        />
+        /> */}
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2 lg:items-stretch">

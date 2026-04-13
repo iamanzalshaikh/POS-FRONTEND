@@ -37,7 +37,7 @@ const AllTransactions: React.FC = () => {
   const [filterType, setFilterType] = useState<StreamFilter>('all');
   const [page, setPage] = useState(1);
   const [recentItems, setRecentItems] = useState<RecentFinanceTransaction[]>([]);
-  const [recentMeta, setRecentMeta] = useState({ total: 0, totalPages: 0, limit: 30 });
+  const [recentMeta, setRecentMeta] = useState({ total: 0, totalPages: 0, limit: 10 });
   const [inventoryRows, setInventoryRows] = useState<
     Array<{
       id: string;
@@ -51,7 +51,7 @@ const AllTransactions: React.FC = () => {
     const res = await getRecentTransactions({
       type: filterType === 'inventory' ? 'all' : filterType,
       page,
-      limit: 30,
+      limit: 10,
     });
     if (res.success && res.data) {
       setRecentItems(res.data.items || []);
@@ -59,11 +59,11 @@ const AllTransactions: React.FC = () => {
       setRecentMeta({
         total: p?.total ?? 0,
         totalPages: p?.totalPages ?? 0,
-        limit: p?.limit ?? 30,
+        limit: p?.limit ?? 10,
       });
     } else {
       setRecentItems([]);
-      setRecentMeta({ total: 0, totalPages: 0, limit: 30 });
+      setRecentMeta({ total: 0, totalPages: 0, limit: 10 });
     }
   }, [filterType, page]);
 
@@ -126,14 +126,12 @@ const AllTransactions: React.FC = () => {
       header: "Transaction",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
-          <div
-            className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-sm border ${
-              row.original.type === 'REFUND'
-                ? 'bg-blue-50 text-blue-500 border-blue-100 dark:bg-blue-950/20 dark:border-blue-900/50'
-                : 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900/50'
-            }`}
-          >
-            {row.original.type === 'REFUND' ? <RotateCcw size={20} /> : <ShoppingCart size={20} />}
+          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
+            {row.original.type === 'REFUND' ? (
+              <RotateCcw size={20} className="text-blue-500" />
+            ) : (
+              <ShoppingCart size={20} className="text-emerald-600" />
+            )}
           </div>
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
@@ -200,8 +198,8 @@ const AllTransactions: React.FC = () => {
       header: "Description",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-slate-50 text-slate-500 border border-slate-100 dark:bg-slate-800 dark:border-slate-700 shrink-0">
-            <Package size={20} />
+          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
+            <Package size={20} className="text-slate-500" />
           </div>
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
@@ -308,7 +306,7 @@ const AllTransactions: React.FC = () => {
       </div>
 
       {/* DataTable */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
         <DataTable
           columns={filterType === 'inventory' ? inventoryColumns : transactionColumns}
           data={tableData}

@@ -157,6 +157,14 @@ const PayrollManagementPage: React.FC = () => {
 
   const columns: ColumnDef<PayrollRecord>[] = [
     {
+      header: "Payroll ID",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
+          #{row.original.id.slice(-6).toUpperCase()}
+        </div>
+      )
+    },
+    {
       header: "Staff Member",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
@@ -291,6 +299,7 @@ const PayrollManagementPage: React.FC = () => {
           isLoading={loading}
           onRefresh={fetchPayroll}
           placeholder="Search staff members..."
+          hidePagination={false}
           headerActions={
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative group">
