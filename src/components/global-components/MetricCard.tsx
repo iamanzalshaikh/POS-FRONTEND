@@ -1,10 +1,13 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 interface MetricCardProps {
     title: string;
     value: string | number;
     icon: any;
+    change?: number | string;
+    isPositive?: boolean;
     colorClass?: string;
     className?: string;
 }
@@ -13,6 +16,8 @@ const MetricCard = ({
     title, 
     value, 
     icon: Icon, 
+    change,
+    isPositive = true,
     colorClass = "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400", 
     className 
 }: MetricCardProps) => (
@@ -24,7 +29,18 @@ const MetricCard = ({
         
         <div className="flex items-center justify-between relative z-10 w-full gap-4">
             <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-1.5 truncate">{title}</p>
+                <div className="flex items-center gap-2 mb-1.5">
+                    <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] truncate">{title}</p>
+                    {change !== undefined && (
+                        <div className={cn(
+                            "flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider",
+                            isPositive ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400" : "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400"
+                        )}>
+                            {isPositive ? '+' : '-'}{Math.abs(Number(change))}%
+                            {isPositive ? <ArrowUpRight size={10} strokeWidth={3} /> : <ArrowDownRight size={10} strokeWidth={3} />}
+                        </div>
+                    )}
+                </div>
                 <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate tabular-nums">{value}</h3>
             </div>
             <div className={cn("p-3 rounded-2xl transition-all shrink-0 group-hover:scale-110 shadow-sm", colorClass)}>
@@ -35,3 +51,4 @@ const MetricCard = ({
 );
 
 export default MetricCard;
+

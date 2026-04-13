@@ -137,40 +137,40 @@ const AccountantDashboard: React.FC = () => {
                 description="Real-time financial analytics and business health"
               />
 
-              {loading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-[2rem]"></div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <MetricCard
-                    title="Revenue"
-                    value={formatCurrency(dashboardData.totalRevenue)}
-                    icon={DollarSign}
-                    colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
-                  />
-                  <MetricCard
-                    title="Expenses"
-                    value={formatCurrency(dashboardData.totalExpenses)}
-                    icon={Calculator}
-                    colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
-                  />
-                  <MetricCard
-                    title="Net Profit"
-                    value={formatCurrency(dashboardData.netProfit)}
-                    icon={TrendingUp}
-                    colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-                  />
-                  <MetricCard
-                    title="Sales tax"
-                    value={formatCurrency(dashboardData.salesTaxTotal)}
-                    icon={FileText}
-                    colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
-                  />
-                </div>
-              )}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-[2rem]"></div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <MetricCard
+                  title="Revenue"
+                  value={formatCurrency(dashboardData.totalRevenue)}
+                  icon={DollarSign}
+                  colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                />
+                <MetricCard
+                  title="Expenses"
+                  value={formatCurrency(dashboardData.totalExpenses)}
+                  icon={Calculator}
+                  colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
+                />
+                <MetricCard
+                  title="Net Profit"
+                  value={formatCurrency(dashboardData.netProfit)}
+                  icon={TrendingUp}
+                  colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                />
+                <MetricCard
+                  title="Tax Liability"
+                  value={formatCurrency(dashboardData.taxLiability)}
+                  icon={FileText}
+                  colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+                />
+              </div>
+            )}
 
               <div className="space-y-8 mt-10">
                 <FinancialOverview />

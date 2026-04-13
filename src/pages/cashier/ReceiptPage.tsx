@@ -8,6 +8,88 @@ import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatCurrency } from '../../utils/expense-utils';
 
+/**
+ * THERMAL POS RECEIPT STANDARDS (80mm)
+ * - Page width: 80mm
+ * - Printable area: ~72mm
+ * - Font: High contrast sans-serif
+ */
+const thermalPrintStyles = `
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+  
+  body {
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    overflow: hidden;
+  }
+
+  /* Hide everything except the thermal receipt container */
+  #thermal-pos-receipt {
+    width: 80mm !important;
+    margin: 0 !important;
+    padding: 2mm 3mm !important; /* Reduced padding to maximize space */
+    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    box-sizing: border-box;
+  }
+
+  .print-hidden, header, footer, button, nav, aside {
+    display: none !important;
+  }
+
+  /* Format adjustments for 80mm strip */
+  .receipt-table {
+    font-size: 8pt !important; /* Smaller font for table to fit columns */
+    width: 100% !important;
+    table-layout: fixed;
+  }
+
+  .receipt-table th, .receipt-table td {
+    padding: 1mm 0.5mm !important;
+    word-wrap: break-word;
+  }
+
+  /* Specific column adjustments for 80mm */
+  .col-item { width: 35%; text-align: left; }
+  .col-qty { width: 10%; text-align: center; }
+  .col-price { width: 15%; text-align: right; }
+  .col-gst { width: 10%; text-align: right; }
+  .col-disc { width: 10%; text-align: right; }
+  .col-total { width: 20%; text-align: right; }
+
+  .receipt-header-text {
+    font-size: 12pt !important;
+    font-weight: bold !important;
+  }
+
+  .receipt-body-text {
+    font-size: 8pt !important;
+  }
+
+  .receipt-divider {
+    border-top: 1px dashed #000 !important;
+    margin: 2mm 0 !important;
+  }
+
+  /* Remove all shadows, rounded corners, and colored backgrounds */
+  * {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    color: black !important;
+    background-color: white !important;
+    -webkit-print-color-adjust: exact;
+  }
+}
+`;
+
 // Receipt amounts (match API / ledger — show paisa, no rounding to whole rupees)
 const formatNumber = (amount: number): string => {
   return new Intl.NumberFormat('en-PK', {
@@ -416,7 +498,8 @@ const ReceiptPage: React.FC = () => {
   // This allows users to see and print the receipt immediately
 
   return (
-    <div className="min-h-[520px] flex flex-col bg-white border border-slate-200 rounded-3xl overflow-hidden print:rounded-none print:border-0">
+    <div className="min-h-[520px] flex flex-col bg-white border border-slate-200 rounded-3xl overflow-hidden print:bg-white print:border-0 print:rounded-none">
+      <style>{thermalPrintStyles}</style>
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80 print:hidden">
         <div>
           <h1 className="text-xl font-extrabold text-slate-900">
@@ -485,7 +568,7 @@ const ReceiptPage: React.FC = () => {
       </header>
 
       <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto p-6">
+        <div id="thermal-pos-receipt" className="max-w-4xl mx-auto p-6 md:p-8 bg-white">
           {/* Store Info Header - For Print */}
           <div className="mb-6 pb-4 border-b-2 border-slate-300 print:block">
             {user?.store ? (
@@ -541,6 +624,8 @@ const ReceiptPage: React.FC = () => {
             )}
           </div>
 
+          <div className="receipt-divider hidden print:block" />
+
           <div className="mb-4 flex items-center justify-between text-xs text-slate-600">
             <div>
               <div className="font-bold text-slate-800">
@@ -571,15 +656,17 @@ const ReceiptPage: React.FC = () => {
             )}
           </div>
 
-          <table className="w-full text-xs">
+          <div className="receipt-divider hidden print:block" />
+
+          <table className="w-full text-xs receipt-table">
             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-y border-slate-200">
               <tr>
-                <th className="px-3 py-3 text-left">Item</th>
-                <th className="px-3 py-3 text-center w-16">Qty</th>
-                <th className="px-3 py-3 text-right w-20">Price</th>
-                <th className="px-3 py-3 text-right w-20">GST</th>
-                <th className="px-3 py-3 text-right w-20">Discount</th>
-                <th className="px-3 py-3 text-right w-24">Total</th>
+                <th className="px-3 py-3 text-left col-item">Item</th>
+                <th className="px-3 py-3 text-center col-qty">Qty</th>
+                <th className="px-3 py-3 text-right col-price">Price</th>
+                <th className="px-3 py-3 text-right col-gst">GST</th>
+                <th className="px-3 py-3 text-right col-disc">Disc</th>
+                <th className="px-3 py-3 text-right col-total">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -633,33 +720,33 @@ const ReceiptPage: React.FC = () => {
                         key={idx}
                         className="border-b border-slate-100 last:border-0"
                       >
-                        <td className="px-3 py-3">
-                          <div className="font-semibold text-slate-900">
+                        <td className="px-3 py-3 col-item">
+                          <div className="font-semibold text-slate-900 line-clamp-2">
                             {details.productName}
                           </div>
                         </td>
-                        <td className="px-3 py-4 text-center">
-                          <span className="text-base font-bold text-slate-800">
+                        <td className="px-3 py-4 text-center col-qty">
+                          <span className="text-base font-bold text-slate-800 print:text-xs">
                             {details.quantity}
                           </span>
                         </td>
-                        <td className="px-3 py-4 text-right">
-                          <span className="text-base font-bold text-slate-800">
+                        <td className="px-3 py-4 text-right col-price">
+                          <span className="text-base font-bold text-slate-800 print:text-xs">
                             {formatNumber(details.unitPrice)}
                           </span>
                         </td>
-                        <td className="px-3 py-4 text-right">
-                          <span className="text-base font-bold text-slate-600">
+                        <td className="px-3 py-4 text-right col-gst">
+                          <span className="text-base font-bold text-slate-600 print:text-xs">
                             {formatNumber(details.gst)}
                           </span>
                         </td>
-                        <td className="px-3 py-4 text-right">
-                          <span className="text-base font-bold text-blue-600">
+                        <td className="px-3 py-4 text-right col-disc">
+                          <span className="text-base font-bold text-blue-600 print:text-xs">
                             {formatNumber(itemDiscount)}
                           </span>
                         </td>
-                        <td className="px-3 py-4 text-right">
-                          <span className="text-lg font-black text-slate-900">
+                        <td className="px-3 py-4 text-right col-total">
+                          <span className="text-lg font-black text-slate-900 print:text-sm">
                             {formatNumber(lineTotal)}
                           </span>
                         </td>
@@ -670,6 +757,8 @@ const ReceiptPage: React.FC = () => {
               )}
             </tbody>
           </table>
+
+          <div className="receipt-divider hidden print:block" />
 
           <div className="mt-6 space-y-3 border-t border-dashed border-slate-200 pt-4 text-xs text-slate-600">
             {(() => {
@@ -747,6 +836,8 @@ const ReceiptPage: React.FC = () => {
             })()}
           </div>
 
+          <div className="receipt-divider hidden print:block" />
+
           {sale?.paymentMethod && (
             <div className="mt-4 text-xs text-slate-600">
               <div>
@@ -765,6 +856,8 @@ const ReceiptPage: React.FC = () => {
               )}
             </div>
           )}
+
+          <div className="receipt-divider hidden print:block" />
 
           {/* Footer */}
           <div className="mt-8 pt-4 border-t-2 border-slate-200 text-center print:mt-4 print:pt-3">
