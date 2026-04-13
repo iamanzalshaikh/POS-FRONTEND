@@ -18,10 +18,6 @@ import {
   Search,
   CheckCircle,
   IndianRupee,
-  Eye,
-  CheckCircle2,
-  Printer,
-  XCircle,
 } from 'lucide-react';
 import { fetchProducts, getProductByBarcode } from '../../api/products.api';
 import { createSale } from '../../api/sales.api';
@@ -110,17 +106,13 @@ const POSInterface: React.FC = () => {
   });
   const [discountMode, setDiscountMode] = useState<DiscountMode>('amount');
   const [discountValue, setDiscountValue] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<string | null>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
-  
-  // Receipt Preview State
-  const [showReceiptPreview, setShowReceiptPreview] = useState(false);
-  const [completedSaleData, setCompletedSaleData] = useState<any>(null);
   
   // Filter states for products table
   const [productSearch, setProductSearch] = useState('');
@@ -313,7 +305,7 @@ const POSInterface: React.FC = () => {
     console.log('[POSInterface] Clearing cart...');
     setCart([]);
     setDiscountValue(0);
-    setPaymentMethod('CASH');
+    setPaymentMethod(null);
     setNotes('');
     setError(null);
   };
@@ -338,7 +330,7 @@ const POSInterface: React.FC = () => {
     // Clear cart
     setCart([]);
     setDiscountValue(0);
-    setPaymentMethod('CASH');
+    setPaymentMethod(null);
     setNotes('');
     setError(null);
   };
@@ -491,19 +483,22 @@ const POSInterface: React.FC = () => {
         // The actual sale object is in res.data.data.sale or res.data
         const saleData = res?.data?.sale || res?.data || res;
 
-          if (saleData && saleData.id) {
-            console.log('✅ [POSInterface] Sale created successfully:', saleData);
-            
-            // Set data for preview modal instead of navigating
-            setCompletedSaleData(saleData);
-            setShowReceiptPreview(true);
-            
-            // Clear cart immediately
-            setCart([]);
-            setDiscountValue(0);
-            setPaymentMethod('CASH');
-            setNotes('');
-          } else {
+        if (saleData && saleData.id) {
+          console.log('✅ [POSInterface] Sale created successfully:', saleData);
+          console.log('📦 [POSInterface] Sale items:', saleData.saleItems || saleData.items);
+          
+          // Clear cart
+          setCart([]);
+          setDiscountValue(0);
+          setPaymentMethod(null);
+          setNotes('');
+          
+          // Navigate to receipt page with autoPrint flag
+          console.log('🧭 [POSInterface] Navigating to receipt page with autoPrint: true');
+          navigate(`/cashier/receipt/${saleData.id}`, {
+            state: { sale: saleData, status: 'COMPLETED', autoPrint: true },
+          });
+        } else {
           console.error('❌ [POSInterface] Sale response missing data:', res);
           setError(res?.message || 'Unable to complete sale');
         }
@@ -532,18 +527,43 @@ const POSInterface: React.FC = () => {
         await offlineStorage.saveSale(offlineSale);
         console.log('✅ [OfflineStorage] Sale saved locally:', tempId);
 
-        // Set data for preview modal
-        setCompletedSaleData(offlineSale);
-        setShowReceiptPreview(true);
-
-        // Clear cart immediately
+        // Clear cart
         setCart([]);
         setDiscountValue(0);
-        setPaymentMethod('CASH');
+        setPaymentMethod(null);
         setNotes('');
 
         // Store sale in sessionStorage for instant access
         sessionStorage.setItem(`offline-sale-${tempId}`, JSON.stringify(offlineSale));
+
+        // Navigate to receipt page with offline sale data for auto-print
+        navigate(`/cashier/receipt/offline/${tempId}`, {
+          state: {
+            sale: {
+              id: tempId,
+              tempId,
+              invoiceNumber,
+              deviceId,
+              paymentMethod,
+              discountAmount: numericDiscountAmount,
+              notes: notes || undefined,
+              saleItems: payload.items.map((item: any) => ({
+                productName: item.productName,
+                quantity: item.quantity,
+                price: item.price,
+                unitPrice: item.unitPrice,
+                subtotal: item.totalPrice,
+              })),
+              subtotal,
+              totalTax: tax,
+              totalAmount: total,
+              createdAt: new Date().toISOString(),
+              syncStatus: 'PENDING',
+            },
+            status: 'PENDING_SYNC',
+            autoPrint: true,
+          },
+        });
       }
     } catch (err: any) {
       console.error('❌ [POSInterface] Sale error:', err);
@@ -1183,120 +1203,10 @@ const POSInterface: React.FC = () => {
                 </div>
               </div>
             </aside>
-
-      {/* Receipt Preview Modal */}
-      {showReceiptPreview && completedSaleData && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                  <CheckCircle2 className="text-emerald-500" size={20} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Sale Completed</h3>
-                  <p className="text-xs text-slate-500 font-medium">Invoice #{completedSaleData.invoiceNumber || completedSaleData.id}</p>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowReceiptPreview(false)}
-                className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 dark:bg-slate-950/30 space-y-6">
-              {/* Receipt Visual Container */}
-              <div className="mx-auto w-[80mm] min-h-[400px] bg-white text-slate-900 shadow-xl border border-slate-200 p-4 font-sans text-[10px] scale-[1.2] origin-top my-4">
-                <div className="text-center mb-4">
-                  <h2 className="text-lg font-bold uppercase tracking-tight">{user?.store?.name || 'STORE'}</h2>
-                  <p className="text-[8px] leading-tight text-slate-600 px-4">{user?.store?.address || 'Main Branch'}</p>
-                  <p className="text-[8px] text-slate-600">TEL: {user?.store?.phone || '000-000000'}</p>
-                </div>
-
-                <div className="border-t border-dashed border-slate-300 my-2" />
-                
-                <div className="flex justify-between text-[8px] mb-2 uppercase font-bold text-slate-500">
-                  <span>INV: {completedSaleData.invoiceNumber || completedSaleData.id}</span>
-                  <span>{new Date().toLocaleDateString()}</span>
-                </div>
-
-                <table className="w-full text-left">
-                  <thead className="border-b border-dashed border-slate-300">
-                    <tr>
-                      <th className="py-1">ITEM</th>
-                      <th className="py-1 text-center">QTY</th>
-                      <th className="py-1 text-right">TOTAL</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(completedSaleData.saleItems || completedSaleData.items || []).map((item: any, idx: number) => (
-                      <tr key={idx} className="border-b border-slate-50">
-                        <td className="py-1 font-medium">{item.productName || item.product?.name || 'Product'}</td>
-                        <td className="py-1 text-center">{item.quantity}</td>
-                        <td className="py-1 text-right font-bold">{formatCurrency(item.subtotal || item.totalPrice || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div className="border-t border-dashed border-slate-300 my-2" />
-                
-                <div className="space-y-1">
-                  <div className="flex justify-between font-bold">
-                    <span>SUBTOTAL</span>
-                    <span>{formatCurrency(completedSaleData.subtotal || total)}</span>
-                  </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>TAX (18%)</span>
-                    <span>{formatCurrency(completedSaleData.totalTax || tax)}</span>
-                  </div>
-                  {completedSaleData.discountAmount > 0 && (
-                    <div className="flex justify-between text-emerald-600">
-                      <span>DISCOUNT</span>
-                      <span>-{formatCurrency(completedSaleData.discountAmount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between text-sm font-black pt-1 border-t border-slate-100">
-                    <span>GRAND TOTAL</span>
-                    <span>{formatCurrency(completedSaleData.totalAmount || total)}</span>
-                  </div>
-                </div>
-
-                <div className="border-t border-dashed border-slate-300 my-3 text-center">
-                  <p className="text-[8px] mt-2 font-bold opacity-60">THANK YOU FOR YOUR PURCHASE</p>
-                  <p className="text-[7px] opacity-40">Software by Elsa DevOps</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setShowReceiptPreview(false)}
-                className="flex items-center justify-center gap-2 py-4 px-6 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-              >
-                <XCircle size={16} />
-                Dismiss
-              </button>
-              <button
-                onClick={() => {
-                  window.print();
-                  setShowReceiptPreview(false);
-                }}
-                className="flex items-center justify-center gap-2 py-4 px-6 rounded-2xl bg-emerald-500 text-white font-black uppercase tracking-widest text-[10px] hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
-              >
-                <Printer size={16} />
-                Confirm & Print
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-          </div>
         </div>
       </div>
-  );
+    </div>
+);
 };
 
 export default POSInterface;
