@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart } from 'lucide-react';
+import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart, Download } from 'lucide-react';
 import { getSalesReport, getInventoryReport } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
 import type { Expense } from '../../utils/expense-utils';
-import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
+import { EXPENSE_CATEGORIES, formatCurrency as formatCurrencyUtil, getCategoryLabel } from '../../utils/expense-utils';
 import MetricCard from '../../components/global-components/MetricCard';
+import { DataTable } from '../../components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
 
 interface MonthlyCloseData {
   period: {
@@ -179,6 +181,34 @@ const MonthlyCloseReport: React.FC = () => {
     return date.toLocaleString('default', { month: 'long', year: 'numeric' });
   };
 
+  // Expense Breakdown Columns
+  const expenseColumns: ColumnDef<{ category: string; amount: number; percentage: number }>[] = [
+    {
+      header: "Category",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest font-bold">
+          {row.original.category}
+        </div>
+      )
+    },
+    {
+      header: "Amount",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
+          {formatCurrencyUtil(row.original.amount)}
+        </div>
+      )
+    },
+    {
+      header: "Percentage",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest font-bold">
+          {row.original.percentage.toFixed(1)}%
+        </div>
+      )
+    }
+  ];
+
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -305,33 +335,13 @@ const MonthlyCloseReport: React.FC = () => {
         </div>
 
         {/* Expense Breakdown */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-8">
-          <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
-            <PieChart size={20} className="text-red-400" />
-            Expense Breakdown
-          </h3>
-          {data.expenses.byCategory.length > 0 ? (
-            <div className="space-y-3">
-              {data.expenses.byCategory.map((cat) => (
-                <div key={cat.category} className="flex justify-between items-center py-2">
-                  <span className="text-sm font-bold text-slate-700">{cat.category}</span>
-                  <div className="text-right">
-                    <span className="text-sm font-black text-slate-900">{formatCurrency(cat.amount)}</span>
-                    <span className="text-[10px] font-bold text-slate-500 ml-2">({cat.percentage.toFixed(1)}%)</span>
-                  </div>
-                </div>
-              ))}
-              <div className="flex justify-between items-center py-3 pt-4 border-t-2 border-slate-200 mt-4">
-                <span className="text-sm font-black uppercase text-slate-700 tracking-widest">Total Expenses</span>
-                <span className="text-lg font-black text-red-600">{formatCurrency(data.expenses.total)}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-slate-400">
-              <PieChart size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-bold">No expenses recorded</p>
-            </div>
-          )}
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none col-span-1">
+          <DataTable
+            columns={expenseColumns}
+            data={data.expenses.byCategory}
+            hidePagination={true}
+            placeholder="Search expenses..."
+          />
         </div>
 
         {/* Inventory Status */}

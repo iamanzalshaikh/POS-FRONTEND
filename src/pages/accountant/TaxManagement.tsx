@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { FileText, Download, AlertCircle, CheckCircle } from 'lucide-react';
-import { getSalesReport, getSalesTransactions } from '../../api/finance.api';
+import { FileText, Download, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
+import { getSalesReport } from '../../api/finance.api';
 import MetricCard from '../../components/global-components/MetricCard';
+import { DataTable } from '../../components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
 
 interface TaxItem {
   id: string;
@@ -10,7 +12,6 @@ interface TaxItem {
   amount: number;
   status: 'paid' | 'pending' | 'overdue';
   dueDate: string;
-  invoiceNumber?: string;
 }
 
 const TaxManagement: React.FC = () => {
@@ -204,70 +205,8 @@ const TaxManagement: React.FC = () => {
       </div>
 
       {/* Tax Breakdown Table */}
-      <div className="bg-white border border-slate-200 rounded-3xl overflow-hidden">
-        <div className="px-8 py-6 border-b border-slate-200 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-slate-900">Tax Breakdown</h2>
-          <button
-            onClick={handleExportReport}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
-          >
-            <Download size={16} />
-            <span>Export Report</span>
-          </button>
-        </div>
-
-        <table className="w-full">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Tax Type</th>
-              <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Rate</th>
-              <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Amount</th>
-              <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Due Date</th>
-              <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-500">Status</th>
-              <th className="px-8 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {taxItems.length > 0 ? (
-              taxItems.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-8 py-4">
-                    <span className="text-sm font-bold text-slate-900">{item.type}</span>
-                  </td>
-                  <td className="px-8 py-4">
-                    <span className="text-sm font-black text-slate-600">{item.rate}</span>
-                  </td>
-                  <td className="px-8 py-4">
-                    <span className="text-sm font-black text-slate-900">₹{item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </td>
-                  <td className="px-8 py-4">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">{item.dueDate}</span>
-                  </td>
-                  <td className="px-8 py-4">
-                    <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${getStatusStyles(item.status)}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-8 py-4 text-right">
-                    <button
-                      onClick={() => handlePayTax(item.id)}
-                      className="text-[10px] font-black uppercase text-blue-500 hover:text-blue-600 tracking-widest"
-                      disabled={item.status === 'paid'}
-                    >
-                      {item.status === 'paid' ? 'Paid' : 'Pay Now'}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={6} className="px-8 py-12 text-center text-slate-400">
-                  <p className="text-sm font-bold">No tax records found</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+        <TaxTable taxItems={taxItems} onExport={handleExportReport} />
       </div>
 
       {/* Tax Reminders */}
@@ -293,3 +232,91 @@ const TaxManagement: React.FC = () => {
 };
 
 export default TaxManagement;
+
+// Tax DataTable Component
+const TaxTable: React.FC<{ taxItems: TaxItem[]; onExport: () => void }> = ({ taxItems, onExport }) => {
+  const handlePayTax = (taxId: string) => {
+    alert(`Pay tax ${taxId} - Would open payment gateway`);
+  };
+
+  const getStatusStyles = (status: TaxItem['status']) => {
+    switch (status) {
+      case 'paid':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'pending':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'overdue':
+        return 'bg-red-50 text-red-700 border-red-200';
+    }
+  };
+
+  const columns: ColumnDef<TaxItem>[] = [
+    {
+      header: "Tax Type",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest font-bold">
+          {row.original.type}
+        </div>
+      )
+    },
+    {
+      header: "Rate",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-600 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest font-bold">
+          {row.original.rate}
+        </div>
+      )
+    },
+    {
+      header: "Amount",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
+          ₹{row.original.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+      )
+    },
+    {
+      header: "Due Date",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest font-bold">
+          {row.original.dueDate}
+        </div>
+      )
+    },
+    {
+      header: "Status",
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${getStatusStyles(row.original.status)}`}>
+            {row.original.status}
+          </span>
+        </div>
+      )
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex justify-center items-center gap-2">
+          <button
+            onClick={() => handlePayTax(row.original.id)}
+            className="text-[10px] font-black uppercase text-blue-500 hover:text-blue-600 tracking-widest"
+            disabled={row.original.status === 'paid'}
+          >
+            {row.original.status === 'paid' ? 'Paid' : 'Pay Now'}
+          </button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <DataTable
+      columns={columns}
+      data={taxItems}
+      onExport={() => onExport()}
+      placeholder="Search tax records..."
+      hidePagination={false}
+    />
+  );
+};
