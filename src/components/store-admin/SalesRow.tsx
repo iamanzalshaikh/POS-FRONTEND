@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react"
 import type { SaleTransaction } from "@/types/sales"
+import { getSaleGrandTotal, getSaleTaxTotal } from "@/utils/saleAmounts"
 
 interface Props {
   transaction: SaleTransaction
@@ -43,9 +44,8 @@ const SalesRow: React.FC<Props> = ({ transaction, index, onCancel, onRefund }) =
     ? new Date(transaction.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : transaction.date || "N/A";
 
-  const totalAmountValue = typeof transaction.totalAmount === 'number' 
-    ? transaction.totalAmount 
-    : parseFloat(String(transaction.totalAmount || "0"));
+  const grandTotal = getSaleGrandTotal(transaction)
+  const taxTotal = getSaleTaxTotal(transaction)
 
   return (
     <tr className="border-b hover:bg-slate-50 transition-all duration-300 group cursor-pointer border-slate-100">
@@ -68,7 +68,10 @@ const SalesRow: React.FC<Props> = ({ transaction, index, onCancel, onRefund }) =
       </td>
       <td className="p-4">
         <div className="flex flex-col items-start">
-          <span className="font-black text-slate-900 tracking-tight">₨ {totalAmountValue.toFixed(2)}</span>
+          <span className="font-black text-slate-900 tracking-tight">₨ {grandTotal.toFixed(2)}</span>
+          {taxTotal > 0 && (
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-[1px]">GST ₨ {taxTotal.toFixed(2)}</span>
+          )}
           {transaction._count?.saleItems && (
             <span className="text-[9px] font-black text-slate-400 uppercase tracking-[1px]">{transaction._count.saleItems} Items</span>
           )}

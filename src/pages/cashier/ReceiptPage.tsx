@@ -8,13 +8,36 @@ import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatCurrency } from '../../utils/expense-utils';
 
-// Simple number formatter without currency symbol
+// Receipt amounts (match API / ledger — show paisa, no rounding to whole rupees)
 const formatNumber = (amount: number): string => {
   return new Intl.NumberFormat('en-PK', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(amount);
 };
+
+function toFiniteNumber(v: unknown): number | null {
+  if (v === undefined || v === null) return null;
+  if (typeof v === 'string' && v.trim() === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Use tax persisted on the sale line (authoritative). Only fall back to % when tax was not stored
+ * (e.g. some offline payloads). Avoid defaulting to 18% — GET /sales often omits product.taxPercentage.
+ */
+function lineItemGst(item: {
+  tax?: unknown;
+  taxPercentage?: unknown;
+  product?: { taxPercentage?: unknown };
+}, subtotal: number): number {
+  const stored = toFiniteNumber(item.tax);
+  if (stored !== null) return stored;
+  const pct = toFiniteNumber(item.product?.taxPercentage ?? item.taxPercentage);
+  if (pct !== null && pct > 0) return subtotal * (pct / 100);
+  return 0;
+}
 
 type ReceiptStatus = 'COMPLETED' | 'PENDING_SYNC';
 type SaleData = {
@@ -588,8 +611,9 @@ const ReceiptPage: React.FC = () => {
                     const unitPrice = Number(item.price || item.unitPrice || 0);
                     const quantity = Number(item.quantity || 1);
                     const subtotal = unitPrice * quantity;
-                    const taxRate = Number(item.product?.taxPercentage || item.taxPercentage || 18) / 100;
-                    const gst = subtotal * taxRate;
+                    const gst = lineItemGst(item, subtotal);
+                    const taxRate =
+                      subtotal > 0 ? gst / subtotal : 0;
 
                     totalSubtotal += subtotal;
                     totalGST += gst;
@@ -649,38 +673,48 @@ const ReceiptPage: React.FC = () => {
 
           <div className="mt-6 space-y-3 border-t border-dashed border-slate-200 pt-4 text-xs text-slate-600">
             {(() => {
-              // Calculate combined totals
+              const totalDiscount = toFiniteNumber(sale?.discountAmount) ?? 0;
+              const serverSub = toFiniteNumber(sale?.subtotal);
+              const serverTax = toFiniteNumber(sale?.totalTax);
+              const serverGrand = toFiniteNumber(sale?.totalAmount);
+              const useServerTotals =
+                serverSub !== null &&
+                serverTax !== null &&
+                serverGrand !== null;
+
               let totalSubtotal = 0;
               let totalGST = 0;
-              let totalDiscount = Number(sale?.discountAmount) || 0;
               let grandTotal = 0;
 
-              items.forEach((item: any) => {
-                const unitPrice = Number(item.price || item.unitPrice || 0);
-                const quantity = Number(item.quantity || 1);
-                const subtotal = unitPrice * quantity;
-                const taxRate = Number(item.product?.taxPercentage || item.taxPercentage || 18) / 100;
-                const gst = subtotal * taxRate;
-                
-                totalSubtotal += subtotal;
-                totalGST += gst;
-              });
+              if (useServerTotals) {
+                totalSubtotal = serverSub;
+                totalGST = serverTax;
+                grandTotal = serverGrand;
+              } else {
+                items.forEach((item: any) => {
+                  const unitPrice = Number(item.price || item.unitPrice || 0);
+                  const quantity = Number(item.quantity || 1);
+                  const subtotal = unitPrice * quantity;
+                  const gst = lineItemGst(item, subtotal);
+                  totalSubtotal += subtotal;
+                  totalGST += gst;
+                });
+                const discountPercentage =
+                  totalSubtotal > 0 ? totalDiscount / totalSubtotal : 0;
+                items.forEach((item: any) => {
+                  const unitPrice = Number(item.price || item.unitPrice || 0);
+                  const quantity = Number(item.quantity || 1);
+                  const subtotal = unitPrice * quantity;
+                  const gst = lineItemGst(item, subtotal);
+                  const itemDiscount = subtotal * discountPercentage;
+                  grandTotal += subtotal + gst - itemDiscount;
+                });
+              }
 
-              // Distribute discount proportionally
-              const discountPercentage = totalSubtotal > 0 ? (totalDiscount / totalSubtotal) : 0;
-              
-              // Calculate line totals with distributed discount
-              items.forEach((item: any) => {
-                const unitPrice = Number(item.price || item.unitPrice || 0);
-                const quantity = Number(item.quantity || 1);
-                const subtotal = unitPrice * quantity;
-                const taxRate = Number(item.product?.taxPercentage || item.taxPercentage || 18) / 100;
-                const gst = subtotal * taxRate;
-                const itemDiscount = subtotal * discountPercentage;
-                const lineTotal = subtotal + gst - itemDiscount;
-                
-                grandTotal += lineTotal;
-              });
+              const gstLabelPct =
+                totalSubtotal > 0.0001
+                  ? Math.round((totalGST / totalSubtotal) * 1000) / 10
+                  : null;
 
               return (
                 <>
@@ -689,7 +723,13 @@ const ReceiptPage: React.FC = () => {
                     <span>{formatNumber(totalSubtotal)}</span>
                   </div>
                   <div className="flex justify-between font-semibold text-slate-800">
-                    <span>Total GST (18%):</span>
+                    <span>
+                      Total GST
+                      {gstLabelPct !== null && gstLabelPct > 0
+                        ? ` (${gstLabelPct}%)`
+                        : ''}
+                      :
+                    </span>
                     <span>{formatNumber(totalGST)}</span>
                   </div>
                   {totalDiscount > 0 && (

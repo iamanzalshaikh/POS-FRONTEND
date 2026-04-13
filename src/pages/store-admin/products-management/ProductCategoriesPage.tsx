@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react"
 import AddCategoryModal from "@/components/store-admin/AddCategoryModal"
-import { CheckCircle2, Plus, Search, Layers, Box, Hash, Trash2 } from "lucide-react"
-import { getCategories } from "@/api/category.api";
+import { CheckCircle2, Plus, Search, Box, Trash2 } from "lucide-react"
+import { deleteCategory, getCategories } from "@/api/category.api";
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
-import { cn } from '@/lib/utils';
 
 const ProductCategoriesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -32,10 +31,34 @@ const ProductCategoriesPage = () => {
   
   const categories = (categoriesRes as any)?.data || (Array.isArray(categoriesRes) ? categoriesRes : []);
 
-  const filtered = categories.filter((c: any) => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filtered = categories.filter((c: any) => {
+    const q = searchQuery.toLowerCase()
+    const parentName = c.parent?.name?.toLowerCase() || ""
+    return (
+      c.name.toLowerCase().includes(q) ||
+      parentName.includes(q) ||
+      (c.slug && String(c.slug).toLowerCase().includes(q))
+    )
+  });
+
+  const handleDelete = async (c: any) => {
+    const childCount = c._count?.children ?? 0
+    const productCount = c._count?.products ?? 0
+    if (childCount > 0 || productCount > 0) {
+      window.alert(
+        `Cannot delete: ${childCount} subcategories, ${productCount} products. Remove or reassign them first.`
+      )
+      return
+    }
+    if (!window.confirm(`Delete category “${c.name}”? This cannot be undone.`)) return
+    try {
+      await deleteCategory(c.id)
+      setSuccessMessage("Category deleted.")
+      await fetchCategories()
+    } catch (e: any) {
+      window.alert(e.response?.data?.message || "Delete failed.")
+    }
+  };
 
   const columns: ColumnDef<any>[] = [
     {
@@ -57,13 +80,21 @@ const ProductCategoriesPage = () => {
         )
     },
     {
-        header: "Description",
-        accessorKey: "description",
+        header: "Parent",
         meta: { align: 'left' },
         cell: ({ row }) => (
-            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate max-w-[300px]">
-                {row.original.description || "No classification details provided."}
+            <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest truncate max-w-[200px]">
+                {row.original.parent?.name || "—"}
             </p>
+        )
+    },
+    {
+        header: "Subcats",
+        meta: { align: 'center' },
+        cell: ({ row }) => (
+            <span className="text-[10px] font-black text-slate-400 tabular-nums">
+                {row.original._count?.children ?? 0}
+            </span>
         )
     },
     {
@@ -90,11 +121,13 @@ const ProductCategoriesPage = () => {
         id: "actions",
         header: "Actions",
         meta: { align: 'center' },
-        cell: () => (
+        cell: ({ row }) => (
             <div className="flex justify-center items-center gap-2">
-                <button 
-                    disabled
-                    className="p-2.5 text-slate-200 dark:text-slate-800 cursor-not-allowed opacity-50"
+                <button
+                    type="button"
+                    onClick={() => handleDelete(row.original)}
+                    className="p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
+                    title="Delete category"
                 >
                     <Trash2 size={16} />
                 </button>

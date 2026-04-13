@@ -35,6 +35,8 @@ type CartItem = {
   name: string;
   price: number;
   quantity: number;
+  /** Matches product tax; backend uses batch % then product % — cart uses product for preview. */
+  taxPercentage?: number;
   discountPercentage?: number;
 };
 
@@ -59,7 +61,18 @@ type Product = {
 
 type DiscountMode = 'amount' | 'percent';
 
-const TAX_RATE = 0.18; // 18% GST placeholder – can be wired to backend later
+function parseProductTaxPct(product: {
+  effectiveTaxPercentage?: unknown;
+  taxPercentage?: unknown;
+}): number {
+  const raw = product.effectiveTaxPercentage ?? product.taxPercentage;
+  if (raw === null || raw === undefined) return 0;
+  const n =
+    typeof raw === 'object' && raw !== null && 'toString' in raw
+      ? Number(String(raw))
+      : Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
 
 const POSInterface: React.FC = () => {
   const navigate = useNavigate();
@@ -173,9 +186,18 @@ const POSInterface: React.FC = () => {
     return Math.min(manual + automaticDiscount, subtotal);
   }, [discountMode, discountValue, subtotal, automaticDiscount]);
 
-  const taxableBase = Math.max(subtotal - discountAmount, 0);
-  const tax = taxableBase * TAX_RATE;
-  const total = taxableBase + tax;
+  // Per-line tax from product % (aligns with server when batch tax is 0). Server: totalAmount = subtotal + totalTax - discount.
+  const tax = useMemo(
+    () =>
+      cart.reduce((sum, item) => {
+        const lineSub = item.price * item.quantity;
+        const pct = Number(item.taxPercentage ?? 0);
+        return sum + lineSub * (Number.isFinite(pct) ? pct / 100 : 0);
+      }, 0),
+    [cart]
+  );
+
+  const total = Math.max(0, subtotal + tax - discountAmount);
 
   // Change calculation logic (frontend only)
   const receivedAmountNum = parseFloat(receivedAmount) || 0;
@@ -212,6 +234,7 @@ const POSInterface: React.FC = () => {
           name: product.name,
           price: unitPrice,
           quantity: 1,
+          taxPercentage: parseProductTaxPct(product),
           discountPercentage: product.discountPercentage || 0,
         },
       ];

@@ -1,5 +1,5 @@
-import React from 'react';
-import { Package, Plus, AlertCircle } from 'lucide-react';
+import React from "react";
+import { Package, Plus, AlertCircle } from "lucide-react";
 
 interface Product {
   id: string;
@@ -30,7 +30,9 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
       <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] overflow-hidden p-20 shadow-none">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Synchronizing Product Registry...</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">
+            Synchronizing Product Registry...
+          </p>
         </div>
       </div>
     );
@@ -76,27 +78,34 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {products.map((product) => {
-              const stock = product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
+              const stock =
+                product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
               const price = Number(product.sellingPrice ?? product.price ?? 0);
               const isOutOfStock = stock <= 0;
               const isLowStock = stock > 0 && stock <= 5;
-              const category = product.category?.name || product.category || 'N/A';
+              const category =
+                product.category?.name || product.category || "N/A";
 
               return (
-                <tr key={product.id} className="hover:bg-slate-50 transition-colors">
+                <tr
+                  key={product.id}
+                  className="hover:bg-slate-50 transition-colors"
+                >
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
                         <Package className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
-                        <div className="text-sm font-semibold text-slate-900">{product.name}</div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {product.name}
+                        </div>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-6">
                     <span className="text-xs font-mono font-semibold text-slate-600">
-                      {product.sku || '-'}
+                      {product.sku || "-"}
                     </span>
                   </td>
                   <td className="py-4 px-6">

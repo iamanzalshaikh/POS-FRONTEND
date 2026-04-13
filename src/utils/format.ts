@@ -24,11 +24,10 @@ export const formatPKR = (amount: number | string): string => {
         ? parseFloat(amount.toString().replace(/[^0-9.-]+/g, ''))
         : amount;
 
-    if (isNaN(value)) return '₨ 0';
+    if (isNaN(value)) return '₨ 0.00';
 
-    const shouldShowDecimals = Math.abs(value - Math.round(value)) > 0;
     const formattedValue = value.toLocaleString('en-PK', {
-        minimumFractionDigits: shouldShowDecimals ? 2 : 0,
+        minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 

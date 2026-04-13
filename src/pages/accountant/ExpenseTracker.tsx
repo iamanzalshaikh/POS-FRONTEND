@@ -4,12 +4,15 @@ import { Search, ChevronLeft, ChevronRight, ArrowUpRight, XCircle, RotateCcw, Ca
 import { getInventoryLogs, getSalesTransactions } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
 import type { Expense as ExpenseType } from '../../utils/expense-utils';
+import { getSaleGrandTotal, getSaleTaxTotal } from '../../utils/saleAmounts';
 
 interface Transaction {
   id: string;
   invoiceNumber?: string;
   description: string;
   amount: number;
+  /** GST / sales tax (sales only) */
+  tax?: number;
   date: string;
   dateRaw: Date;
   type: 'Sale' | 'Refund' | 'Cancellation' | 'Inventory' | 'Business Expense';
@@ -56,12 +59,15 @@ const ExpenseTracker: React.FC = () => {
 
         sales.forEach((sale: any) => {
           const dateRaw = new Date(sale.createdAt);
+          const grand = getSaleGrandTotal(sale);
+          const taxAmt = getSaleTaxTotal(sale);
           if (sale.isCancelled) {
             transactionList.push({
               id: sale.id,
               invoiceNumber: sale.invoiceNumber,
               description: `Invoice #${sale.invoiceNumber}`,
-              amount: Number(sale.totalAmount),
+              amount: grand,
+              tax: taxAmt,
               date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
               dateRaw,
               type: 'Cancellation',
@@ -73,7 +79,8 @@ const ExpenseTracker: React.FC = () => {
               id: sale.id,
               invoiceNumber: sale.invoiceNumber,
               description: `Invoice #${sale.invoiceNumber}`,
-              amount: Number(sale.totalAmount),
+              amount: grand,
+              tax: taxAmt,
               date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
               dateRaw,
               type: 'Refund',
@@ -85,7 +92,8 @@ const ExpenseTracker: React.FC = () => {
               id: sale.id,
               invoiceNumber: sale.invoiceNumber,
               description: `Invoice #${sale.invoiceNumber}`,
-              amount: Number(sale.totalAmount),
+              amount: grand,
+              tax: taxAmt,
               date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
               dateRaw,
               type: 'Sale',
@@ -321,11 +329,14 @@ const ExpenseTracker: React.FC = () => {
                 </button>
               </th>
               <th className="text-right px-6 py-3">
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-widest">GST</span>
+              </th>
+              <th className="text-right px-6 py-3">
                 <button
                   onClick={() => handleSort('amount')}
                   className="flex items-center gap-1 justify-end text-[10px] font-black uppercase text-slate-500 tracking-widest hover:text-slate-900 transition-colors ml-auto"
                 >
-                  Amount
+                  Total
                   <ArrowUpDown size={12} />
                 </button>
               </th>
@@ -361,15 +372,32 @@ const ExpenseTracker: React.FC = () => {
                     <span className="text-xs font-medium text-slate-600">{tx.date}</span>
                   </td>
                   <td className="px-6 py-4 text-right">
+                    <span className="text-sm font-bold text-slate-600 tabular-nums">
+                      {tx.tax != null && tx.tax > 0
+                        ? new Intl.NumberFormat('en-IN', {
+                            style: 'currency',
+                            currency: 'INR',
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }).format(tx.tax)
+                        : '—'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
                     <span className="text-sm font-black text-slate-900 tabular-nums">
-                      {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(tx.amount)}
+                      {new Intl.NumberFormat('en-IN', {
+                        style: 'currency',
+                        currency: 'INR',
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      }).format(tx.amount)}
                     </span>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="px-6 py-16 text-center">
+                <td colSpan={5} className="px-6 py-16 text-center">
                   <p className="text-sm font-bold text-slate-400">No transactions found</p>
                 </td>
               </tr>
@@ -385,7 +413,15 @@ const ExpenseTracker: React.FC = () => {
           <span className="font-black text-slate-900">{filteredAndSorted.length}</span> transactions
           {totalAmount > 0 && (
             <span className="ml-3">
-              Total: <span className="font-black text-slate-900">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(totalAmount)}</span>
+              Total:{' '}
+              <span className="font-black text-slate-900">
+                {new Intl.NumberFormat('en-IN', {
+                  style: 'currency',
+                  currency: 'INR',
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }).format(totalAmount)}
+              </span>
             </span>
           )}
         </div>
