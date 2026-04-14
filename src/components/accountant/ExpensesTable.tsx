@@ -61,7 +61,7 @@ const ExpensesTable: React.FC<ExpensesTableProps> = ({
               <tr key={expense.id} className="hover:bg-slate-50 transition-colors">
                 <td className="py-4 px-6">
                   <span className="text-xs font-mono font-semibold text-slate-600">
-                    #{expense.id.slice(-6).toUpperCase()}
+                    {expense.displayId || `#${expense.id.slice(-6).toUpperCase()}`}
                   </span>
                 </td>
                 <td className="py-4 px-6">

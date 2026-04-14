@@ -6,6 +6,7 @@ import api from '../service/api';
 
 export interface StaffMember {
   id: string;
+  displayId?: string;
   storeId: string;
   name: string;
   phone?: string | null;
@@ -56,6 +57,7 @@ export type PayrollStatus = 'PAID' | 'UNPAID' | 'PARTIAL';
 
 export interface PayrollRecord {
   id: string;
+  displayId?: string;
   storeId: string;
   staffId: string;
   year: number;
