@@ -168,12 +168,18 @@ const PayrollManagementPage: React.FC = () => {
       header: "Staff Member",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
-            {row.original.staff?.name?.charAt(0).toUpperCase() || '?'}
-          </div>
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.staff?.name || 'Unknown'}</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-0.5">{row.original.staff?.role || ''}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      header: "Role",
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center gap-3">
+          <div className="text-left">
+            <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">{row.original.staff?.role || 'Unknown'}</p>
           </div>
         </div>
       )

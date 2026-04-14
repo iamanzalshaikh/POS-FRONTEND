@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Package, Search, RefreshCcw, ShoppingCart, Box, AlertTriangle } from 'lucide-react';
 import { fetchProducts } from '../../api/products.api';
-import { formatCurrency } from '../../utils/expense-utils';
+import { formatCurrency, formatCurrencyShort, formatNumberShort } from '@/utils/format';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
@@ -77,34 +77,67 @@ const ProductsListPage: React.FC = () => {
 
   const columns: ColumnDef<Product>[] = [
     {
-      header: "Product Details",
+      header: "ID",
       cell: ({ row }) => (
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
-            <Box size={20} />
-          </div>
-          <div className="text-left">
-            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.name}</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-0.5">SKU: {row.original.sku || 'N/A'}</p>
-          </div>
+        <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
+          {(row.index + 1).toString().padStart(2, '0')}
+        </div>
+      )
+    },
+    {
+      header: "Product Name",
+      accessorKey: "name",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <p className="text-sm font-black text-[#1e293b] dark:text-white transition-colors uppercase tracking-tight truncate">
+            {row.original.name}
+          </p>
+        </div>
+      )
+    },
+    {
+      header: "SKU",
+      accessorKey: "sku",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-[2px]">
+            {row.original.sku || 'N/A'}
+          </span>
         </div>
       )
     },
     {
       header: "Category",
       cell: ({ row }) => (
-        <div className="flex justify-center">
-          <span className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl text-[9px] font-black uppercase tracking-[2px]">
+        <div className="text-center">
+          <span className="px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] border border-slate-100 dark:border-slate-800">
             {row.original.category?.name || 'General'}
           </span>
         </div>
       )
     },
     {
-      header: "Selling Price",
+      header: "Selling",
+      accessorKey: "sellingPrice",
       cell: ({ row }) => (
-        <div className="text-center text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest tabular-nums font-bold">
-          {formatCurrency(row.original.sellingPrice)}
+        <div className="text-center text-[#1e293b] dark:text-slate-300 text-[11px] font-black uppercase tracking-widest tabular-nums">
+          {formatCurrencyShort(row.original.sellingPrice)}
+        </div>
+      )
+    },
+    {
+      header: "Status",
+      accessorKey: "isActive",
+      cell: ({ row }) => (
+        <div className="flex justify-center text-center">
+          <span className={cn(
+            "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+            row.original.isActive 
+              ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
+              : "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
+          )}>
+            {row.original.isActive ? 'Active' : 'Inactive'}
+          </span>
         </div>
       )
     },
@@ -113,34 +146,18 @@ const ProductsListPage: React.FC = () => {
       cell: ({ row }) => {
         const stock = getStockQuantity(row.original);
         return (
-          <div className="flex justify-center">
+          <div className="flex justify-center text-center">
             <span className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm inline-flex items-center gap-2",
+              "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[2px] border",
               stock === 0 ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50" :
               stock <= 10 ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
-              "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50"
+              "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50"
             )}>
-              <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", stock === 0 ? "bg-rose-500" : stock <= 10 ? "bg-amber-500" : "bg-emerald-500")} />
-              {stock} Units
+              {formatNumberShort(stock)} UNITS
             </span>
           </div>
-        )
+        );
       }
-    },
-    {
-      header: "Status",
-      cell: ({ row }) => (
-        <div className="flex justify-center">
-          <span className={cn(
-            "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm",
-            row.original.isActive 
-              ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
-              : "bg-slate-100 text-slate-500 border-slate-200"
-          )}>
-            {row.original.isActive ? 'Active' : 'Inactive'}
-          </span>
-        </div>
-      )
     }
   ];
 

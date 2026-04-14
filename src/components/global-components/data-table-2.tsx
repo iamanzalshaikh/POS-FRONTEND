@@ -56,6 +56,7 @@ interface DataTableProps<TData, TValue> {
     hidePagination?: boolean
     maxHeight?: string
     pageSize?: number
+    showColumnVisibility?: boolean
 }
 
 function DataTableComponent<TData, TValue>({
@@ -75,8 +76,9 @@ function DataTableComponent<TData, TValue>({
     onExport,
     isLoading = false,
     hidePagination = true,
-    maxHeight = "600px",
-    pageSize = 10
+    maxHeight = "calc(100vh - 400px)",
+    pageSize = 1000,
+    showColumnVisibility = true
 }: DataTableProps<TData, TValue>) {
     const [isRefreshing, setIsRefreshing] = React.useState(false)
 
@@ -232,42 +234,44 @@ function DataTableComponent<TData, TValue>({
                         <Upload className="h-4 w-4" />
                         <span className="hidden sm:inline">Export</span>
                     </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-10 border-slate-200 dark:border-slate-800 bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl px-5">
-                                <Filter className="h-3.5 w-3.5" />
-                                Columns <ChevronDown className="h-3.5 w-3.5 opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="z-50 min-w-[8rem] overflow-hidden rounded-[1.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 shadow-2xl">
-                            {table
-                                .getAllColumns()
-                                .filter((column) => column.getCanHide())
-                                .map((column) => (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="relative flex cursor-default select-none items-center rounded-xl py-3 px-3 text-[10px] font-black uppercase tracking-widest outline-none transition-colors focus:bg-slate-50 dark:focus:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer data-[state=checked]:text-blue-600"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) =>
-                                            column.toggleVisibility(!!value)
-                                        }
-                                    >
-                                        {column.id}
-                                    </DropdownMenuCheckboxItem>
-                                ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {showColumnVisibility && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="h-10 border-slate-200 dark:border-slate-800 bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl px-5">
+                                    <Filter className="h-3.5 w-3.5" />
+                                    Columns <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="z-50 min-w-[8rem] overflow-hidden rounded-[1.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 shadow-2xl">
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            className="relative flex cursor-default select-none items-center rounded-xl py-3 px-3 text-[10px] font-black uppercase tracking-widest outline-none transition-colors focus:bg-slate-50 dark:focus:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer data-[state=checked]:text-blue-600"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
+                                            }
+                                        >
+                                            {column.id}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
             </div>
 
-            {/* Table wrapper with vertical scroll */}
-            <div className="rounded-2xl border-none shadow-none bg-card relative">
+            {/* Table wrapper with vertical and horizontal scroll */}
+            <div className="rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-none bg-white dark:bg-slate-900 relative overflow-hidden">
                 <div 
                     className="overflow-auto custom-scrollbar"
-                    style={hidePagination ? { maxHeight: maxHeight } : undefined}
+                    style={{ maxHeight: maxHeight }}
                 >
-                    <Table>
-                        <TableHeader className={cn("bg-card/95 backdrop-blur-sm border-b border-border transition-colors", hidePagination && "sticky top-0 z-30")}>
+                    <Table className="min-w-full">
+                        <TableHeader className="bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 sticky top-0 z-30 transition-colors">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="bg-muted/50">
                                     {headerGroup.headers.map((header) => {
@@ -350,45 +354,7 @@ function DataTableComponent<TData, TValue>({
             </div>
         </div>
 
-            {/* Footer: page info + pagination (only if enabled or manual) */}
-            {(!hidePagination || manualPagination) && (
-                <div className="flex items-center justify-end space-x-2 py-2">
-                    <div className="flex-1 text-sm text-muted-foreground">
-                        {(() => {
-                            if (manualPagination) {
-                                const from = ((pageIndex ?? 1) - 1) * pageSize + 1
-                                const to = Math.min((pageIndex ?? 1) * pageSize, totalItems ?? 0)
-                                return `Showing ${from}–${to} of ${totalItems ?? 0} results (Page ${pageIndex} of ${pageCount})`
-                            }
-                            const state = table.getState()
-                            const pageIndexInternal = state.pagination?.pageIndex ?? 0
-                            const pageSizeInternal = state.pagination?.pageSize ?? pageSize
-                            const total = table.getFilteredRowModel().rows.length
-                            const from = total === 0 ? 0 : pageIndexInternal * pageSizeInternal + 1
-                            const to = Math.min((pageIndexInternal + 1) * pageSizeInternal, total)
-                            return `Showing ${from}–${to} of ${total} results`
-                        })()}
-                    </div>
-                    <div className="space-x-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => manualPagination ? onPageChange?.((pageIndex ?? 1) - 1) : table.previousPage()}
-                            disabled={manualPagination ? (pageIndex ?? 1) <= 1 : !table.getCanPreviousPage()}
-                        >
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => manualPagination ? onPageChange?.((pageIndex ?? 1) + 1) : table.nextPage()}
-                            disabled={manualPagination ? (pageIndex ?? 1) >= (pageCount ?? 1) : !table.getCanNextPage()}
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-            )}
+            {/* Footer removed per user requirement for scroll-based navigation */}
 
             {children}
         </div>

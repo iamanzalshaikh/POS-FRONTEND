@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ShoppingCart, Scan, Package, RotateCcw, Clock } from 'lucide-react';
+import { ShoppingCart, Scan, Package, RotateCcw, Clock, History } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import DeviceAccessGate from '../../components/cashier/DeviceAccessGate';
 import POSInterface from './POSInterface';
@@ -12,6 +12,7 @@ import CashierProfilePage from './CashierProfilePage';
 import ProductsListPage from './ProductsListPage';
 import ReturnRefundPage from './ReturnRefundPage';
 import OfflineSalesPage from './OfflineSalesPage';
+import SalesHistoryPage from './SalesHistoryPage';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import * as devicesApi from '../../api/devices.api';
@@ -43,6 +44,7 @@ const CashierDashboard: React.FC = () => {
   const cashierMenu = [
     ...(deviceId ? [] : [{ name: 'Select Device', icon: Scan, path: '/cashier/devices' }]),
     { name: 'POS Terminal', icon: ShoppingCart, path: '/cashier/terminal' },
+    { name: 'Sale History', icon: History, path: '/cashier/sales' },
     { name: 'Offline Sales', icon: Clock, path: '/cashier/offline-sales' },
     { name: 'Returns / Refunds', icon: RotateCcw, path: '/cashier/returns' },
     { name: 'Products', icon: Package, path: '/cashier/products' },
@@ -65,6 +67,7 @@ const CashierDashboard: React.FC = () => {
           />
           <Route path="/devices" element={deviceId ? <Navigate to="/cashier/terminal" replace /> : <DeviceSelection />} />
           <Route path="/terminal" element={<POSInterface />} />
+          <Route path="/sales" element={<SalesHistoryPage />} />
           <Route path="/offline-sales" element={<OfflineSalesPage />} />
           <Route path="/products" element={<ProductsListPage />} />
           <Route path="/receipt/:saleId" element={<ReceiptPage />} />

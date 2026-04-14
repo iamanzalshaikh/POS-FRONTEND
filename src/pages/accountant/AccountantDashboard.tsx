@@ -135,7 +135,7 @@ const AccountantDashboard: React.FC = () => {
         <Route
           index
           element={
-            <div className="animate-fade-in space-y-10">
+            <div className="animate-fade-in space-y-8">
               <AccountantDashboardHome
                 summary={summary}
                 dailyRevenue={dailyRevenue}
@@ -144,7 +144,7 @@ const AccountantDashboard: React.FC = () => {
                 onPeriodPresetChange={setPeriodPreset}
               />
 
-              <div className="space-y-8 mt-10">
+              <div className="space-y-8">
                 <ExpenseTracker />
               </div>
             </div>  

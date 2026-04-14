@@ -60,6 +60,8 @@ export interface ProfitLossData {
   grossProfit: number;
   grossMargin: number;
   operatingExpenses: number;
+  salaries: number;
+  salariesSource: 'PAYROLL' | 'EXPENSES' | 'NONE';
   expenseRatio: number;
   netProfit: number;
   netMargin: number;
@@ -71,6 +73,7 @@ export interface ProfitLossData {
   metrics: {
     totalSales: number;
     totalExpenses: number;
+    expenseEntryCount: number;
   };
 }
 

@@ -30,6 +30,7 @@ interface StaffMember {
   status: StaffStatus;
   joiningDate: string;
   phone?: string;
+  displayId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -196,13 +197,18 @@ const StaffManagementPage: React.FC = () => {
       header: "Staff Member",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
-            {row.original.name.charAt(0).toUpperCase()}
-          </div>
+          
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.name}</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-0.5">Joined {formatDate(row.original.joiningDate)}</p>
           </div>
+        </div>
+      )
+    },
+    {
+      header: "Joined On",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums">
+          {formatDate(row.original.joiningDate)}
         </div>
       )
     },

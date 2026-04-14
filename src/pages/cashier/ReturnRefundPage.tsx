@@ -151,7 +151,15 @@ const ReturnRefundPage: React.FC = () => {
     );
   };
 
-  const totalReturnAmount = returnItems.reduce((sum, item) => sum + item.returnQuantity * item.unitPrice, 0);
+  const totalReturnSubtotal = returnItems.reduce((sum, item) => sum + item.returnQuantity * item.unitPrice, 0);
+  
+  // Calculate proportional refund based on what was actually paid
+  // This accounts for global discounts and taxes applied to the original sale
+  const refundProportion = sale ? (sale.subtotal > 0 ? totalReturnSubtotal / sale.subtotal : 0) : 0;
+  const totalReturnAmount = sale ? (refundProportion * sale.totalAmount) : 0;
+  const refundDiscountAdjustment = sale ? (sale.discountAmount * refundProportion) : 0;
+  const refundTaxAdjustment = sale ? (sale.totalTax * refundProportion) : 0;
+
   const hasSelectedItems = returnItems.some((item) => item.returnQuantity > 0);
 
   const handleConfirmRefund = async () => {
@@ -237,24 +245,32 @@ const ReturnRefundPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {returnItems.map((item) => (
-                      <tr key={item.saleItemId} className={cn("transition-colors", item.returnQuantity > 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50")}>
-                        <td className="px-8 py-5">
-                          <p className="text-xs font-black text-slate-900 dark:text-white uppercase">{item.productName}</p>
-                          <p className="text-[9px] font-black text-slate-400 uppercase mt-1">{formatCurrency(item.unitPrice)} / unit</p>
-                        </td>
-                        <td className="px-8 py-5">
-                           <div className="flex items-center justify-center gap-4">
-                              <button onClick={() => handleQuantityChange(item.saleItemId, -1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">-</button>
-                              <span className="text-xs font-black w-4 text-center">{item.returnQuantity}</span>
-                              <button onClick={() => handleQuantityChange(item.saleItemId, 1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">+</button>
-                           </div>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(item.returnQuantity * item.unitPrice)}</p>
-                        </td>
-                      </tr>
-                    ))}
+                    {returnItems.map((item) => {
+                      const itemDiscountRatio = sale && sale.subtotal > 0 ? sale.discountAmount / sale.subtotal : 0;
+                      const itemNetTotal = item.returnQuantity * item.unitPrice * (1 - itemDiscountRatio);
+                      
+                      return (
+                        <tr key={item.saleItemId} className={cn("transition-colors", item.returnQuantity > 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50")}>
+                          <td className="px-8 py-5">
+                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase">{item.productName}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[9px] font-black text-slate-400 uppercase line-through">{formatCurrency(item.unitPrice)}</span>
+                                <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">{formatCurrency(item.unitPrice * (1 - itemDiscountRatio))} / unit</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                             <div className="flex items-center justify-center gap-4">
+                                <button onClick={() => handleQuantityChange(item.saleItemId, -1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">-</button>
+                                <span className="text-xs font-black w-4 text-center">{item.returnQuantity}</span>
+                                <button onClick={() => handleQuantityChange(item.saleItemId, 1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">+</button>
+                             </div>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <p className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(itemNetTotal)}</p>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -265,14 +281,29 @@ const ReturnRefundPage: React.FC = () => {
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800 sticky top-24">
               <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight mb-8">Refund Summary</h3>
               
-              <div className="space-y-4 mb-8">
-                <div className="flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Subtotal</span>
-                  <span className="text-sm font-black text-slate-900 dark:text-white">{formatCurrency(totalReturnAmount)}</span>
+              <div className="space-y-3 mb-8">
+                <div className="flex justify-between items-center px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Gross Subtotal</span>
+                  <span className="text-xs font-black text-slate-900 dark:text-white">{formatCurrency(totalReturnSubtotal)}</span>
                 </div>
-                <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
-                  <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Total Refund</span>
-                  <span className="text-lg font-black text-blue-600 dark:text-blue-400">{formatCurrency(totalReturnAmount)}</span>
+                
+                {refundDiscountAdjustment > 0 && (
+                    <div className="flex justify-between items-center px-4 py-3 bg-rose-50/50 dark:bg-rose-950/20 rounded-xl border border-rose-100/50 dark:border-rose-900/30">
+                        <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Discount applied</span>
+                        <span className="text-xs font-black text-rose-600">-{formatCurrency(refundDiscountAdjustment)}</span>
+                    </div>
+                )}
+
+                {refundTaxAdjustment > 0 && (
+                    <div className="flex justify-between items-center px-4 py-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Tax (GST)</span>
+                        <span className="text-xs font-black text-slate-600">+{formatCurrency(refundTaxAdjustment)}</span>
+                    </div>
+                )}
+
+                <div className="mt-4 flex justify-between items-center p-5 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border-2 border-blue-100 dark:border-blue-800 shadow-sm">
+                  <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Net Refund Amt</span>
+                  <span className="text-xl font-black text-blue-600 dark:text-blue-400">{formatCurrency(totalReturnAmount)}</span>
                 </div>
               </div>
 

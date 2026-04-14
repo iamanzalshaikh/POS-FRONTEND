@@ -5,8 +5,9 @@ import { createPortal } from 'react-dom';
 import { createProduct } from '@/api/products.api';
 import { getCategories } from '@/api/category.api';
 import { toast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 
-const GST_PRESETS = [0, 10, 18] as const;
+const GST_PRESETS = [18] as const;
 
 const UNIT_TYPES = [
   { value: 'PIECE', label: 'Piece / Unit' },
@@ -34,7 +35,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
   const [description, setDescription] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
   const [sellingPrice, setSellingPrice] = useState('');
-  const [taxPercentage, setTaxPercentage] = useState('10');
+  const [taxPercentage, setTaxPercentage] = useState('18');
   const [discountPercentage, setDiscountPercentage] = useState('0');
   const [initialStock, setInitialStock] = useState('0');
   const [reorderLevel, setReorderLevel] = useState('10');
@@ -72,7 +73,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
     setDescription('');
     setPurchasePrice('');
     setSellingPrice('');
-    setTaxPercentage('10');
+    setTaxPercentage('18');
     setDiscountPercentage('0');
     setInitialStock('0');
     setReorderLevel('10');
@@ -303,6 +304,11 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
                     onChange={(e) => setSellingPrice(e.target.value)}
                     className={`${inputClass} text-blue-600 dark:text-blue-400 font-bold`}
                   />
+                  <div className="mt-2 space-y-1">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                      Calculated GST (18%): Rs {((Number(sellingPrice) || 0) * 0.18).toFixed(2)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -335,13 +341,10 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
                 <div className="space-y-2">
                   <label className={labelClass}>Tax rate (%)</label>
                   <input
+                    readOnly
                     type="number"
-                    min={0}
-                    max={100}
-                    step="0.01"
                     value={taxPercentage}
-                    onChange={(e) => setTaxPercentage(e.target.value)}
-                    className={inputClass}
+                    className={`${inputClass} bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed`}
                   />
                 </div>
                 <div className="space-y-2">

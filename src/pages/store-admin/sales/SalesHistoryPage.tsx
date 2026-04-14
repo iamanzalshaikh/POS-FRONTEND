@@ -90,15 +90,15 @@ const SalesHistoryPage = () => {
     // Calculate metrics locally from transaction ledger
     const summary = {
         revenue: transactions
-            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()))
+            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
             .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0),
         salesCount: transactions
-            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()))
+            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
             .length,
         discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discount || 0), 0),
         refunds: transactions
-            .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded')
-            .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0)
+            .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded' || t.isReversal)
+            .reduce((sum: number, t: any) => sum + Math.abs(getSaleGrandTotal(t)), 0)
     };
 
     // Generate full timeline for the chart (fills missing dates with 0)
@@ -135,16 +135,28 @@ const SalesHistoryPage = () => {
             )
         },
         {
-            header: "Transaction",
+            header: "Invoice",
             accessorKey: "invoiceNumber",
             meta: { align: 'left' },
             cell: ({ row }) => (
-                <div className="min-w-[120px]">
-                    <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">#{row.original.invoiceNumber || row.original.id?.slice(-8)}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                        <Calendar size={10} className="text-slate-400" />
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{new Date(row.original.createdAt).toLocaleDateString()}</p>
-                    </div>
+                <div className="min-w-[100px]">
+                    <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">#{row.original.invoiceNumber || row.original.id?.slice(-8)}</p>
+                </div>
+            )
+        },
+        {
+            header: "Date",
+            cell: ({ row }) => (
+                <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+                    {new Date(row.original.createdAt).toLocaleDateString()}
+                </div>
+            )
+        },
+        {
+            header: "Time",
+            cell: ({ row }) => (
+                <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+                    {new Date(row.original.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
             )
         },
@@ -172,7 +184,7 @@ const SalesHistoryPage = () => {
                     <span className="text-[12px] font-black uppercase tracking-widest tabular-nums text-slate-900 dark:text-white block">
                         {formatCurrency(grand)}
                     </span>
-                    {tax > 0 && (
+                    {Math.abs(tax) > 0 && (
                         <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">GST {formatCurrency(tax)}</span>
                     )}
                 </div>
@@ -195,15 +207,17 @@ const SalesHistoryPage = () => {
             accessorKey: "paymentStatus",
             cell: ({ row }) => {
                 const s = String(row.original.paymentStatus).toLowerCase();
+                const isRef = row.original.isReversal || s === 'refunded';
                 return (
                     <div className="flex justify-center">
                         <span className={cn(
                             "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border leading-tight",
+                            isRef ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50" :
                             s === 'completed' || s === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" :
                             s === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
                             "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
                         )}>
-                            {s}
+                            {isRef ? 'REFUNDED' : s}
                         </span>
                     </div>
                 );

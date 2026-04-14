@@ -22,8 +22,11 @@ const subcategoryMapping: Record<string, string[]> = {
 
 export default function AddProductPage() {
     const navigate = useNavigate();
-    const [category, setCategory] = useState('');
-    const [subcategory, setSubcategory] = useState('');
+    const [sellingPrice, setSellingPrice] = useState<string>('');
+    const [taxRate, setTaxRate] = useState<number>(18);
+    const [category, setCategory] = useState<string>('');
+    const [subcategory, setSubcategory] = useState<string>('');
+    const gstAmount = (Number(sellingPrice) || 0) * (taxRate / 100);
 
     return (
         <div className="animate-fade-in pb-32">
@@ -167,10 +170,18 @@ export default function AddProductPage() {
                                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs">Rs</span>
                                         <input
                                             type="number"
+                                            value={sellingPrice}
+                                            onChange={(e) => setSellingPrice(e.target.value)}
                                             placeholder="0.00"
                                             className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 font-bold dark:text-white"
                                         />
                                     </div>
+                                    {sellingPrice && (
+                                        <p className="mt-2 text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                                            <Percent size={10} />
+                                            Includes GST Amount: Rs {gstAmount.toFixed(2)}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -179,9 +190,10 @@ export default function AddProductPage() {
                                     <div className="relative">
                                         <Percent size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input
+                                            readOnly
                                             type="number"
-                                            placeholder="0"
-                                            className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-gray-400 font-bold dark:text-white"
+                                            value={taxRate}
+                                            className="w-full pl-11 pr-4 py-3 bg-gray-50/50 dark:bg-slate-800/50 border border-gray-100 dark:border-slate-700 rounded-xl text-sm focus:ring-0 outline-none transition-all placeholder:text-gray-400 font-bold dark:text-gray-400 cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
