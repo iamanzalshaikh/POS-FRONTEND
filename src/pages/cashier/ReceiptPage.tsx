@@ -117,7 +117,8 @@ function lineItemGst(item: {
   const stored = toFiniteNumber(item.tax);
   if (stored !== null) return stored;
   const pct = toFiniteNumber(item.product?.taxPercentage ?? item.taxPercentage);
-  if (pct !== null && pct > 0) return subtotal * (pct / 100);
+  // Matches POS Terminal inclusive tax math
+  if (pct !== null && pct > 0) return subtotal * (pct / (100 + pct));
   return 0;
 }
 

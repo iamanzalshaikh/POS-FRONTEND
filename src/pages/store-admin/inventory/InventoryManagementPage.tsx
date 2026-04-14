@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import InventoryHeader from "@/components/store-admin/InventoryHeader"
 import { fetchInventoryLogs } from "@/api/inventory.api";
 import { DataTable } from '@/components/global-components/data-table-2';
@@ -156,8 +157,6 @@ const InventoryManagementPage = () => {
     return matchesSearch && matchesType;
   });
 
-  const totalCount = filteredMovements.length;
-  const paginatedMovements = filteredMovements.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="animate-in fade-in duration-500 space-y-10">

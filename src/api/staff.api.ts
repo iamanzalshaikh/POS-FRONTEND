@@ -434,6 +434,12 @@ export const updateStaffMember = async (
   };
 };
 
+/** Alias for fetching a single system user by ID — used by StaffDetailPage */
+export const fetchStaffMemberById = async (id: string): Promise<any> => {
+  const response = await api.get<any>(`/users/${id}`);
+  return response;
+};
+
 /** Re-export for store-admin compatibility */
 export type CreateStaffInput = CreateStaffData;
 export type StaffRole = string;

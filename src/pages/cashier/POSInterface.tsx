@@ -189,12 +189,15 @@ const POSInterface: React.FC = () => {
   }, [discountMode, discountValue, subtotal, automaticDiscount]);
 
   // Per-line tax from product % (aligns with server when batch tax is 0). Server: totalAmount = subtotal + totalTax - discount.
+  // Tax is already included in the selling price per user requirement.
+  // Using inclusive tax formula: Amount * (TaxRate / (100 + TaxRate))
   const tax = useMemo(
     () =>
       cart.reduce((sum, item) => {
         const lineSub = item.price * item.quantity;
         const pct = Number(item.taxPercentage ?? 0);
-        return sum + lineSub * (Number.isFinite(pct) ? pct / 100 : 0);
+        // Inclusive Tax Logic
+        return sum + lineSub * (Number.isFinite(pct) ? pct / (100 + pct) : 0);
       }, 0),
     [cart]
   );

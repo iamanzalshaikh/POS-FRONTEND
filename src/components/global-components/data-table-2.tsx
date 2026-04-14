@@ -56,6 +56,7 @@ interface DataTableProps<TData, TValue> {
     hidePagination?: boolean
     maxHeight?: string
     pageSize?: number
+    showColumnVisibility?: boolean
 }
 
 function DataTableComponent<TData, TValue>({
@@ -76,7 +77,8 @@ function DataTableComponent<TData, TValue>({
     isLoading = false,
     hidePagination = true,
     maxHeight = "600px",
-    pageSize = 10
+    pageSize = 10,
+    showColumnVisibility = true
 }: DataTableProps<TData, TValue>) {
     const [isRefreshing, setIsRefreshing] = React.useState(false)
 
@@ -232,31 +234,33 @@ function DataTableComponent<TData, TValue>({
                         <Upload className="h-4 w-4" />
                         <span className="hidden sm:inline">Export</span>
                     </Button>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-10 border-slate-200 dark:border-slate-800 bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl px-5">
-                                <Filter className="h-3.5 w-3.5" />
-                                Columns <ChevronDown className="h-3.5 w-3.5 opacity-50" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="z-50 min-w-[8rem] overflow-hidden rounded-[1.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 shadow-2xl">
-                            {table
-                                .getAllColumns()
-                                .filter((column) => column.getCanHide())
-                                .map((column) => (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="relative flex cursor-default select-none items-center rounded-xl py-3 px-3 text-[10px] font-black uppercase tracking-widest outline-none transition-colors focus:bg-slate-50 dark:focus:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer data-[state=checked]:text-blue-600"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) =>
-                                            column.toggleVisibility(!!value)
-                                        }
-                                    >
-                                        {column.id}
-                                    </DropdownMenuCheckboxItem>
-                                ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    {showColumnVisibility && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="h-10 border-slate-200 dark:border-slate-800 bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl px-5">
+                                    <Filter className="h-3.5 w-3.5" />
+                                    Columns <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="z-50 min-w-[8rem] overflow-hidden rounded-[1.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 shadow-2xl">
+                                {table
+                                    .getAllColumns()
+                                    .filter((column) => column.getCanHide())
+                                    .map((column) => (
+                                        <DropdownMenuCheckboxItem
+                                            key={column.id}
+                                            className="relative flex cursor-default select-none items-center rounded-xl py-3 px-3 text-[10px] font-black uppercase tracking-widest outline-none transition-colors focus:bg-slate-50 dark:focus:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer data-[state=checked]:text-blue-600"
+                                            checked={column.getIsVisible()}
+                                            onCheckedChange={(value) =>
+                                                column.toggleVisibility(!!value)
+                                            }
+                                        >
+                                            {column.id}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </div>
             </div>
 

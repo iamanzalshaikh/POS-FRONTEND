@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { createProduct } from '@/api/products.api';
 import { getCategories } from '@/api/category.api';
 import { toast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 
 const GST_PRESETS = [18] as const;
 
