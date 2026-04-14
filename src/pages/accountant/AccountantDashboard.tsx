@@ -1,12 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { BarChart3, PieChart, FileText, Download, Calculator, FileSpreadsheet, TrendingUp, DollarSign, Users, Wallet, Truck, ClipboardList, ListOrdered } from 'lucide-react';
+import {
+  LayoutDashboard,
+  PieChart,
+  FileText,
+  Download,
+  FileSpreadsheet,
+  Calculator,
+  Users,
+  Wallet,
+  Truck,
+  ClipboardList,
+  ListOrdered,
+} from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import MetricCard from '../../components/global-components/MetricCard';
-import { getSalesReport } from '../../api/finance.api';
-import { getExpenses } from '../../api/expenses.api';
-import FinancialOverview from './FinancialOverview';
+import { getFinanceSummary, getSalesReport } from '../../api/finance.api';
+import type { FinanceSummaryData } from '../../api/finance.api';
 import ExpenseTracker from './ExpenseTracker';
+import AccountantDashboardHome, { type AccountantPeriodPreset } from './AccountantDashboardHome';
 import ExpensesPage from './ExpensesPage';
 import ExpenseReport from './ExpenseReport';
 import TaxManagement from './TaxManagement';
@@ -16,88 +27,85 @@ import MonthlyCloseReport from './MonthlyCloseReport';
 import AllTransactions from './AllTransactions';
 import StaffManagementPage from './StaffManagementPage';
 import PayrollManagementPage from './PayrollManagementPage';
-import PageHeader from '../../components/global-components/PageHeader';
-import { formatCurrency } from '@/utils/format';
 import SuppliersPage from '@/pages/store-admin/purchasing/SuppliersPage';
 import SupplierPurchasesListPage from '@/pages/store-admin/purchasing/SupplierPurchasesListPage';
 import NewSupplierPurchasePage from '@/pages/store-admin/purchasing/NewSupplierPurchasePage';
 import SupplierPurchaseDetailPage from '@/pages/store-admin/purchasing/SupplierPurchaseDetailPage';
 
+function toLocalYMD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Today = single day. Week = Monday–today (this week). Month = 1st of month–today. */
+function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string; endDate: string } {
+  const today = new Date();
+  const endDate = toLocalYMD(today);
+  if (preset === 'today') {
+    return { startDate: endDate, endDate };
+  }
+  if (preset === 'week') {
+    const start = new Date(today);
+    const dow = start.getDay();
+    const daysFromMonday = dow === 0 ? 6 : dow - 1;
+    start.setDate(start.getDate() - daysFromMonday);
+    return { startDate: toLocalYMD(start), endDate };
+  }
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  return { startDate: toLocalYMD(start), endDate };
+}
+
 const AccountantDashboard: React.FC = () => {
-  const [dashboardData, setDashboardData] = useState({
-    totalRevenue: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    /** Sum of tax on completed sales in the period (from /reports/sales), not a flat % guess */
-    salesTaxTotal: 0,
-    revenueChange: 0,
-    expensesChange: 0,
-    profitChange: 0,
-  });
+  const [periodPreset, setPeriodPreset] = useState<AccountantPeriodPreset>('month');
+  const [summary, setSummary] = useState<FinanceSummaryData | null>(null);
+  const [dailyRevenue, setDailyRevenue] = useState<Array<{ label: string; revenue: number }>>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    const { startDate, endDate } = getPeriodForPreset(periodPreset);
     try {
       setLoading(true);
-      const end = new Date();
-      const start = new Date();
-      start.setDate(start.getDate() - 30);
-      const startStr = start.toISOString().split('T')[0];
-      const endStr = end.toISOString().split('T')[0];
-
-      const [salesResponse, expensesResponse] = await Promise.all([
-        getSalesReport({ startDate: startStr, endDate: endStr }),
-        getExpenses(),
+      const [summaryRes, salesRes] = await Promise.all([
+        getFinanceSummary({ startDate, endDate }),
+        getSalesReport({ startDate, endDate }),
       ]);
 
-      // GET /reports/sales → summary.totalRevenue, .totalTax, .totalDiscount (same window)
-      let totalRevenue = 0;
-      let salesTaxTotal = 0;
-      if (salesResponse.success && 'data' in salesResponse && salesResponse.data?.summary) {
-        const s = salesResponse.data.summary;
-        totalRevenue = Number(s.totalRevenue) || 0;
-        salesTaxTotal = Number(s.totalTax) || 0;
+      if (summaryRes.success && 'data' in summaryRes && summaryRes.data) {
+        setSummary(summaryRes.data);
+      } else {
+        setSummary(null);
       }
 
-      // Same calendar window as sales (was wrongly summing all-time expenses before)
-      let totalExpenses = 0;
-      if (expensesResponse.success && Array.isArray(expensesResponse.data)) {
-        const winStart = new Date(startStr);
-        winStart.setHours(0, 0, 0, 0);
-        const winEnd = new Date(endStr);
-        winEnd.setHours(23, 59, 59, 999);
-        totalExpenses = expensesResponse.data.reduce((sum, e) => {
-          const d = new Date(e.date);
-          if (Number.isNaN(d.getTime())) return sum;
-          if (d < winStart || d > winEnd) return sum;
-          return sum + Number(e.amount);
-        }, 0);
+      if (salesRes.success && 'data' in salesRes && salesRes.data?.data?.length) {
+        setDailyRevenue(
+          salesRes.data.data.map((r) => ({
+            label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            }),
+            revenue: r.revenue,
+          }))
+        );
+      } else {
+        setDailyRevenue([]);
       }
-
-      const netProfit = totalRevenue - totalExpenses;
-
-      setDashboardData({
-        totalRevenue,
-        totalExpenses,
-        netProfit,
-        salesTaxTotal,
-        revenueChange: 12.5,
-        expensesChange: -5.2,
-        profitChange: 18.3,
-      });
     } catch (error) {
       console.error('[AccountantDashboard] Failed to fetch dashboard data:', error);
+      setSummary(null);
+      setDailyRevenue([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [periodPreset]);
+
+  useEffect(() => {
+    void fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const accountantMenu = [
-    { name: 'Summary', icon: BarChart3, path: '/accountant' },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/accountant' },
     {
       name: 'Purchasing',
       icon: Truck,
@@ -112,7 +120,8 @@ const AccountantDashboard: React.FC = () => {
     { name: 'Expense Report', icon: FileSpreadsheet, path: '/accountant/expense-report' },
     { name: 'Staff', icon: Users, path: '/accountant/staff' },
     { name: 'Payroll', icon: Wallet, path: '/accountant/payroll' },
-    { name: 'Tax', icon: FileText, path: '/accountant/tax' },
+    // Temporarily disabled - can be re-enabled by uncommenting
+    // { name: 'Tax', icon: FileText, path: '/accountant/tax' },
     { name: 'P&L', icon: PieChart, path: '/accountant/pl' },
     { name: 'Monthly Close', icon: FileText, path: '/accountant/monthly-close' },
     { name: 'Export', icon: Download, path: '/accountant/export' },
@@ -122,7 +131,7 @@ const AccountantDashboard: React.FC = () => {
     <DashboardLayout
       menuItems={accountantMenu}
       title="Financial Controller"
-      subtitle="Review ledger, expenses and financial health"
+      subtitle=""
       role="ACCOUNTANT"
       accentColor="indigo"
     >
@@ -132,51 +141,18 @@ const AccountantDashboard: React.FC = () => {
           index
           element={
             <div className="animate-fade-in space-y-10">
-              <PageHeader
-                title="Financial Overview"
-                description="Real-time financial analytics and business health"
+              <AccountantDashboardHome
+                summary={summary}
+                dailyRevenue={dailyRevenue}
+                loading={loading}
+                periodPreset={periodPreset}
+                onPeriodPresetChange={setPeriodPreset}
               />
 
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-pulse">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-[2rem]"></div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricCard
-                  title="Revenue"
-                  value={formatCurrency(dashboardData.totalRevenue)}
-                  icon={DollarSign}
-                  colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
-                />
-                <MetricCard
-                  title="Expenses"
-                  value={formatCurrency(dashboardData.totalExpenses)}
-                  icon={Calculator}
-                  colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
-                />
-                <MetricCard
-                  title="Net Profit"
-                  value={formatCurrency(dashboardData.netProfit)}
-                  icon={TrendingUp}
-                  colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-                />
-                <MetricCard
-                  title="Tax Liability"
-                  value={formatCurrency(dashboardData.taxLiability)}
-                  icon={FileText}
-                  colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
-                />
-              </div>
-            )}
-
               <div className="space-y-8 mt-10">
-                <FinancialOverview />
                 <ExpenseTracker />
               </div>
-            </div>
+            </div>  
           }
         />
         <Route path="expenses" element={<ExpensesPage />} />

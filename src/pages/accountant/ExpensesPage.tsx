@@ -106,6 +106,14 @@ const ExpensesPage: React.FC = () => {
 
   const columns: ColumnDef<Expense>[] = [
     {
+      header: "Expense ID",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
+          #{row.original.id.slice(-6).toUpperCase()}
+        </div>
+      )
+    },
+    {
       header: "Expense Details",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
@@ -218,6 +226,7 @@ const ExpensesPage: React.FC = () => {
           isLoading={loading}
           onRefresh={fetchExpenses}
           placeholder="Search expenses..."
+          hidePagination={false}
           headerActions={
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative group">

@@ -92,8 +92,8 @@ const FinancialOverview: React.FC = () => {
           <h3 className="text-lg font-extrabold text-slate-900 tracking-tight">Weekly Revenue Trend</h3>
           <p className="text-xs text-slate-500 font-medium font-bold uppercase tracking-widest mt-1">Channel performance summary</p>
         </div>
-        <div className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full border border-blue-100 shadow-sm shadow-blue-50/50">
-          <span className="text-[10px] font-black uppercase tracking-widest">+12% vs LY</span>
+        <div className="px-3 py-1.5 bg-slate-50 text-slate-600 rounded-full border border-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+          <span className="text-[10px] font-black uppercase tracking-widest">Last 7 days</span>
         </div>
       </div>
       {data.weeklyRevenue && data.weeklyRevenue.length > 0 ? (

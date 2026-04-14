@@ -74,6 +74,25 @@ export interface ProfitLossData {
   };
 }
 
+/** GET /finance/summary — same shape as GET /reports/finance/summary */
+export interface FinanceSummaryData {
+  period: { startDate: string; endDate: string };
+  comparisonPeriod: { startDate: string; endDate: string };
+  totalRevenue: number;
+  cogs: number;
+  operatingExpenses: number;
+  salaries: number;
+  salariesSource: 'PAYROLL' | 'EXPENSES' | 'NONE';
+  totalExpenses: number;
+  grossProfit: number;
+  grossMarginPercent: number | null;
+  netProfit: number;
+  taxLiability: number;
+  revenueChange: number;
+  expensesChange: number;
+  profitChange: number;
+}
+
 export interface MonthlyCloseData {
   period: {
     startDate: string;
@@ -426,6 +445,26 @@ export const getInventoryLogs = async (params?: InventoryLogsParams): Promise<St
 // Endpoint: GET /finance/*
 // Access: ACCOUNTANT, STORE_ADMIN, SUPER_ADMIN
 // ============================================================================
+
+/**
+ * Finance dashboard summary (revenue, COGS, opex, salaries, net profit, tax, period-over-period %).
+ * Optional `startDate` + `endDate` (YYYY-MM-DD); omit both for last 30 days.
+ */
+export const getFinanceSummary = async (params?: {
+  startDate?: string;
+  endDate?: string;
+}): Promise<StandardApiResponse<FinanceSummaryData> | ApiError> => {
+  return withErrorHandling(
+    () =>
+      api.get<BackendApiResponse<FinanceSummaryData>>('/finance/summary', {
+        params:
+          params?.startDate && params?.endDate
+            ? { startDate: params.startDate, endDate: params.endDate }
+            : undefined,
+      }),
+    'Failed to fetch finance summary'
+  );
+};
 
 /**
  * Fetches Profit & Loss statement with correct COGS calculation
