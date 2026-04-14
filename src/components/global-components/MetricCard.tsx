@@ -68,8 +68,9 @@ const MetricCard = ({
         compact ? 'text-[9px] tracking-[0.14em]' : 'text-[10px] tracking-[0.18em]'
     );
 
-    const displayValue = typeof value === 'number' 
-        ? (isCurrency ? formatCurrencyShort(value) : formatNumberShort(value))
+    const numericValue = typeof value === 'string' ? parseFloat(value.toString().replace(/[^0-9.-]+/g, '')) : value;
+    const displayValue = (typeof numericValue === 'number' && !isNaN(numericValue))
+        ? (isCurrency ? formatCurrencyShort(numericValue) : formatNumberShort(numericValue))
         : value;
 
     if (variant === 'stacked') {
@@ -128,7 +129,7 @@ const MetricCard = ({
     return (
         <div
             className={cn(
-                'group relative flex min-h-[110px] flex-col justify-center overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900',
+                'group relative flex min-h-[110px] flex-col justify-center overflow-hidden rounded-[2rem] border border-slate-100 bg-white px-4 py-5 sm:px-5 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900',
                 'hover:shadow-xl hover:shadow-indigo-500/10',
                 className
             )}
@@ -138,10 +139,10 @@ const MetricCard = ({
             <div className="relative z-10 flex w-full items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                     <div className="mb-1.5 flex min-h-[22px] flex-wrap items-center gap-2">
-                        <p className={cn(titleClass, 'truncate')}>{title}</p>
+                        <p className={titleClass}>{title}</p>
                         {changeBadge(change, isPositive, false)}
                     </div>
-                    <h3 className="truncate text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
+                    <h3 className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white leading-none mt-1">
                         {displayValue}
                     </h3>
                     {subtitle ? (

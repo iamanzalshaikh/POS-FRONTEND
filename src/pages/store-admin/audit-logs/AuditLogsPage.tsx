@@ -63,13 +63,14 @@ const AuditLogsPage: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-3">
                     {(entity || action || startDate || endDate) && (
-                        <button
+                        <Button
+                            variant="secondary"
                             onClick={resetFilters}
-                            className="flex items-center gap-2 px-6 py-3 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-2xl text-[11px] font-bold uppercase tracking-widest border border-rose-100 dark:border-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all active:scale-95 shadow-sm"
+                            className="flex items-center gap-2 px-6 h-12 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-rose-100 dark:border-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all active:scale-95 shadow-sm"
                         >
                             <X size={14} />
                             Reset Filters
-                        </button>
+                        </Button>
                     )}
                 </div>
             </div>

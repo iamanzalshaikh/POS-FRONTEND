@@ -21,7 +21,8 @@ interface MenuItem {
     name: string;
     icon: any;
     path: string;
-    children?: { name: string; icon?: any; path: string }[];
+    exact?: boolean;
+    children?: { name: string; icon?: any; path: string; exact?: boolean }[];
 }
 
 interface MainSidebarProps {
@@ -91,13 +92,14 @@ export default function MainSidebar({ menuItems, roleName, brandIcon: BrandIcon 
                                     {isSubmenuOpen && !collapsed && (
                                         <div className="pl-12 space-y-1 border-l-2 border-white/10 ml-6 py-1">
                                             {item.children.map((child, cIdx) => (
-                                                <NavLink
-                                                    key={cIdx}
-                                                    to={child.path}
-                                                    className={({ isActive }) =>
-                                                        `block py-2 px-2 text-sm font-medium rounded-lg transition-all hover:text-white hover:bg-white/5 ${isActive ? 'text-white bg-white/10' : 'text-slate-400'}`
-                                                    }
-                                                >
+                                                    <NavLink
+                                                        key={cIdx}
+                                                        to={child.path}
+                                                        end={child.exact}
+                                                        className={({ isActive }) =>
+                                                            `block py-2 px-2 text-sm font-medium rounded-lg transition-all hover:text-white hover:bg-white/5 ${isActive ? 'text-white bg-white/10' : 'text-slate-400'}`
+                                                        }
+                                                    >
                                                     {child.name}
                                                 </NavLink>
                                             ))}
@@ -111,6 +113,7 @@ export default function MainSidebar({ menuItems, roleName, brandIcon: BrandIcon 
                             <NavLink
                                 key={idx}
                                 to={item.path}
+                                end={item.exact}
                                 title={collapsed ? item.name : ""}
                                 className={({ isActive }) =>
                                     `flex items-center gap-3 px-4 py-3 rounded-xl transition-all group relative ${collapsed ? 'px-2 justify-center' : ''} ${isActive

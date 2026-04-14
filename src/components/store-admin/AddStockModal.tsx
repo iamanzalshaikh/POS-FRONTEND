@@ -1,5 +1,6 @@
 import { X, Plus, Archive, Calendar, Tag, DollarSign } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import { createPortal } from 'react-dom';
 import { addBatch } from '@/api/products.api';
 
@@ -135,10 +136,19 @@ export default function AddStockModal({ open, onClose, onSuccess, product }: Add
                     </div>
 
                     <div className="flex gap-4 pt-4 shrink-0">
-                        <button type="button" onClick={handleClose} className="flex-1 py-4 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-slate-100 dark:hover:bg-slate-700 transition-all active:scale-95 border border-slate-100 dark:border-slate-700">
+                        <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={handleClose} 
+                            className="flex-1 h-14 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-none"
+                        >
                             Cancel
-                        </button>
-                        <button type="submit" disabled={loading} className="flex-1 py-4 bg-amber-500 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all active:scale-95 disabled:opacity-50 border border-amber-400 flex items-center justify-center gap-2">
+                        </Button>
+                        <Button 
+                            type="submit" 
+                            disabled={loading} 
+                            className="flex-1 h-14 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
                             {loading ? (
                                 <span className="animate-pulse">Authorizing...</span>
                             ) : (
@@ -147,7 +157,7 @@ export default function AddStockModal({ open, onClose, onSuccess, product }: Add
                                     Commit Batch
                                 </>
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>

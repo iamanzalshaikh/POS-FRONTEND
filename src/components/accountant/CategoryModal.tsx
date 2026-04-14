@@ -8,7 +8,8 @@ import {
   deleteExpenseCategory,
   type ExpenseCategory,
 } from '../../api/expenses.api';
-import Toast, { type ToastType } from '../ui/Toast';
+import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -22,7 +23,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -125,8 +125,8 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
     }
   };
 
-  const showToast = (message: string, type: ToastType) => {
-    setToast({ message, type });
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    toast[type](message);
   };
 
   if (!isOpen) return null;
@@ -158,13 +158,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ isOpen, onClose, onCatego
             <X size={20} />
           </button>
         </div>
-
-        {/* Toast */}
-        {toast && (
-          <div className="mx-8 mt-4 z-[100]">
-            <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-          </div>
-        )}
 
         {/* Add New Category */}
         <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">

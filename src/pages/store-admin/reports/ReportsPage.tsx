@@ -8,7 +8,8 @@ import CategoryPieChart from "../dashboard/components/CategoryPieChart";
 import * as reportsApi from "@/api/reports.api";
 import { fetchLowStockInventory } from "@/api/inventory.api";
 import { AlertTriangle } from "lucide-react";
-import { formatCurrency, formatCurrencyShort, formatNumberShort } from "@/utils/format";
+import { formatCurrency, formatCurrencyShort, formatNumberShort, toLocalYMD } from "@/utils/format";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const ReportsPage = () => {
@@ -39,8 +40,8 @@ const ReportsPage = () => {
             start.setHours(0, 0, 0, 0);
         }
         return {
-            startDate: start.toISOString().split('T')[0],
-            endDate: end.toISOString().split('T')[0]
+            startDate: toLocalYMD(start),
+            endDate: toLocalYMD(end)
         };
     };
 
@@ -117,7 +118,7 @@ const ReportsPage = () => {
         } else {
             let curr = new Date(start);
             while (curr <= end) {
-                const dStr = curr.toISOString().split('T')[0];
+                const dStr = toLocalYMD(curr);
                 points.push({ 
                     label: curr.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
                     dateStr: dStr,
@@ -190,12 +191,12 @@ const ReportsPage = () => {
                     </div>
                     <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Report Failure</h2>
                     <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed px-4">{error}</p>
-                    <button
+                    <Button
                         onClick={() => window.location.reload()}
-                        className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-700 transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none"
+                        className="w-full h-14 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
                     >
                         Try Again
-                    </button>
+                    </Button>
                 </div>
             ) : activeTab === 'sales' && data ? (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
