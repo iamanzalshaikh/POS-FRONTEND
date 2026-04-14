@@ -74,12 +74,6 @@ const TopPerformingProducts: React.FC<TopPerformingProductsProps> = ({ products 
         </table>
       </div>
       
-      <div className="p-6 border-t border-slate-50 dark:border-slate-800">
-        <button className="w-full flex items-center justify-center gap-2 py-3 bg-slate-50 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-all active:scale-95 group">
-          View Detailed Analytics
-          <ArrowUpRight size={14} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-        </button>
-      </div>
     </div>
   );
 };

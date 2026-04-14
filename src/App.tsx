@@ -30,7 +30,8 @@ const InventoryManagement = lazy(() => import('@/pages/store-admin/inventory/Inv
 const StockLevelsPage = lazy(() => import('@/pages/store-admin/inventory/StockLevelsPage'));
 const SettingsPage = lazy(() => import('@/pages/store-admin/settings/SettingsPage'));
 const StockAdjustmentPage = lazy(() => import('@/pages/store-admin/inventory/StockAdjustmentPage'));
-const ReportsPage = lazy(() => import('@/pages/store-admin/reports/ReportsPage'));
+import ReportsPage from './pages/store-admin/reports/ReportsPage';
+import AuditLogsPage from './pages/store-admin/audit-logs/AuditLogsPage';
 const StaffDetailPage = lazy(() => import('@/pages/store-admin/staff-management/StaffDetailPage'));
 const SuppliersPage = lazy(() => import('@/pages/store-admin/purchasing/SuppliersPage'));
 const SupplierPurchasesListPage = lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchasesListPage'));
@@ -99,6 +100,7 @@ const App: React.FC = () => {
                   <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
                   <Route path="/store-admin/categories" element={<ProductCategories />} />
                   <Route path="/store-admin/reports" element={<ReportsPage />} />
+                  <Route path="/store-admin/audit-logs" element={<AuditLogsPage />} />
                   <Route path="/store-admin/purchasing/suppliers" element={<SuppliersPage />} />
                   <Route path="/store-admin/purchasing/purchases" element={<SupplierPurchasesListPage />} />
                   <Route path="/store-admin/purchasing/purchases/new" element={<NewSupplierPurchasePage />} />

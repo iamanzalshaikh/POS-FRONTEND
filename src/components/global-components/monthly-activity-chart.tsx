@@ -1,5 +1,5 @@
 import React from 'react';
-import { Area, AreaChart, XAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { Area, AreaChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
 
 import {
   type ChartConfig,
@@ -7,6 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart';
+import { formatNumberShort, formatCurrencyShort } from '@/utils/format';
 
 const chartConfig = {
   activity: {
@@ -100,6 +101,12 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
               tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
               tickMargin={10} 
             />
+            <YAxis 
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+              tickFormatter={(val) => isCurrency ? formatCurrencyShort(val).replace('₨ ', '') : formatNumberShort(val)}
+            />
             <Tooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {
@@ -107,7 +114,7 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
                     <div className="bg-slate-900 text-white p-3 rounded-2xl shadow-xl border border-slate-800/50 backdrop-blur-md">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{payload[0].payload.month}</p>
                       <p className="text-sm font-black">
-                        {isCurrency ? `₨ ${Number(payload[0].value).toLocaleString()}` : payload[0].value}
+                        {isCurrency ? formatCurrencyShort(payload[0].value as number) : formatNumberShort(payload[0].value as number)}
                         <span className="text-[10px] font-medium text-slate-400 ml-1.5 uppercase tracking-tighter">{unit}</span>
                       </p>
                     </div>

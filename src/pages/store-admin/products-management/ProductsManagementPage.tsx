@@ -91,7 +91,8 @@ export default function ProductsManagementPage() {
     // Merge Logic
     const getMergedProducts = () => {
         const productsRaw = productsDataRes?.data || (Array.isArray(productsDataRes) ? productsDataRes : [])
-        const inventoryRaw = inventoryDataRes?.data || (Array.isArray(inventoryDataRes) ? inventoryDataRes : [])
+        const invResData = inventoryDataRes?.data
+        const inventoryRaw = Array.isArray(invResData) ? invResData : (invResData?.data || [])
 
         const inventoryMap = inventoryRaw.reduce((acc: any, inv: any) => {
             acc[inv.productId] = inv.totalQuantity || inv.stock || 0
@@ -230,25 +231,25 @@ export default function ProductsManagementPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                 <MetricCard 
                     title="Total Products" 
-                    value={String(products.length)} 
+                    value={products.length} 
                     icon={ShoppingCart} 
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                 />
                 <MetricCard 
                     title="Active Store" 
-                    value={String(products.filter((p: any) => p.isActive).length)} 
+                    value={products.filter((p: any) => p.isActive).length} 
                     icon={PackageOpen} 
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
                     title="Low Stock" 
-                    value={String(products.filter((p: any) => p.stock > 0 && p.stock <= (p.reorderLevel || 10)).length)} 
+                    value={products.filter((p: any) => p.stock > 0 && p.stock <= (p.reorderLevel || 10)).length} 
                     icon={AlertTriangle} 
                     colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
                 />
                 <MetricCard 
                     title="Categories" 
-                    value={String(categories.length)} 
+                    value={categories.length} 
                     icon={Box} 
                     colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
                 />

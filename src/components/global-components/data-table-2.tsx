@@ -55,6 +55,7 @@ interface DataTableProps<TData, TValue> {
     isLoading?: boolean
     hidePagination?: boolean
     maxHeight?: string
+    pageSize?: number
 }
 
 function DataTableComponent<TData, TValue>({
@@ -74,7 +75,8 @@ function DataTableComponent<TData, TValue>({
     onExport,
     isLoading = false,
     hidePagination = true,
-    maxHeight = "600px"
+    maxHeight = "600px",
+    pageSize = 10
 }: DataTableProps<TData, TValue>) {
     const [isRefreshing, setIsRefreshing] = React.useState(false)
 
@@ -109,7 +111,7 @@ function DataTableComponent<TData, TValue>({
         initialState: {
             pagination: {
                 pageIndex: 0,
-                pageSize: hidePagination ? 100000 : 10,
+                pageSize: hidePagination ? 100000 : pageSize,
             },
         },
         state: {
@@ -120,7 +122,7 @@ function DataTableComponent<TData, TValue>({
             ...((manualPagination || !hidePagination) && {
                 pagination: {
                     pageIndex: (pageIndex ?? 1) - 1,
-                    pageSize: 10,
+                    pageSize: pageSize,
                 },
             }),
         },
@@ -354,13 +356,13 @@ function DataTableComponent<TData, TValue>({
                     <div className="flex-1 text-sm text-muted-foreground">
                         {(() => {
                             if (manualPagination) {
-                                const from = ((pageIndex ?? 1) - 1) * 10 + 1
-                                const to = Math.min((pageIndex ?? 1) * 10, totalItems ?? 0)
+                                const from = ((pageIndex ?? 1) - 1) * pageSize + 1
+                                const to = Math.min((pageIndex ?? 1) * pageSize, totalItems ?? 0)
                                 return `Showing ${from}–${to} of ${totalItems ?? 0} results (Page ${pageIndex} of ${pageCount})`
                             }
                             const state = table.getState()
                             const pageIndexInternal = state.pagination?.pageIndex ?? 0
-                            const pageSizeInternal = state.pagination?.pageSize ?? 10
+                            const pageSizeInternal = state.pagination?.pageSize ?? pageSize
                             const total = table.getFilteredRowModel().rows.length
                             const from = total === 0 ? 0 : pageIndexInternal * pageSizeInternal + 1
                             const to = Math.min((pageIndexInternal + 1) * pageSizeInternal, total)

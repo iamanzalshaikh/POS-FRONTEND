@@ -10,14 +10,28 @@ const ProductCategoriesPage = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [successMessage, setSuccessMessage] = useState("")
 
-  const [categoriesRes, setCategoriesRes] = useState<any>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const limit = 5;
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (p = page, q = searchQuery) => {
     setLoading(true);
     try {
-      const data = await getCategories();
-      setCategoriesRes(data);
+      const resp = await getCategories({ page: p, limit, search: q });
+      const rawPayload = resp?.data;
+
+      if (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+        // Paginated response: { data: [], total: 10, ... }
+        setCategories(rawPayload.data || []);
+        setTotal(rawPayload.total || 0);
+      } else {
+        // Flat array response: [...]
+        const data = Array.isArray(rawPayload) ? rawPayload : [];
+        setCategories(data);
+        setTotal(data.length);
+      }
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     } finally {
@@ -25,21 +39,22 @@ const ProductCategoriesPage = () => {
     }
   };
 
+  // Handle Search Input Change (Debounced)
   useEffect(() => {
-    fetchCategories();
-  }, []);
-  
-  const categories = (categoriesRes as any)?.data || (Array.isArray(categoriesRes) ? categoriesRes : []);
+    const timer = setTimeout(() => {
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        fetchCategories(1, searchQuery);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const filtered = categories.filter((c: any) => {
-    const q = searchQuery.toLowerCase()
-    const parentName = c.parent?.name?.toLowerCase() || ""
-    return (
-      c.name.toLowerCase().includes(q) ||
-      parentName.includes(q) ||
-      (c.slug && String(c.slug).toLowerCase().includes(q))
-    )
-  });
+  // Handle Page Change
+  useEffect(() => {
+    fetchCategories(page, searchQuery);
+  }, [page]);
 
   const handleDelete = async (c: any) => {
     const childCount = c._count?.children ?? 0
@@ -65,7 +80,7 @@ const ProductCategoriesPage = () => {
         header: "ID",
         cell: ({ row }) => (
             <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
-                {String(row.index + 1).padStart(2, '0')}
+                {String(((page - 1) * limit) + row.index + 1).padStart(2, '0')}
             </div>
         )
     },
@@ -144,7 +159,7 @@ const ProductCategoriesPage = () => {
   }, [successMessage])
 
   const handleCategoryAdded = () => {
-    fetchCategories()
+    fetchCategories(page, searchQuery)
     setSuccessMessage("Category created successfully!")
   }
 
@@ -173,14 +188,20 @@ const ProductCategoriesPage = () => {
         </button>
       </div>
 
-      {/* Management Ledger Area */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
         <DataTable 
             columns={columns} 
-            data={filtered}
+            data={categories}
             isLoading={loading}
-            onRefresh={fetchCategories}
+            onRefresh={() => fetchCategories(page, searchQuery)}
             placeholder="Search categories..."
+            hidePagination={false}
+            manualPagination={true}
+            pageIndex={page}
+            pageSize={limit}
+            totalItems={total}
+            pageCount={Math.ceil(total / limit)}
+            onPageChange={(newPageIndex) => setPage(newPageIndex)}
             headerActions={
                 <div className="flex items-center gap-3">
                     <div className="relative group">

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from '@/components/global-components/data-table-2';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatCurrencyShort, formatNumberShort } from '@/utils/format';
 import type { Product } from '../types';
 
 interface TopProductsTableProps {
@@ -39,7 +39,7 @@ export default function TopProductsTable({ products }: TopProductsTableProps) {
             cell: ({ row }) => (
                 <div className="text-right">
                     <span className="font-black text-slate-900 dark:text-white text-[13px] tabular-nums tracking-tight">
-                        {formatCurrency(row.getValue("revenue"))}
+                        {formatCurrencyShort(row.getValue("revenue"))}
                     </span>
                 </div>
             )

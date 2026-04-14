@@ -3,36 +3,41 @@ import { Store, CreditCard, Laptop2, Activity, CalendarDays, Download, Loader2, 
 import { reportsApi } from '../../service/api';
 import { StatsCard } from '../../components/ui/StatsCard';
 import { DataTable } from '@/components/global-components/data-table';
-import { formatPKR } from '@/utils/format';
+import { formatPKR, formatNumberShort, formatCurrencyShort } from '@/utils/format';
 
-const SuperOverview: React.FC = () => {
+const StoreOverview: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await reportsApi.getSuperAdminOverview();
-        if (res.data.success) {
-          setStats(res.data.data);
-        } else {
-          setError(res.data.message || 'Failed to load stats');
-        }
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Error occurred while fetching stats');
-      } finally {
-        setLoading(false);
+  const fetchStats = async () => {
+    try {
+      const res = await reportsApi.getSuperAdminOverview();
+      if (res.data.success) {
+        setStats(res.data.data);
+      } else {
+        setError(res.data.message || 'Failed to load stats');
       }
-    };
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Error occurred while fetching stats');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchStats();
+    
+    // Auto-refresh stats every 2 minutes
+    const interval = setInterval(fetchStats, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px]">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-4" />
-        <p className="text-slate-500 font-medium animate-pulse">Loading global dashboard metrics...</p>
+        <p className="text-slate-500 font-medium animate-pulse">Loading node performance metrics...</p>
       </div>
     );
   }
@@ -66,14 +71,21 @@ const SuperOverview: React.FC = () => {
       cell: ({ row }) => <span className="text-slate-500 font-medium truncate max-w-[150px]">{row.original.store?.city || 'Unknown'}, {row.original.store?.state || ''}</span>,
     },
     {
-      accessorKey: 'isActive',
+      id: 'status',
       header: 'Status',
-      cell: ({ getValue }) => {
-        const active = getValue<boolean>();
+      cell: ({ row }) => {
+        const device = row.original;
+        const lastActive = device.lastActiveAt ? new Date(device.lastActiveAt).getTime() : 0;
+        const now = Date.now();
+        const isOnline = (now - lastActive) < (5 * 60 * 1000) && device.isActive;
+
         return (
-          <span className={`px-3 py-1 rounded-md text-xs font-bold ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-            {active ? 'Active' : 'Inactive'}
-          </span>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`}></div>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest ${isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
         );
       },
     },
@@ -90,8 +102,8 @@ const SuperOverview: React.FC = () => {
       {/* Header Section */}
       <div className="flex justify-between items-end mb-8 pt-2">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Super Admin Overview</h1>
-          <p className="text-slate-500 font-medium mt-1">Real-time performance metrics across 12 countries</p>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Node Overview</h1>
+          <p className="text-slate-500 font-medium mt-1">Real-time performance metrics across global SaaS nodes</p>
         </div>
         <div className="flex space-x-3">
           <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
@@ -109,16 +121,16 @@ const SuperOverview: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard 
           title="Total Stores"
-          value={stats?.totalStores?.toLocaleString() || '0'}
+          value={formatNumberShort(stats?.totalStores || 0)}
           icon={Store}
           iconColorClass="text-indigo-600"
           iconBgClass="bg-indigo-50"
-          description="total"
+          description="total nodes"
           trend={{ value: "Live DB", isPositive: true, label: "Live DB total" }}
         />
         <StatsCard 
           title="Total Revenue"
-          value={formatPKR(stats?.totalRevenue || 0)}
+          value={formatCurrencyShort(stats?.totalRevenue || 0)}
           icon={CreditCard}
           iconColorClass="text-emerald-600"
           iconBgClass="bg-emerald-50"
@@ -127,7 +139,7 @@ const SuperOverview: React.FC = () => {
         />
         <StatsCard 
           title="Active Devices"
-          value={stats?.activeDevices?.toLocaleString() || '0'}
+          value={formatNumberShort(stats?.activeDevices || 0)}
           icon={Laptop2}
           iconColorClass="text-blue-600"
           iconBgClass="bg-blue-50"
@@ -136,7 +148,7 @@ const SuperOverview: React.FC = () => {
         />
         <StatsCard 
           title="Active Trials"
-          value={stats?.activeTrials?.toLocaleString() || '0'}
+          value={formatNumberShort(stats?.activeTrials || 0)}
           icon={Activity}
           iconColorClass="text-rose-600"
           iconBgClass="bg-rose-50"
@@ -151,7 +163,7 @@ const SuperOverview: React.FC = () => {
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2 flex flex-col">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Revenue by Top Stores</h2>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Revenue by Top Nodes</h2>
               <p className="text-slate-500 font-medium text-sm mt-1">Top performing branches globally</p>
             </div>
             <button className="text-sm font-bold text-slate-900 px-3 py-1">View All</button>
@@ -159,7 +171,7 @@ const SuperOverview: React.FC = () => {
           
           <div className="mb-4">
             <div className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              {formatPKR(stats?.totalRevenue || 0)}
+              {formatCurrencyShort(stats?.totalRevenue || 0)}
             </div>
             <div className="text-xs font-bold text-slate-400 flex items-center mt-2">
               <span className="text-slate-500">Total Lifetime Revenue</span>
@@ -189,17 +201,15 @@ const SuperOverview: React.FC = () => {
           </div>
         </div>
 
-        {/* Store Density Map Area */}
+        {/* Node Density Map Area */}
         <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 flex flex-col">
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Store Density</h2>
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Node Density</h2>
           <p className="text-slate-500 font-medium text-sm mt-1 mb-6">Geographical distribution</p>
           
           <div className="w-full h-48 bg-slate-200 rounded-xl mb-6 flex items-center justify-center relative overflow-hidden">
-             {/* Map Placeholder */}
              <div className="absolute w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] top-[40%] left-[30%]"></div>
              <div className="absolute w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] top-[60%] left-[50%]"></div>
              <div className="absolute w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)] top-[70%] left-[75%]"></div>
-             <span className="text-slate-400 font-mono text-sm tracking-widest hidden">MAP DATA</span>
           </div>
 
           <div className="space-y-4 flex-1 flex flex-col justify-end">
@@ -258,4 +268,4 @@ const SuperOverview: React.FC = () => {
   );
 };
 
-export default SuperOverview;
+export default StoreOverview;

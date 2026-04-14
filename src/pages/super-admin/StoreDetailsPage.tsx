@@ -23,6 +23,7 @@ import {
     Package
 } from 'lucide-react';
 import { showToast } from '../../utils/admin-toast';
+import { formatNumberShort } from '@/utils/format';
 import Pagination from '../../components/shared/admin/Pagination';
 
 const storeUpdateSchema = yup.object().shape({
@@ -171,7 +172,7 @@ const StoreDetailsPage: React.FC = () => {
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Administrators</p>
-                            <span className="text-xs font-bold text-slate-700">{currentStore?._count?.users || 0} Registered</span>
+                            <span className="text-xs font-bold text-slate-700">{formatNumberShort(currentStore?._count?.users || 0)} Registered</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4 px-6 border-r border-slate-100">
@@ -180,7 +181,7 @@ const StoreDetailsPage: React.FC = () => {
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Inventory Items</p>
-                            <span className="text-xs font-bold text-slate-700">{currentStore?._count?.products || 0} Products</span>
+                            <span className="text-xs font-bold text-slate-700">{formatNumberShort(currentStore?._count?.products || 0)} Products</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-4 px-6">
@@ -189,7 +190,7 @@ const StoreDetailsPage: React.FC = () => {
                         </div>
                         <div>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Device Uplinks</p>
-                            <span className="text-xs font-bold text-slate-700">{currentStore?._count?.devices || 0} Registered</span>
+                            <span className="text-xs font-bold text-slate-700">{formatNumberShort(currentStore?._count?.devices || 0)} Registered</span>
                         </div>
                     </div>
                 </div>
