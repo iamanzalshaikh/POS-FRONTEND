@@ -5,6 +5,8 @@ import {
   Package,
   RotateCcw,
   ShoppingCart,
+  Eye,
+  Search,
 } from 'lucide-react';
 import {
   getInventoryLogs,
@@ -47,11 +49,17 @@ const AllTransactions: React.FC = () => {
     }>
   >([]);
 
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
   const loadRecent = useCallback(async () => {
     const res = await getRecentTransactions({
       type: filterType === 'inventory' ? 'all' : filterType,
       page,
       limit: 10,
+      ...(dateFrom && dateTo ? { startDate: dateFrom, endDate: dateTo } : {}),
     });
     if (res.success && res.data) {
       setRecentItems(res.data.items || []);
@@ -65,7 +73,7 @@ const AllTransactions: React.FC = () => {
       setRecentItems([]);
       setRecentMeta({ total: 0, totalPages: 0, limit: 10 });
     }
-  }, [filterType, page]);
+  }, [filterType, page, dateFrom, dateTo]);
 
   const loadInventory = useCallback(async () => {
     const res = await getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' });
@@ -116,10 +124,27 @@ const AllTransactions: React.FC = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [filterType]);
+  }, [filterType, dateFrom, dateTo]);
 
   const saleCount = recentItems.filter((r) => r.transactionType === 'SALE').length;
   const refundCount = recentItems.filter((r) => r.transactionType === 'REFUND').length;
+
+  // Frontend search filter
+  const filteredRecentItems = recentItems.filter((item) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      item.invoiceNumber.toLowerCase().includes(q) ||
+      item.cashier?.name?.toLowerCase().includes(q) ||
+      item.id.toLowerCase().includes(q)
+    );
+  });
+
+  const filteredInventoryRows = inventoryRows.filter((row) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return row.description.toLowerCase().includes(q) || row.dateLabel.toLowerCase().includes(q);
+  });
 
   const transactionColumns: ColumnDef<TransactionRow>[] = [
     {
@@ -186,6 +211,22 @@ const AllTransactions: React.FC = () => {
         </div>
       ),
     },
+    {
+      id: "actions",
+      header: "View",
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => navigate(`/accountant/transaction/${row.original.id}`)}
+            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl transition-all active:scale-90"
+            title="View Receipt"
+          >
+            <Eye size={16} />
+          </button>
+        </div>
+      ),
+    },
   ];
 
   const inventoryColumns: ColumnDef<{
@@ -224,14 +265,13 @@ const AllTransactions: React.FC = () => {
 
   const tableData =
     filterType === 'inventory'
-      ? inventoryRows.map((row) => ({
+      ? filteredInventoryRows.map((row) => ({
           id: row.id,
           description: row.description,
           amountLabel: row.amountLabel,
           dateLabel: row.dateLabel,
         }))
-      : recentItems.map((t) => {
-          // Extract just the sequence number: "IMTIAZ-20260408-000009" → "000009"
+      : filteredRecentItems.map((t) => {
           const shortInvoice = t.invoiceNumber.includes('-')
             ? t.invoiceNumber.substring(t.invoiceNumber.lastIndexOf('-') + 1)
             : t.invoiceNumber;
@@ -268,18 +308,6 @@ const AllTransactions: React.FC = () => {
           <p className="text-sm text-slate-500 mt-1">
             View all sales, refunds, and inventory adjustments
           </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value as StreamFilter)}
-            className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[200px]"
-          >
-            <option value="all">Sales & Refunds (All)</option>
-            <option value="sale">Sales Only</option>
-            <option value="refund">Refunds Only</option>
-            <option value="inventory">Inventory Adjustments</option>
-          </select>
         </div>
       </div>
 
@@ -325,6 +353,64 @@ const AllTransactions: React.FC = () => {
           pageIndex={filterType !== 'inventory' ? page : undefined}
           onPageChange={filterType !== 'inventory' ? setPage : undefined}
           totalItems={filterType !== 'inventory' ? recentMeta.total : undefined}
+          headerActions={
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Type Filter */}
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as StreamFilter)}
+                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[180px]"
+              >
+                <option value="all">Sales & Refunds (All)</option>
+                <option value="sale">Sales Only</option>
+                <option value="refund">Refunds Only</option>
+                <option value="inventory">Inventory Adjustments</option>
+              </select>
+
+              {/* Search */}
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="Search invoice, cashier..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 pl-11 pr-4 w-[220px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                />
+              </div>
+
+              {/* Date From */}
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+              />
+
+              {/* Date To */}
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+              />
+
+              {/* Clear */}
+              {(searchQuery || dateFrom || dateTo) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setDateFrom('');
+                    setDateTo('');
+                  }}
+                  className="h-10 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 transition-all"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          }
         />
       </div>
     </div>

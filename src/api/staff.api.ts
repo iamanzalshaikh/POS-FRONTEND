@@ -346,6 +346,30 @@ export const getStaffPayrollHistory = async (
 // ALIAS EXPORTS (for store-admin StaffManagementPage compatibility)
 // ============================================================================
 
+/** Fetch a single staff member by ID */
+export const fetchStaffMemberById = async (
+  id: string
+): Promise<{ success: boolean; data: StaffMember | null; message?: string }> => {
+  const response = await api.get<any>(`/staff/${id}`);
+  const data = response.data?.data || response.data;
+  
+  if (data && !Array.isArray(data)) {
+    return {
+      success: true,
+      data: {
+        ...data,
+        monthlySalary: Number(data.monthlySalary),
+      },
+    };
+  }
+  
+  return {
+    success: false,
+    data: null,
+    message: response.data?.message || 'Failed to fetch staff member',
+  };
+};
+
 /** Alias for getStaff — used by store-admin staff management */
 export const fetchStaffMembers = async (params?: {
   search?: string;
