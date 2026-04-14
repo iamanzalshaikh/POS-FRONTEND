@@ -26,6 +26,7 @@ import ProfitLossReport from './ProfitLossReport';
 import ExportData from './ExportData';
 import MonthlyCloseReport from './MonthlyCloseReport';
 import AllTransactions from './AllTransactions';
+import TransactionReceipt from './TransactionReceipt';
 import StaffManagementPage from './StaffManagementPage';
 import PayrollManagementPage from './PayrollManagementPage';
 import SuppliersPage from '@/pages/store-admin/purchasing/SuppliersPage';
@@ -154,6 +155,7 @@ const AccountantDashboard: React.FC = () => {
         <Route path="staff" element={<StaffManagementPage />} />
         <Route path="payroll" element={<PayrollManagementPage />} />
         <Route path="transactions" element={<AllTransactions />} />
+        <Route path="transaction/:transactionId" element={<TransactionReceipt />} />
         <Route path="purchasing/suppliers" element={<SuppliersPage />} />
         <Route path="purchasing/purchases/new" element={<NewSupplierPurchasePage />} />
         <Route path="purchasing/purchases/:id" element={<SupplierPurchaseDetailPage />} />
