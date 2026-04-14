@@ -4,7 +4,8 @@ import { getSalesReport, getInventoryReport } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
 import type { Expense } from '../../utils/expense-utils';
-import { EXPENSE_CATEGORIES, formatCurrency as formatCurrencyUtil, getCategoryLabel } from '../../utils/expense-utils';
+import { EXPENSE_CATEGORIES, getCategoryLabel } from '../../utils/expense-utils';
+import { formatCurrency as formatCurrencyUtil, toLocalYMD } from '../../utils/format';
 import MetricCard from '../../components/global-components/MetricCard';
 import { DataTable } from '../../components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -48,7 +49,7 @@ const MonthlyCloseReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<MonthlyCloseData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+  const [selectedMonth, setSelectedMonth] = useState(toLocalYMD(new Date()).slice(0, 7)); // YYYY-MM
 
   useEffect(() => {
     fetchMonthlyData();
@@ -61,8 +62,8 @@ const MonthlyCloseReport: React.FC = () => {
 
       // Calculate month start and end dates
       const [year, month] = selectedMonth.split('-').map(Number);
-      const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-      const endDate = new Date(year, month, 0).toISOString().split('T')[0];
+      const startDate = toLocalYMD(new Date(year, month - 1, 1));
+      const endDate = toLocalYMD(new Date(year, month, 0));
 
       console.log('📊 [MonthlyClose] Fetching data for:', { startDate, endDate, selectedMonth });
 
@@ -166,13 +167,8 @@ const MonthlyCloseReport: React.FC = () => {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(value);
+  const formatCurrencyLocal = (value: number) => {
+    return formatCurrencyUtil(value);
   };
 
   const getMonthName = (monthStr: string) => {
@@ -282,25 +278,25 @@ const MonthlyCloseReport: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Revenue"
-          value={formatCurrency(data.sales.totalRevenue)}
+          value={formatCurrencyLocal(data.sales.totalRevenue)}
           icon={DollarSign}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <MetricCard
           title="Net Revenue"
-          value={formatCurrency(data.sales.netRevenue)}
+          value={formatCurrencyLocal(data.sales.netRevenue)}
           icon={TrendingUp}
           colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
         <MetricCard
           title="Gross Profit"
-          value={formatCurrency(data.profit.grossProfit)}
+          value={formatCurrencyLocal(data.profit.grossProfit)}
           icon={TrendingUp}
           colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
         />
         <MetricCard
           title="Stock Value"
-          value={formatCurrency(data.inventory.closingStock)}
+          value={formatCurrencyLocal(data.inventory.closingStock)}
           icon={FileText}
           colorClass="bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
         />

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Search, Plus, Minus, CheckCircle, Package, Loader2 } from 'lucide-react';
 import { adjustStock } from '@/api/inventory.api';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 
 const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], onSuccess?: () => void }) => {
     const [quantity, setQuantity] = useState(1);
@@ -18,8 +20,8 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
     );
 
     const handleSubmit = async () => {
-        if (!selectedProduct) return alert('Please select a product');
-        if (quantity === 0) return alert('Quantity cannot be zero');
+        if (!selectedProduct) return toast.error('Please select a product', 'Missing Data');
+        if (quantity === 0) return toast.error('Quantity cannot be zero', 'Invalid Input');
         
         // Smart Quantity Logic:
         // Adjustments from the UI are often intended as "magnitudes".
@@ -47,11 +49,12 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
             setNotes('');
             setReferenceId('');
             
+            toast.success('Stock level adjusted successfully', 'Success');
             if (onSuccess) onSuccess();
         } catch (error: any) {
             console.error('Adjustment failed:', error);
             const errorMsg = error.response?.data?.message || error.message || 'An unknown error occurred';
-            alert(`Adjustment Failed: ${errorMsg}\n\nNote: If this is a server error (500), it may be due to a backend database constraint.`);
+            toast.error(errorMsg, 'Adjustment Failed');
         } finally {
             setIsSubmitting(false);
         }
@@ -106,7 +109,13 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                                                 <span className="text-sm font-bold text-gray-800">{p.name}</span>
                                                 <span className="text-[10px] text-gray-400 font-mono tracking-wider">{p.barcode || 'NO BARCODE'}</span>
                                             </div>
-                                            <span className="bg-blue-50 text-blue-600 text-[10px] font-black px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">SELECT</span>
+                                            <Button 
+                                                variant="secondary" 
+                                                size="sm" 
+                                                className="h-7 text-[9px] font-black opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                SELECT
+                                            </Button>
                                         </button>
                                     ))
                                 ) : (
@@ -153,21 +162,23 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                     <div className="space-y-2 text-center">
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Quantity Adjustment</label>
                         <div className="flex items-center justify-center gap-6 mt-4">
-                            <button 
+                            <Button 
+                                variant="outline"
                                 onClick={() => setQuantity(quantity - 1)}
-                                className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-500 transition-all active:scale-90 border border-gray-100 shadow-sm"
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-500 hover:border-rose-100 transition-all active:scale-90 border-2 border-slate-100 shadow-none p-0"
                             >
                                 <Minus size={24} strokeWidth={3} />
-                            </button>
+                            </Button>
                             <div className="w-24 text-center">
                                 <span className="text-5xl font-black text-gray-900 tracking-tighter tabular-nums">{quantity}</span>
                             </div>
-                            <button 
+                            <Button 
+                                variant="outline"
                                 onClick={() => setQuantity(quantity + 1)}
-                                className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 hover:bg-emerald-50 hover:text-emerald-500 transition-all active:scale-90 border border-gray-100 shadow-sm"
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all active:scale-90 border-2 border-slate-100 shadow-none p-0"
                             >
                                 <Plus size={24} strokeWidth={3} />
-                            </button>
+                            </Button>
                         </div>
                     </div>
 
@@ -182,14 +193,14 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                         />
                     </div>
 
-                    <button 
+                    <Button 
                         onClick={handleSubmit}
                         disabled={isSubmitting || !selectedProduct}
-                        className="w-full flex items-center justify-center gap-3 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-[2px] shadow-xl shadow-emerald-200 hover:bg-emerald-700 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
+                        className="w-full h-14 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-[2px] shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
                     >
                         {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle size={18} className="group-hover:rotate-12 transition-transform" />}
                         {isSubmitting ? 'Submitting...' : 'Adjust Stock Level'}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

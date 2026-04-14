@@ -1,8 +1,10 @@
 import { X, Package, Tag, Archive, UploadCloud, Info, DollarSign, CheckCircle2, Percent, Scale } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
 import { createPortal } from 'react-dom';
 import { createProduct } from '@/api/products.api';
 import { getCategories } from '@/api/category.api';
+import { toast } from '@/lib/toast';
 
 const GST_PRESETS = [18] as const;
 
@@ -123,6 +125,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
 
     try {
       await createProduct(formData);
+      toast.success('Product created successfully', "Inventory Updated");
       onSuccess?.();
       handleClose();
       resetForm();
@@ -131,7 +134,9 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
         err && typeof err === 'object' && 'response' in err
           ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
           : undefined;
-      setError(msg || 'Failed to save product.');
+      const errorMsg = msg || 'Failed to save product.';
+      setError(errorMsg);
+      toast.error(errorMsg, "Action Failed");
     } finally {
       setLoading(false);
     }
@@ -316,18 +321,20 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {GST_PRESETS.map((p) => (
-                    <button
+                    <Button
                       key={p}
                       type="button"
+                      variant={taxPercentage === String(p) ? "default" : "outline"}
                       onClick={() => setTaxPercentage(String(p))}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all ${
+                      className={cn(
+                        "px-3 py-1.5 h-8 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all",
                         taxPercentage === String(p)
-                          ? 'bg-emerald-600 text-white border-emerald-600'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-emerald-400'
-                      }`}
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600'
+                      )}
                     >
                       {p}%
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <div className="space-y-2">
@@ -447,17 +454,18 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
           </div>
 
           <div className="p-6 shrink-0 border-t border-slate-100 dark:border-slate-800 flex gap-4 bg-white dark:bg-slate-900">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={handleClose}
-              className="flex-1 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#1e293b] dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="flex-1 h-12 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-[#2563eb] text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 h-12 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-xl shadow-blue-500/20 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span className="animate-pulse">Saving…</span>
@@ -467,7 +475,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
                   <span>Save product</span>
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

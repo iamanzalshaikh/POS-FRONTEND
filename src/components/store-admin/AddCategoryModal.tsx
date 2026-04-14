@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react"
 import { createPortal } from 'react-dom'
 import { X, Shapes, CheckCircle2, Info } from 'lucide-react'
 import { createCategory, getCategories } from "@/api/category.api"
+import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import type { Category } from "@/types/category"
 
 interface Props {
@@ -90,15 +92,18 @@ const AddCategoryModal = ({ open, onClose, onCategoryAdded }: Props) => {
       }
 
       onCategoryAdded()
+      toast.success("Category created successfully!", "Success")
       handleClose()
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
           : undefined
-      setError(msg || "Failed to create category registry.")
+      const errorMsg = msg || "Failed to create category registry."
+      setError(errorMsg)
+      toast.error(errorMsg, "Action Failed")
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -181,17 +186,18 @@ const AddCategoryModal = ({ open, onClose, onCategoryAdded }: Props) => {
           </div>
 
           <div className="flex gap-4 pt-6 shrink-0 border-t border-slate-100 dark:border-slate-800">
-            <button
+            <Button
               type="button"
+              variant="outline"
               onClick={handleClose}
-              className="flex-1 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#1e293b] dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all active:scale-95"
+              className="flex-1 h-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#1e293b] dark:text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 bg-[#2563eb] text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 h-12 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span className="animate-pulse">Saving...</span>
@@ -201,7 +207,7 @@ const AddCategoryModal = ({ open, onClose, onCategoryAdded }: Props) => {
                   <span>Save Category</span>
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

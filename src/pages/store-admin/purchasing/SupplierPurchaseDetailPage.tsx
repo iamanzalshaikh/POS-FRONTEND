@@ -19,9 +19,10 @@ import {
 } from "@/api/suppliers.api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePurchasingBasePath } from "@/hooks/usePurchasingBasePath";
-import { formatCurrencyShort } from "@/utils/format";
+import { formatCurrencyShort, formatNumberShort } from "@/utils/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import MetricCard from "@/components/global-components/MetricCard";
 
@@ -89,11 +90,14 @@ export default function SupplierPurchaseDetailPage() {
                 method: payMethod,
                 notes: payNotes.trim() || undefined,
             });
+            toast.success(`Payment of ${formatCurrencyShort(amt)} recorded successfully.`, "Settlement Updated");
             setPayAmount("");
             setPayNotes("");
             await loadPurchase();
         } catch (err: any) {
-            setPayError(err.response?.data?.message || err.message || "Payment failed");
+            const msg = err.response?.data?.message || err.message || "Payment failed";
+            setPayError(msg);
+            toast.error(msg, "Payment Failed");
         } finally {
             setPaySaving(false);
         }
@@ -150,7 +154,7 @@ export default function SupplierPurchaseDetailPage() {
                 <div className="flex gap-3">
                     <Button
                         variant="outline"
-                        className="rounded-xl border-slate-200 dark:border-slate-800 text-[10px] font-black uppercase tracking-widest h-11 px-6 shadow-sm active:scale-95 transition-all"
+                        className="rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-900/50 dark:hover:bg-blue-950/30 text-[10px] font-black uppercase tracking-widest h-11 px-6 shadow-sm active:scale-95 transition-all"
                         onClick={() => window.print()}
                     >
                         Export PDF
@@ -216,7 +220,7 @@ export default function SupplierPurchaseDetailPage() {
                                             <td className="py-4 text-center text-[10px] font-black text-slate-400 dark:text-slate-500">
                                                 #{it.batch?.batchNumber || it.id.slice(0, 6).toUpperCase()}
                                             </td>
-                                            <td className="py-4 text-center text-sm font-black text-slate-900 dark:text-white">{it.quantity}</td>
+                                            <td className="py-4 text-center text-sm font-black text-slate-900 dark:text-white">{formatNumberShort(it.quantity)}</td>
                                             <td className="py-4 text-right text-[11px] font-black text-slate-500 dark:text-slate-400">{formatCurrencyShort(num(it.unitPrice))}</td>
                                             <td className="py-4 text-right text-sm font-black text-slate-900 dark:text-white">{formatCurrencyShort(num(it.totalPrice))}</td>
                                         </tr>
@@ -346,7 +350,7 @@ export default function SupplierPurchaseDetailPage() {
                                     <Button
                                         type="submit"
                                         disabled={paySaving}
-                                        className="w-full h-14 bg-white text-blue-600 hover:bg-blue-50 rounded-2xl font-black uppercase tracking-[2px] text-[10px] mt-4 shadow-lg shadow-blue-900/30 active:scale-95 transition-all"
+                                        className="w-full h-14 bg-white text-blue-600 hover:bg-white/90 rounded-2xl font-black uppercase tracking-[2px] text-[10px] mt-4 shadow-lg shadow-blue-900/30 active:scale-95 transition-all"
                                     >
                                         {paySaving ? "Validating..." : "Settle Balance"}
                                     </Button>
@@ -396,7 +400,3 @@ export default function SupplierPurchaseDetailPage() {
         </div>
     );
 }
-
-const AlertCircle = ({ size }: { size: number }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-);

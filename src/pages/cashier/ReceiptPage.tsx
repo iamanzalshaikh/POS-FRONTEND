@@ -351,9 +351,8 @@ const ReceiptPage: React.FC = () => {
     }
 
     // Check what data we have - be VERY lenient
-    const hasItems = (sale.saleItems || sale.items) && 
-                     Array.isArray(sale.saleItems || sale.items) && 
-                     (sale.saleItems || sale.items).length > 0;
+    const currentItems = sale.saleItems || sale.items;
+    const hasItems = Array.isArray(currentItems) && currentItems.length > 0;
     const hasTotal = sale.totalAmount !== undefined && sale.totalAmount !== null;
     const hasInvoiceNumber = sale.invoiceNumber || sale.id || sale.tempId;
 
@@ -599,23 +598,23 @@ const ReceiptPage: React.FC = () => {
             ) : sale?.store ? (
               // Fallback to sale's store info
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">{sale.store.name}</h2>
-                {sale.store.address && (
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">{sale?.store?.name}</h2>
+                {sale?.store?.address && (
                   <div className="flex items-center justify-center space-x-2 mb-1">
                     <MapPin size={16} className="text-slate-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{sale.store.address}</p>
+                    <p className="text-sm text-slate-700">{sale?.store?.address}</p>
                   </div>
                 )}
-                {sale.store.phone && (
+                {sale?.store?.phone && (
                   <div className="flex items-center justify-center space-x-2 mb-1">
                     <Phone size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{sale.store.phone}</p>
+                    <p className="text-sm text-slate-700">{sale?.store?.phone}</p>
                   </div>
                 )}
-                {sale.store.email && (
+                {sale?.store?.email && (
                   <div className="flex items-center justify-center space-x-2">
                     <Mail size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{sale.store.email}</p>
+                    <p className="text-sm text-slate-700">{sale?.store?.email}</p>
                   </div>
                 )}
               </div>
@@ -641,7 +640,7 @@ const ReceiptPage: React.FC = () => {
                   Cashier
                 </div>
                 <div className="font-semibold text-slate-800">
-                  {sale.user.name || sale.user.email}
+                  {sale?.user?.name || sale?.user?.email}
                 </div>
               </div>
             )}
@@ -653,7 +652,7 @@ const ReceiptPage: React.FC = () => {
                 <span className="font-semibold text-slate-700">
                   Device:
                 </span>{' '}
-                {sale.device.deviceName}
+                {sale?.device?.deviceName}
               </div>
             )}
           </div>
@@ -831,11 +830,11 @@ const ReceiptPage: React.FC = () => {
                     <div className="mt-4 pt-3 border-t border-slate-200 space-y-1.5">
                       <div className="flex justify-between items-center text-xs">
                         <span className="font-bold text-slate-500 uppercase tracking-widest">Amount Paid</span>
-                        <span className="font-black text-slate-900">{formatCurrency(toFiniteNumber(sale.receivedAmount) || 0)}</span>
+                        <span className="font-black text-slate-900">{formatCurrency(toFiniteNumber(sale?.receivedAmount) || 0)}</span>
                       </div>
                       <div className="flex justify-between items-center text-sm">
                         <span className="font-bold text-slate-500 uppercase tracking-widest">Change</span>
-                        <span className="font-black text-blue-600">{formatCurrency(toFiniteNumber(sale.changeAmount) || 0)}</span>
+                        <span className="font-black text-blue-600">{formatCurrency(toFiniteNumber(sale?.changeAmount) || 0)}</span>
                       </div>
                     </div>
                   )}
@@ -852,14 +851,14 @@ const ReceiptPage: React.FC = () => {
                 <span className="font-semibold text-slate-700">
                   Payment Method:
                 </span>{' '}
-                {sale.paymentMethod}
+                {sale?.paymentMethod}
               </div>
               {sale?.paymentStatus && (
                 <div>
                   <span className="font-semibold text-slate-700">
                     Payment Status:
                   </span>{' '}
-                  {sale.paymentStatus}
+                  {sale?.paymentStatus}
                 </div>
               )}
             </div>

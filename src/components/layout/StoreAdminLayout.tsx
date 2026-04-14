@@ -24,7 +24,7 @@ const storeAdminMenu = [
         path: '/store-admin/purchasing/suppliers',
         children: [
             { name: 'Suppliers', icon: Truck, path: '/store-admin/purchasing/suppliers' },
-            { name: 'Purchases', icon: ClipboardList, path: '/store-admin/purchasing/purchases' },
+            { name: 'Purchases', icon: ClipboardList, path: '/store-admin/purchasing/purchases', exact: true },
             { name: 'New purchase', icon: PlusCircle, path: '/store-admin/purchasing/purchases/new' },
         ]
     },

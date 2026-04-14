@@ -4,7 +4,7 @@ import MetricCard from '@/components/global-components/MetricCard';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
-import { formatCurrency } from "@/utils/format";
+import { formatCurrency, toLocalYMD } from "@/utils/format";
 import MonthlyActivityChart from "@/components/global-components/monthly-activity-chart";
 import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
 
@@ -18,8 +18,8 @@ const SalesHistoryPage = () => {
     const [statusFilter, setStatusFilter] = useState("All Status");
     const [paymentMethod, setPaymentMethod] = useState("All Methods");
     const [dateRange, setDateRange] = useState({
-        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-        end: new Date().toISOString().split('T')[0]
+        start: toLocalYMD(new Date(new Date().setDate(new Date().getDate() - 30))),
+        end: toLocalYMD(new Date())
     });
 
     // Pagination State
@@ -153,14 +153,9 @@ const SalesHistoryPage = () => {
             accessorKey: "customerName",
             meta: { align: 'left' },
             cell: ({ row }) => (
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-[11px] font-black text-slate-400 uppercase shadow-sm">
-                        {String(row.original.customerName || 'C').charAt(0)}
-                    </div>
-                    <div>
-                        <span className="text-[10px] font-black tracking-widest uppercase text-slate-900 dark:text-white block">{row.original.customerName || 'Walk-in'}</span>
-                        <span className="text-[9px] font-black tracking-widest uppercase text-slate-400 mt-0.5 block">Tier: Standard</span>
-                    </div>
+                <div className="flex flex-col justify-center">
+                    <span className="text-[10px] font-black tracking-widest uppercase text-slate-900 dark:text-white block">{row.original.customerName || 'Walk-in'}</span>
+                    <span className="text-[9px] font-black tracking-widest uppercase text-slate-400 mt-0.5 block">Tier: Standard</span>
                 </div>
             )
         },
@@ -299,12 +294,12 @@ const SalesHistoryPage = () => {
                             </div>
                             <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
                                 {[
-                                    { label: 'Today', range: 0 },
+                                { label: 'Today', range: 0 },
                                     { label: 'Weekly', range: 7 },
                                     { label: 'Monthly', range: 30 }
                                 ].map((r) => {
-                                    const start = new Date(new Date().setDate(new Date().getDate() - r.range)).toISOString().split('T')[0];
-                                    const end = new Date().toISOString().split('T')[0];
+                                    const start = toLocalYMD(new Date(new Date().setDate(new Date().getDate() - r.range)));
+                                    const end = toLocalYMD(new Date());
                                     const isActive = dateRange.start === start && dateRange.end === end;
                                     return (
                                         <button

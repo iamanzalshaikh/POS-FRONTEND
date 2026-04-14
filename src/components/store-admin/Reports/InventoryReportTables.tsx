@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, XCircle, Package } from 'lucide-react';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
+import { formatNumberShort } from '@/utils/format';
 
 interface InventoryItem {
   id: string;
@@ -46,7 +47,7 @@ const InventoryReportTables: React.FC<InventoryReportTablesProps> = ({
         header: "Qty",
         accessorKey: "totalQuantity",
         cell: ({ row }) => (
-            <span className="text-sm font-black text-rose-600">{row.original.totalQuantity}</span>
+            <span className="text-sm font-black text-rose-600">{formatNumberShort(row.original.totalQuantity)}</span>
         )
     },
     {
@@ -54,7 +55,7 @@ const InventoryReportTables: React.FC<InventoryReportTablesProps> = ({
         accessorKey: "product.reorderLevel",
         meta: { align: 'right' },
         cell: ({ row }) => (
-            <span className="text-[10px] font-black text-slate-400 uppercase">{row.original.product.reorderLevel} units</span>
+            <span className="text-[10px] font-black text-slate-400 uppercase">{formatNumberShort(row.original.product.reorderLevel)} units</span>
         )
     }
   ];

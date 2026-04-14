@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import PageLoader from '@/components/ui/PageLoader';
 import HomeRedirect from '@/components/shared/HomeRedirect';
 import StoreAdminLayout from '@/components/layout/StoreAdminLayout';
+import { Toaster } from '@/components/ui/toaster';
 
 // Lazy loading pages
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -72,6 +73,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <SidebarProvider defaultOpen={true}>
+        <Toaster />
         <Router>
           <Suspense fallback={<PageLoader />}>
             <Routes>

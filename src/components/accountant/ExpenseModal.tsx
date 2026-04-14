@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES } from '../../utils/expense-utils';
 import { getExpenseCategories, type ExpenseCategory } from '../../api/expenses.api';
+import { toLocalYMD } from '@/utils/format';
 
 interface ExpenseModalProps {
   isOpen: boolean;
@@ -31,7 +32,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     category: '',
     description: '',
     amount: '',
-    date: new Date().toISOString().split('T')[0],
+    date: toLocalYMD(new Date()),
     notes: '',
     customCategoryId: undefined,
   });
@@ -76,7 +77,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         category: '',
         description: '',
         amount: '',
-        date: new Date().toISOString().split('T')[0],
+        date: toLocalYMD(new Date()),
         notes: '',
         customCategoryId: undefined,
       });

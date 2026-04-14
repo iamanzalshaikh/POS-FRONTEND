@@ -22,11 +22,12 @@ import {
   type StaffMember,
   type UpdatePayrollData,
 } from '../../api/staff.api';
-import Toast, { type ToastType } from '../../components/ui/Toast';
 import ProcessSalaryForm from '../../components/accountant/ProcessSalaryForm';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
+import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const formatCurrency = (amount: number): string => {
@@ -72,7 +73,6 @@ const PayrollManagementPage: React.FC = () => {
   const [selectedPayroll, setSelectedPayroll] = useState<PayrollRecord | null>(null);
   const [staffHistory, setStaffHistory] = useState<PayrollRecord[]>([]);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   // Payment form
   const [paymentForm, setPaymentForm] = useState({
@@ -147,8 +147,8 @@ const PayrollManagementPage: React.FC = () => {
     }
   };
 
-  const showToast = (message: string, type: ToastType) => {
-    setToast({ message, type });
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    toast[type](message);
   };
 
   const totalPaid = payrollRecords.reduce((sum, r) => sum + r.amountPaid, 0);
@@ -264,12 +264,6 @@ const PayrollManagementPage: React.FC = () => {
           onClick: () => setShowCreateModal(true)
         }}
       />
-
-      {toast && (
-        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-right-4">
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard

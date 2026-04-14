@@ -1,5 +1,7 @@
 import { X, Truck, Phone, MapPin, CheckCircle2, Info } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/lib/toast';
 import { createPortal } from 'react-dom';
 import type { Supplier } from '@/api/suppliers.api';
 
@@ -73,8 +75,10 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
         setLoading(false);
 
         if (result.success) {
+            toast.success(`Supplier ${editSupplier ? 'updated' : 'created'} successfully`, "Operation Successful");
             handleClose();
         } else {
+            toast.error(result.error || `Failed to ${editSupplier ? 'update' : 'create'} supplier.`, "Action Failed");
             setError(result.error || `Failed to ${editSupplier ? 'update' : 'create'} supplier.`);
         }
     };
@@ -162,17 +166,18 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
 
                     {/* Footer Actions */}
                     <div className="flex gap-4 pt-6 shrink-0 border-t border-slate-100 dark:border-slate-800">
-                        <button
+                        <Button
                             type="button"
+                            variant="outline"
                             onClick={handleClose}
-                            className="flex-1 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#1e293b] dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all active:scale-95 lowercase first-letter:uppercase"
+                            className="flex-1 h-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[#1e293b] dark:text-slate-300 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 py-3 bg-[#2563eb] text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 lowercase first-letter:uppercase"
+                            className="flex-1 h-12 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
                             {loading ? (
                                 <span className="animate-pulse">Saving...</span>
@@ -182,7 +187,7 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
                                     <span>{editSupplier ? 'Update Supplier' : 'Save Supplier'}</span>
                                 </>
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </form>
             </div>
