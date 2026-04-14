@@ -2,13 +2,13 @@ import { useEffect, useState } from "react"
 import AddCategoryModal from "@/components/store-admin/AddCategoryModal"
 import { CheckCircle2, Plus, Search, Box, Trash2 } from "lucide-react"
 import { deleteCategory, getCategories } from "@/api/category.api";
+import { toast } from '@/lib/toast';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const ProductCategoriesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
 
   const [categories, setCategories] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -60,18 +60,19 @@ const ProductCategoriesPage = () => {
     const childCount = c._count?.children ?? 0
     const productCount = c._count?.products ?? 0
     if (childCount > 0 || productCount > 0) {
-      window.alert(
-        `Cannot delete: ${childCount} subcategories, ${productCount} products. Remove or reassign them first.`
+      toast.warning(
+        `Cannot delete: ${childCount} subcategories, ${productCount} products. Remove or reassign them first.`,
+        "Dependency Found"
       )
       return
     }
     if (!window.confirm(`Delete category “${c.name}”? This cannot be undone.`)) return
     try {
       await deleteCategory(c.id)
-      setSuccessMessage("Category deleted.")
+      toast.success("Category deleted.", "Success")
       await fetchCategories()
     } catch (e: any) {
-      window.alert(e.response?.data?.message || "Delete failed.")
+      toast.error(e.response?.data?.message || "Delete failed.", "Action Failed")
     }
   };
 
@@ -151,27 +152,13 @@ const ProductCategoriesPage = () => {
     }
   ];
 
-  // Auto-dismiss success toast
-  useEffect(() => {
-    if (!successMessage) return
-    const t = setTimeout(() => setSuccessMessage(""), 3000)
-    return () => clearTimeout(t)
-  }, [successMessage])
-
   const handleCategoryAdded = () => {
     fetchCategories(page, searchQuery)
-    setSuccessMessage("Category created successfully!")
+    toast.success("Category created successfully!", "Success")
   }
 
   return (
     <div className="animate-in fade-in duration-500 space-y-8">
-      {/* Success Toast */}
-      {successMessage && (
-        <div className="flex items-center gap-3 bg-white dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 px-5 py-4 rounded-2xl shadow-lg shadow-emerald-50 dark:shadow-none animate-in slide-in-from-top duration-300">
-          <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-          <span className="text-sm font-bold tracking-tight">{successMessage}</span>
-        </div>
-      )}
 
       {/* Inline Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">

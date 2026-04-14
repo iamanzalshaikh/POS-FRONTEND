@@ -1,4 +1,5 @@
 import { PanelLeftOpen, PanelLeftClose, User, LogOut, Settings, CircleUser } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -24,6 +25,15 @@ export default function TopNavbar({
 }: TopNavbarProps) {
     const { collapsed, toggle, openMobile } = useSidebar();
     const { user, logout } = useAuthStore();
+    const navigate = useNavigate();
+
+    const handleProfileClick = () => {
+        if (user?.role === 'SUPER_ADMIN') {
+            navigate('/super-admin/settings');
+        } else if (user?.role === 'STORE_ADMIN') {
+            navigate('/store-admin/settings');
+        }
+    };
 
     return (
         <header className="h-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 px-4 sm:px-8 flex items-center justify-between shadow-sm shadow-slate-100/50 dark:shadow-none transition-colors duration-300">
@@ -83,8 +93,16 @@ export default function TopNavbar({
                                         {(user?.role || 'member').replace('_', ' ')}
                                     </p>
                                 </div>
-                                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white dark:group-hover:bg-indigo-500 transition-all duration-300">
-                                    <CircleUser size={24} strokeWidth={1.5} />
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white dark:group-hover:bg-indigo-500 transition-all duration-300 overflow-hidden">
+                                    {(user as any)?.store?.logoUrl ? (
+                                        <img src={(user as any).store.logoUrl} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    ) : user?.name ? (
+                                        <span className="font-black text-base tracking-widest">
+                                            {user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                                        </span>
+                                    ) : (
+                                        <CircleUser size={24} strokeWidth={1.5} />
+                                    )}
                                 </div>
                             </button>
                         </DropdownMenuTrigger>
@@ -93,7 +111,10 @@ export default function TopNavbar({
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">My Account</p>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator className="bg-slate-50 dark:bg-slate-800" />
-                            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors focus:bg-indigo-50 focus:text-indigo-600 dark:focus:bg-indigo-950/30 dark:focus:text-indigo-400">
+                            <DropdownMenuItem 
+                                onClick={handleProfileClick}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-colors focus:bg-indigo-50 focus:text-indigo-600 dark:focus:bg-indigo-950/30 dark:focus:text-indigo-400"
+                            >
                                 <User size={18} strokeWidth={1.5} />
                                 <span className="text-sm font-medium">Profile Details</span>
                             </DropdownMenuItem>

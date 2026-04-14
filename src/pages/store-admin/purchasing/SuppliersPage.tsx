@@ -209,16 +209,16 @@ export default function SuppliersPage() {
                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Manage vendor relations and procurement</p>
                 </div>
                 {!readOnly && (
-                    <button
+                    <Button
                         onClick={() => {
                             setSelectedSupplier(null);
                             setIsModalOpen(true);
                         }}
-                        className="flex items-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-400/20 border border-blue-500"
+                        className="h-14 px-8 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-xl shadow-blue-500/20 flex items-center gap-2"
                     >
                         <Plus className="w-4 h-4" />
                         Add New Supplier
-                    </button>
+                    </Button>
                 )}
             </div>
 

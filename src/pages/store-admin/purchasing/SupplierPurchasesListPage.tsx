@@ -89,21 +89,7 @@ export default function SupplierPurchasesListPage() {
             header: "ID",
             cell: ({ row }) => (
                 <div className="flex justify-center uppercase tracking-widest text-[11px] font-black text-slate-400">
-                    {row.original.id.slice(-4)}
-                </div>
-            )
-        },
-        {
-            header: "Purchase Date",
-            accessorKey: "purchaseDate",
-            cell: ({ row }) => (
-                <div className="flex flex-col">
-                    <span className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">
-                        {new Date(row.original.purchaseDate).toLocaleDateString()}
-                    </span>
-                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
-                        {new Date(row.original.purchaseDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    {String(row.index + 1).padStart(2, '0')}
                 </div>
             )
         },
@@ -130,12 +116,12 @@ export default function SupplierPurchasesListPage() {
                 const bal = num(row.original.balance);
                 const isPaid = bal <= 0;
                 return (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 items-start">
                         <span className={cn(
                             "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border",
                             isPaid 
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
-                                : "bg-amber-50 text-amber-600 border-amber-100"
+                                ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
+                                : "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50"
                         )}>
                             {isPaid ? 'Fully Paid' : 'Partially Paid'}
                         </span>
@@ -156,12 +142,26 @@ export default function SupplierPurchasesListPage() {
                 return (
                     <div className={cn(
                         "font-black text-sm tracking-tight text-center",
-                        bal > 0 ? "text-amber-600" : "text-emerald-600"
+                        bal > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
                     )}>
                         {bal > 0 ? formatCurrencyShort(bal) : '—'}
                     </div>
                 );
             }
+        },
+        {
+            header: "Purchase Date",
+            accessorKey: "purchaseDate",
+            cell: ({ row }) => (
+                <div className="flex flex-col">
+                    <span className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">
+                        {new Date(row.original.purchaseDate).toLocaleDateString()}
+                    </span>
+                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
+                        {new Date(row.original.purchaseDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                </div>
+            )
         },
         {
             id: "actions",

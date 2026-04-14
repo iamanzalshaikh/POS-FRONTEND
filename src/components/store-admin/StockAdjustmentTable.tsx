@@ -1,6 +1,7 @@
 import { History } from 'lucide-react';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
+import { formatNumberShort, formatDate } from '@/utils/format';
 
 interface StockAdjustmentTableProps {
     adjustments: any[];
@@ -73,7 +74,7 @@ const StockAdjustmentTable = ({
                     <span className={`text-xs font-black tabular-nums ${
                         qty > 0 ? 'text-emerald-600' : 'text-rose-600'
                     }`}>
-                        {qty > 0 ? '+' : ''}{qty}
+                        {qty > 0 ? '+' : ''}{formatNumberShort(qty)}
                     </span>
                 );
             }
@@ -94,7 +95,7 @@ const StockAdjustmentTable = ({
             meta: { align: 'right' },
             cell: ({ row }) => (
                 <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest tabular-nums leading-none">
-                    {new Date(row.original.createdAt).toLocaleString()}
+                    {formatDate(row.original.createdAt)}
                 </span>
             )
         },

@@ -19,6 +19,7 @@ import { usePurchasingBasePath } from "@/hooks/usePurchasingBasePath";
 import { formatCurrencyShort } from "@/utils/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 type Line = { key: string; productId: string; quantity: string; unitPrice: string };
@@ -133,11 +134,14 @@ export default function NewSupplierPurchasePage() {
                 paidAmount: paidNum,
                 notes: notes.trim() || undefined,
             });
+            toast.success("Purchase manifest committed and stock received successfully.", "Ledger Updated");
             const id = res.data?.data?.id;
             if (id) navigate(`${base}/purchases/${id}`);
             else navigate(`${base}/purchases`);
         } catch (err: any) {
-            setError(err.response?.data?.message || err.message || "Ledger commit error: Check connection.");
+            const msg = err.response?.data?.message || err.message || "Ledger commit error: Check connection.";
+            setError(msg);
+            toast.error(msg, "Commit Failed");
         } finally {
             setSaving(false);
         }
@@ -235,10 +239,10 @@ export default function NewSupplierPurchasePage() {
                             </h3>
                             <Button 
                                 type="button" 
-                                variant="ghost" 
+                                variant="secondary" 
                                 size="sm" 
                                 onClick={addLine} 
-                                className="h-10 px-4 rounded-xl text-blue-600 hover:bg-blue-50 font-black uppercase tracking-widest text-[9px] gap-2 active:scale-95 transition-all"
+                                className="h-10 px-4 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 font-black uppercase tracking-widest text-[9px] gap-2 active:scale-95 transition-all border border-blue-100"
                             >
                                 <Plus size={14} /> Add row
                             </Button>
@@ -322,19 +326,19 @@ export default function NewSupplierPurchasePage() {
 
                 <div className="space-y-8">
                     {/* Financial Reconciliation Summary */}
-                    <div className="bg-[#1e293b] rounded-[2.5rem] p-8 shadow-2xl text-white relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700">
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 p-8 shadow-sm relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700 text-slate-900 dark:text-white">
                            <Wallet size={160} />
                         </div>
                         <div className="relative z-10">
-                            <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 mb-8 flex items-center gap-2">
+                            <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 dark:text-slate-500 mb-8 flex items-center gap-2">
                                 <Wallet size={14} /> Settlement Control
                             </h3>
                             
                             <div className="space-y-6">
-                                <div className="flex justify-between items-end border-b border-slate-700/50 pb-6">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Invoice Total</span>
-                                    <span className="text-2xl font-black tracking-tight">{formatCurrencyShort(grandTotal)}</span>
+                                <div className="flex justify-between items-end border-b border-slate-100 dark:border-slate-800 pb-6">
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Invoice Total</span>
+                                    <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{formatCurrencyShort(grandTotal)}</span>
                                 </div>
 
                                 <div className="space-y-2 pt-2">
@@ -343,7 +347,7 @@ export default function NewSupplierPurchasePage() {
                                         type="number"
                                         min={0}
                                         step="0.01"
-                                        className="h-14 bg-white/5 border-white/10 text-white font-black text-xl placeholder:text-slate-600 focus:bg-white/10 focus:ring-0 focus:border-white transition-all rounded-2xl"
+                                        className="h-14 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-black text-xl placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all rounded-2xl"
                                         value={paidAmount}
                                         onChange={(e) => setPaidAmount(e.target.value)}
                                         placeholder="0.00"
@@ -352,11 +356,11 @@ export default function NewSupplierPurchasePage() {
 
                                 <div className={cn(
                                     "p-6 rounded-2xl flex justify-between items-center transition-all",
-                                    balance > 0 ? "bg-amber-500/10 border border-amber-500/20" : "bg-emerald-500/10 border border-emerald-500/20"
+                                    balance > 0 ? "bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20" : "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20"
                                 )}>
                                     <div>
                                         <p className={cn("text-[9px] font-black uppercase tracking-widest", balance > 0 ? "text-amber-500" : "text-emerald-500")}>Outstanding Balance</p>
-                                        <p className={cn("text-xl font-black tracking-tight", balance > 0 ? "text-amber-100" : "text-emerald-100")}>{formatCurrencyShort(balance)}</p>
+                                        <p className={cn("text-xl font-black tracking-tight", balance > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>{formatCurrencyShort(balance)}</p>
                                     </div>
                                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", balance > 0 ? "bg-amber-500/20 text-amber-500" : "bg-emerald-500/20 text-emerald-500")}>
                                         {balance > 0 ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
@@ -366,10 +370,10 @@ export default function NewSupplierPurchasePage() {
                                 <Button 
                                     type="submit" 
                                     disabled={saving} 
-                                    className="w-full h-16 bg-[#2563eb] hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-[2px] text-[10px] mt-6 shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                    className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-[2px] text-[10px] mt-6 shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                                 >
                                     {saving ? (
-                                        <span className="animate-pulse">Committing Ledger...</span>
+                                        <span className="animate-pulse text-[10px]">Committing Ledger...</span>
                                     ) : (
                                         <>
                                             <CheckCircle2 size={18} />
@@ -381,26 +385,6 @@ export default function NewSupplierPurchasePage() {
                         </div>
                     </div>
 
-                    {/* Quick Helper / Info */}
-                    <div className="bg-slate-50 dark:bg-slate-800/30 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800/50">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
-                             System Audit Helper
-                        </h4>
-                        <div className="space-y-4">
-                            <div className="flex gap-4">
-                                <div className="w-1 h-10 bg-blue-500 rounded-full shrink-0" />
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                    Selecting a vendor ensures that the purchase is tracked against their credit limit.
-                                </p>
-                            </div>
-                            <div className="flex gap-4">
-                                <div className="w-1 h-10 bg-indigo-500 rounded-full shrink-0" />
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-                                    Received items will be added to inventory as new batches with distinct expiry tracking.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </form>
         </div>
