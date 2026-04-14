@@ -114,16 +114,23 @@ const ExpensesPage: React.FC = () => {
       )
     },
     {
-      header: "Expense Details",
+      header: "Expense Detail",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
-            <DollarSign size={20} />
+          <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
+            <DollarSign size={16} />
           </div>
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.description}</p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-0.5">{formatDate(row.original.date)}</p>
           </div>
+        </div>
+      )
+    },
+    {
+      header: "Date",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+          {formatDate(row.original.date)}
         </div>
       )
     },

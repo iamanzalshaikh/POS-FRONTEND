@@ -49,18 +49,24 @@ export default function DevicesManagementPage() {
     }, [viewFilter])
 
     const terminalsRaw = (terminalsDataRes as any)?.data || (Array.isArray(terminalsDataRes) ? terminalsDataRes : []);
-    const terminals: Device[] = terminalsRaw.map((t: any) => ({
-        id: t.id,
-        name: t.deviceName || t.name,
-        serialNumber: t.deviceFingerprint ? String(t.deviceFingerprint).slice(0, 16) + "…" : "—",
-        type: "POS",
-        status: t.isActive ? "online" : "offline",
-        lastHeartbeat: t.lastActiveAt ? new Date(t.lastActiveAt).toLocaleString() : "Never",
-        ipAddress: "—",
-        scanner: "None",
-        connectedTo: t.currentUser?.name || null,
-        deviceFingerprint: t.deviceFingerprint || null
-    }));
+    const terminals: Device[] = terminalsRaw.map((t: any) => {
+        const lastActiveDate = t.lastActiveAt ? new Date(t.lastActiveAt) : null;
+        // Device is online if isActive AND has pinged in the last 5 minutes
+        const isOnline = t.isActive && lastActiveDate && (new Date().getTime() - lastActiveDate.getTime() < 5 * 60 * 1000);
+
+        return {
+            id: t.id,
+            name: t.deviceName || t.name,
+            serialNumber: t.deviceFingerprint ? String(t.deviceFingerprint).slice(0, 16) + "…" : "—",
+            type: "POS",
+            status: isOnline ? "online" : "offline",
+            lastHeartbeat: lastActiveDate ? lastActiveDate.toLocaleString() : "Never",
+            ipAddress: "—",
+            scanner: "None",
+            connectedTo: t.currentUser?.name || null,
+            deviceFingerprint: t.deviceFingerprint || null
+        };
+    });
 
     const handleDelete = async (id: string): Promise<boolean> => {
         try {

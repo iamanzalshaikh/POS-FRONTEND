@@ -17,7 +17,7 @@ const SalesHistoryPage: React.FC = () => {
     });
 
     const [page, setPage] = useState(1);
-    const [limit] = useState(10);
+    const [limit] = useState(1000); // High limit for scroll-based UX
     const [salesRes, setSalesRes] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -59,7 +59,6 @@ const SalesHistoryPage: React.FC = () => {
             cell: ({ row }) => (
                 <div className="flex flex-col">
                     <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">#{row.original.invoiceNumber || row.original.id?.slice(-8)}</span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(row.original.createdAt).toLocaleString()}</span>
                 </div>
             )
         },
@@ -96,17 +95,37 @@ const SalesHistoryPage: React.FC = () => {
             accessorKey: "paymentStatus",
             cell: ({ row }) => {
                 const s = String(row.original.paymentStatus).toLowerCase();
+                const isRef = row.original.isReversal || s === 'refunded';
                 return (
                     <span className={cn(
                         "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border leading-tight",
+                        isRef ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50" :
                         s === 'completed' || s === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" :
                         s === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
                         "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
                     )}>
-                        {s}
+                        {isRef ? 'refunded' : s}
                     </span>
                 );
             }
+        },
+        {
+            header: "Date",
+            accessorKey: "createdAt",
+            cell: ({ row }) => (
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                    {new Date(row.original.createdAt).toLocaleDateString()}
+                </span>
+            )
+        },
+        {
+            header: "Time",
+            accessorKey: "createdAt",
+            cell: ({ row }) => (
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300">
+                    {new Date(row.original.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+            )
         },
         {
             id: "actions",
@@ -150,13 +169,8 @@ const SalesHistoryPage: React.FC = () => {
                     data={transactions}
                     isLoading={loading}
                     onRefresh={loadSales}
-                    manualPagination={true}
-                    hidePagination={false}
-                    pageIndex={page}
-                    pageSize={limit}
-                    pageCount={Math.ceil(total / limit) || 1}
-                    totalItems={total}
-                    onPageChange={(newPageIndex) => setPage(newPageIndex)}
+                    manualPagination={false}
+                    hidePagination={true}
                     placeholder="Search ledger..."
                     headerActions={
                         <div className="flex flex-wrap items-center gap-4">

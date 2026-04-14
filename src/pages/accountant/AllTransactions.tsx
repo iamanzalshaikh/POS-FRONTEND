@@ -58,7 +58,7 @@ const AllTransactions: React.FC = () => {
     const res = await getRecentTransactions({
       type: filterType === 'inventory' ? 'all' : filterType,
       page,
-      limit: 10,
+      limit: 1000,
       ...(dateFrom && dateTo ? { startDate: dateFrom, endDate: dateTo } : {}),
     });
     if (res.success && res.data) {
@@ -150,20 +150,20 @@ const AllTransactions: React.FC = () => {
     {
       header: "Transaction",
       cell: ({ row }) => (
-        <div className="flex items-center justify-center gap-3">
-          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
+        <div className="flex items-start justify-center gap-3">
+          <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700 mt-0.5">
             {row.original.type === 'REFUND' ? (
-              <RotateCcw size={20} className="text-blue-500" />
+              <RotateCcw size={16} className="text-blue-500" />
             ) : (
-              <ShoppingCart size={20} className="text-emerald-600" />
+              <ShoppingCart size={16} className="text-emerald-600" />
             )}
           </div>
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
-              {row.original.type} · {row.original.invoiceNumber}
+              {row.original.type}
             </p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest mt-0.5">
-              {new Date(row.original.createdAt).toLocaleString()}
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">
+              #{row.original.invoiceNumber}
             </p>
           </div>
         </div>
@@ -191,15 +191,31 @@ const AllTransactions: React.FC = () => {
       header: "Tax",
       cell: ({ row }) => (
         <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
-          {row.original.totalTax > 0 ? formatCurrency(row.original.totalTax) : '—'}
+          {row.original.totalTax !== 0 ? formatCurrency(row.original.totalTax) : '—'}
         </div>
       ),
     },
     {
       header: "Cashier",
       cell: ({ row }) => (
-        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest font-bold">
+        <div className="text-center text-slate-900 dark:text-white text-[10px] font-black uppercase tracking-widest">
           {row.original.cashier || '—'}
+        </div>
+      ),
+    },
+    {
+      header: "Date",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest tabular-nums">
+          {new Date(row.original.createdAt).toLocaleDateString()}
+        </div>
+      ),
+    },
+    {
+      header: "Time",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest tabular-nums">
+          {new Date(row.original.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       ),
     },
@@ -336,8 +352,8 @@ const AllTransactions: React.FC = () => {
       {/* DataTable */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
         <DataTable
-          columns={filterType === 'inventory' ? inventoryColumns : transactionColumns}
-          data={tableData}
+          columns={(filterType === 'inventory' ? inventoryColumns : transactionColumns) as any}
+          data={tableData as any}
           isLoading={loading}
           onRefresh={() => {
             if (filterType === 'inventory') {
@@ -347,12 +363,8 @@ const AllTransactions: React.FC = () => {
             }
           }}
           placeholder="Search transactions..."
-          hidePagination={false}
-          manualPagination={filterType !== 'inventory'}
-          pageCount={filterType !== 'inventory' ? recentMeta.totalPages : undefined}
-          pageIndex={filterType !== 'inventory' ? page : undefined}
-          onPageChange={filterType !== 'inventory' ? setPage : undefined}
-          totalItems={filterType !== 'inventory' ? recentMeta.total : undefined}
+          hidePagination={true}
+          manualPagination={false}
           headerActions={
             <div className="flex flex-wrap items-center gap-3">
               {/* Type Filter */}

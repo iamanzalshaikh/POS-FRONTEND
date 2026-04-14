@@ -5,6 +5,7 @@ import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
 import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
+import { toLocalYMD } from '../../utils/format';
 import MetricCard from '../../components/global-components/MetricCard';
 
 interface MonthlyCloseData {
@@ -165,7 +166,7 @@ const MonthlyCloseReport: React.FC = () => {
   };
 
   const formatCurrencyLocal = (value: number) => {
-    return formatCurrencyUtil(value);
+    return formatCurrency(value);
   };
 
   const getMonthName = (monthStr: string) => {

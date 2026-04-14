@@ -31,7 +31,7 @@ const InventoryManagementPage = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchInventoryLogs({ limit: 50 });
+      const data = await fetchInventoryLogs({ limit: 1000 });
       setInventoryDataRes(data);
     } catch (err: any) {
       console.error("Failed to fetch inventory logs:", err);
@@ -56,7 +56,7 @@ const InventoryManagementPage = () => {
     changeType: m.changeType,
     referenceId: m.referenceId || m.id.slice(0, 8),
     user: m.user?.name || "System",
-    timestamp: new Date(m.createdAt).toLocaleString(),
+    timestamp: m.createdAt,
     image: m.product?.image ? `http://localhost:3005${m.product.image}` : null
   }));
 
@@ -133,12 +133,18 @@ const InventoryManagementPage = () => {
         )
     },
     {
-        header: "Timestamp",
-        accessorKey: "timestamp",
-        meta: { align: 'right' },
+        header: "Date",
         cell: ({ row }) => (
-            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                {row.original.timestamp}
+            <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+                {new Date(row.original.timestamp).toLocaleDateString()}
+            </div>
+        )
+    },
+    {
+        header: "Time",
+        cell: ({ row }) => (
+            <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+                {new Date(row.original.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
         )
     }

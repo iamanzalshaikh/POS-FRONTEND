@@ -1,6 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Package, AlertTriangle, XCircle, Loader2, RefreshCcw } from 'lucide-react';
 import { fetchFullInventory, fetchLowStockInventory } from '../../api/inventory.api';
+import { DataTable } from '../global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
+import { cn } from '@/lib/utils';
+import { formatNumberShort } from '@/utils/format';
 
 interface InventoryItem {
   id: string;
@@ -225,6 +229,85 @@ const InventoryDisplay: React.FC<InventoryDisplayProps> = ({
     );
   }
 
+  const columns: ColumnDef<InventoryItem>[] = [
+    {
+      header: "ID",
+      cell: ({ row }) => (
+        <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
+          {(row.index + 1).toString().padStart(2, '0')}
+        </div>
+      )
+    },
+    {
+      header: "Product",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <p className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-tight truncate">
+            {getItemName(row.original)}
+          </p>
+        </div>
+      )
+    },
+    {
+      header: "SKU",
+      cell: ({ row }) => (
+        <div className="text-center">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-[2px]">
+            {row.original.product?.sku || row.original.sku || 'N/A'}
+          </span>
+        </div>
+      )
+    },
+    {
+      header: "Stock",
+      cell: ({ row }) => {
+        const stock = getStock(row.original);
+        const threshold = getReorderLevel(row.original);
+        const isLow = stock > 0 && stock <= threshold;
+        const isOut = stock <= 0;
+        return (
+          <div className="text-center">
+            <span className={cn(
+              "text-[11px] font-black uppercase tracking-widest tabular-nums",
+              isOut ? "text-rose-600" : isLow ? "text-amber-600" : "text-emerald-600"
+            )}>
+              {formatNumberShort(stock)} UNITS
+            </span>
+          </div>
+        );
+      }
+    },
+    {
+      header: "Reorder",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-400 text-[10px] font-black uppercase tracking-widest tabular-nums">
+          {getReorderLevel(row.original)}
+        </div>
+      )
+    },
+    {
+      header: "Status",
+      cell: ({ row }) => {
+        const stock = getStock(row.original);
+        const threshold = getReorderLevel(row.original);
+        const isLow = stock > 0 && stock <= threshold;
+        const isOut = stock <= 0;
+        return (
+          <div className="flex justify-center text-center">
+            <span className={cn(
+              "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+              isOut ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50" :
+              isLow ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
+              "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50"
+            )}>
+              {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
+            </span>
+          </div>
+        );
+      }
+    }
+  ];
+
   // Full table view
   return (
     <div className="space-y-4">
@@ -232,94 +315,30 @@ const InventoryDisplay: React.FC<InventoryDisplayProps> = ({
         <div className="flex items-center space-x-2">
           <Package size={20} className="text-emerald-500" />
           <div>
-            <h2 className="text-lg font-extrabold text-slate-900">Inventory Items</h2>
-            <p className="text-xs text-slate-500">Total items: {displayItems.length}</p>
+            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white uppercase tracking-tight">Inventory Items</h2>
+            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Total items: {displayItems.length}</p>
           </div>
         </div>
         <button
           onClick={handleRefresh}
-          className="inline-flex items-center space-x-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
+          className="inline-flex items-center space-x-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all shadow-sm active:scale-95"
         >
-          <RefreshCcw size={13} />
-          <span>Refresh</span>
+          <RefreshCcw size={14} className={cn(loading && "animate-spin")} />
+          <span>Refresh List</span>
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="px-4 py-2 text-left font-bold text-slate-700 text-xs uppercase tracking-wider">
-                Product
-              </th>
-              <th className="px-4 py-2 text-left font-bold text-slate-700 text-xs uppercase tracking-wider">
-                SKU
-              </th>
-              <th className="px-4 py-2 text-center font-bold text-slate-700 text-xs uppercase tracking-wider">
-                Stock
-              </th>
-              <th className="px-4 py-2 text-center font-bold text-slate-700 text-xs uppercase tracking-wider">
-                Reorder Level
-              </th>
-              <th className="px-4 py-2 text-center font-bold text-slate-700 text-xs uppercase tracking-wider">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {displayItems.map((item) => {
-              const stock = getStock(item);
-              const threshold = getReorderLevel(item);
-              const isLowStock = stock > 0 && stock <= threshold;
-              const isOutOfStock = stock <= 0;
-
-              let statusBadge = (
-                <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <span className="w-2 h-2 bg-emerald-500 rounded-full" />
-                  <span>In Stock</span>
-                </span>
-              );
-
-              if (isOutOfStock) {
-                statusBadge = (
-                  <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-                    <XCircle size={12} />
-                    <span>Out of Stock</span>
-                  </span>
-                );
-              } else if (isLowStock) {
-                statusBadge = (
-                  <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-                    <AlertTriangle size={12} />
-                    <span>Low Stock</span>
-                  </span>
-                );
-              }
-
-              return (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 text-slate-800 font-medium">{getItemName(item)}</td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{item.product?.sku || '-'}</td>
-                  <td className="px-4 py-3 text-center">
-                    <span
-                      className={`font-bold text-sm ${
-                        isOutOfStock
-                          ? 'text-red-600'
-                          : isLowStock
-                          ? 'text-amber-600'
-                          : 'text-emerald-600'
-                      }`}
-                    >
-                      {stock}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center text-slate-600 text-sm">{threshold}</td>
-                  <td className="px-4 py-3 text-center">{statusBadge}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden border border-slate-100 dark:border-slate-800">
+        <DataTable
+          columns={columns}
+          data={displayItems}
+          isLoading={loading}
+          onRefresh={handleRefresh}
+          hidePagination={true}
+          manualPagination={false}
+          maxHeight="calc(100vh - 450px)"
+          placeholder="Search inventory items..."
+        />
       </div>
     </div>
   );

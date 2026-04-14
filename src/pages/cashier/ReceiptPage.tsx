@@ -27,6 +27,8 @@ const thermalPrintStyles = `
     padding: 0;
     background: white !important;
     overflow: hidden;
+    font-family: "Helvetica Neue", Arial, sans-serif !important;
+    line-height: 1.2 !important;
   }
 
   /* Hide everything except the thermal receipt container */
@@ -47,36 +49,49 @@ const thermalPrintStyles = `
 
   /* Format adjustments for 80mm strip */
   .receipt-table {
-    font-size: 8pt !important; /* Smaller font for table to fit columns */
+    font-size: 7pt !important;
     width: 100% !important;
     table-layout: fixed;
+    margin-bottom: 2mm !important;
   }
 
-  .receipt-table th, .receipt-table td {
-    padding: 0.5mm 0.2mm !important;
+  .receipt-table th {
+    padding: 1.5mm 0.2mm !important;
+    font-size: 6.5pt !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 0.3mm dashed #000 !important;
+  }
+
+  .receipt-table td {
+    padding: 1mm 0.2mm !important;
     word-wrap: break-word;
-    font-size: 7pt !important;
+    font-size: 6.5pt !important;
+    vertical-align: top !important;
   }
 
-  /* Specific column adjustments for 80mm - REMOVED DISCOUNT COLUMN */
-  .col-item { width: 35%; text-align: left; }
+  /* Column widths for 80mm */
+  .col-item { width: 38%; text-align: left; }
   .col-qty { width: 10%; text-align: center; }
-  .col-price { width: 18%; text-align: right; }
+  .col-price { width: 17%; text-align: right; }
   .col-gst { width: 15%; text-align: right; }
-  .col-total { width: 22%; text-align: right; }
+  .col-total { width: 20%; text-align: right; }
 
   .receipt-header-text {
-    font-size: 12pt !important;
-    font-weight: bold !important;
+    font-size: 10pt !important;
+    font-weight: 900 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1em !important;
   }
 
   .receipt-body-text {
-    font-size: 8pt !important;
+    font-size: 7.5pt !important;
   }
 
   .receipt-divider {
-    border-top: 1px dashed #000 !important;
-    margin: 2mm 0 !important;
+    border-top: 0.4mm dashed #000 !important;
+    margin: 1.5mm 0 !important;
   }
 
   /* Remove all shadows, rounded corners, and colored backgrounds */
@@ -117,8 +132,8 @@ function lineItemGst(item: {
   const stored = toFiniteNumber(item.tax);
   if (stored !== null) return stored;
   const pct = toFiniteNumber(item.product?.taxPercentage ?? item.taxPercentage);
-  // Matches POS Terminal inclusive tax math
-  if (pct !== null && pct > 0) return subtotal * (pct / (100 + pct));
+  // Straight 18% calculation as per backend
+  if (pct !== null && pct > 0) return subtotal * (pct / 100);
   return 0;
 }
 
@@ -572,85 +587,68 @@ const ReceiptPage: React.FC = () => {
       <div className="flex-1 overflow-auto">
         <div id="thermal-pos-receipt" className="max-w-4xl mx-auto p-6 md:p-8 bg-white">
           {/* Store Info Header - For Print */}
-          <div className="mb-6 pb-4 border-b-2 border-slate-300 print:block">
-            {user?.store ? (
-              // Use auth store info as primary source
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">{user.store.name}</h2>
-                {user.store.address && (
-                  <div className="flex items-center justify-center space-x-2 mb-1">
-                    <MapPin size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{user.store.address}</p>
-                  </div>
-                )}
-                {user.store.phone && (
-                  <div className="flex items-center justify-center space-x-2 mb-1">
-                    <Phone size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{user.store.phone}</p>
-                  </div>
-                )}
-                {user.store.email && (
-                  <div className="flex items-center justify-center space-x-2">
-                    <Mail size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{user.store.email}</p>
-                  </div>
-                )}
+          <div className="mb-4 pb-4 border-b-2 border-slate-300 print:block">
+            <div className="flex flex-col items-center text-center">
+              {/* Logo Placeholder */}
+              <div className="mb-3 w-12 h-12 flex items-center justify-center bg-slate-900 rounded-full print:border print:border-black">
+                <Building2 size={24} className="text-white print:text-black" />
               </div>
-            ) : sale?.store ? (
-              // Fallback to sale's store info
-              <div className="text-center">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">{sale?.store?.name}</h2>
-                {sale?.store?.address && (
-                  <div className="flex items-center justify-center space-x-2 mb-1">
-                    <MapPin size={16} className="text-slate-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{sale?.store?.address}</p>
+
+              {user?.store ? (
+                <>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-[0.15em] mb-1 print:text-[10pt]">{user.store.name}</h2>
+                  <div className="space-y-0.5">
+                    {user.store.address && (
+                      <div className="flex items-center justify-center space-x-1">
+                        <MapPin size={10} className="text-slate-500 flex-shrink-0" />
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">{user.store.address}</p>
+                      </div>
+                    )}
+                    {user.store.phone && (
+                      <div className="flex items-center justify-center space-x-1">
+                        <Phone size={10} className="text-slate-500 flex-shrink-0" />
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">{user.store.phone}</p>
+                      </div>
+                    )}
+                    {user.store.email && (
+                      <div className="flex items-center justify-center space-x-1">
+                        <Mail size={10} className="text-slate-500 flex-shrink-0" />
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">{user.store.email}</p>
+                      </div>
+                    )}
                   </div>
-                )}
-                {sale?.store?.phone && (
-                  <div className="flex items-center justify-center space-x-2 mb-1">
-                    <Phone size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{sale?.store?.phone}</p>
-                  </div>
-                )}
-                {sale?.store?.email && (
-                  <div className="flex items-center justify-center space-x-2">
-                    <Mail size={16} className="text-slate-500 flex-shrink-0" />
-                    <p className="text-sm text-slate-700">{sale?.store?.email}</p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <h2 className="text-2xl font-bold text-slate-900">SALE RECEIPT</h2>
-              </div>
-            )}
+                </>
+              ) : (
+                <h2 className="text-xl font-black text-slate-900 uppercase tracking-[0.2em] print:text-[12pt]">SALE RECEIPT</h2>
+              )}
+            </div>
           </div>
 
           <div className="receipt-divider hidden print:block" />
 
-          <div className="mb-4 flex items-center justify-between text-xs text-slate-600">
+          <div className="mb-4 flex items-center justify-between text-[10px] font-bold text-slate-600 uppercase tracking-widest print:text-[6.5pt]">
             <div>
-              <div className="font-bold text-slate-800">
+              <div className="font-black text-slate-900">
                 Invoice #{invoiceNumber}
               </div>
-              <div>{createdAt.toLocaleString()}</div>
+              <div className="mt-0.5 tracking-tight font-medium">{createdAt.toLocaleString()}</div>
             </div>
             {sale?.user && (
               <div className="text-right">
-                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest print:text-[6.5pt]">
                   Cashier
                 </div>
-                <div className="font-semibold text-slate-800">
+                <div className="font-black text-slate-900">
                   {sale?.user?.name || sale?.user?.email}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="mb-4 text-xs text-slate-600">
+          <div className="mb-4 text-[10px] uppercase font-bold text-slate-500 tracking-widest print:text-[6.5pt]">
             {sale?.device && (
               <div>
-                <span className="font-semibold text-slate-700">
+                <span className="font-black text-slate-400">
                   Device:
                 </span>{' '}
                 {sale?.device?.deviceName}
@@ -719,30 +717,30 @@ const ReceiptPage: React.FC = () => {
                     return (
                       <tr
                         key={idx}
-                        className="border-b border-slate-100 last:border-0"
+                        className="border-b border-slate-50 dark:border-slate-800 last:border-0"
                       >
-                        <td className="px-3 py-3 col-item">
-                          <div className="font-semibold text-slate-900 line-clamp-2">
+                        <td className="px-3 py-2.5 col-item">
+                          <div className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tight print:text-[6.5pt] leading-tight">
                             {details.productName}
                           </div>
                         </td>
-                          <td className="px-3 py-4 text-center col-qty">
-                            <span className="text-base font-bold text-slate-800 print:text-[10px]">
+                          <td className="px-3 py-2.5 text-center col-qty">
+                            <span className="text-[11px] font-black text-slate-800 dark:text-slate-300 print:text-[6.5pt] tabular-nums">
                               {details.quantity}
                             </span>
                           </td>
-                          <td className="px-3 py-4 text-right col-price">
-                            <span className="text-base font-bold text-slate-800 print:text-[10px]">
+                          <td className="px-3 py-2.5 text-right col-price">
+                            <span className="text-[11px] font-black text-slate-800 dark:text-slate-300 print:text-[6.5pt] tabular-nums">
                               {formatNumber(details.unitPrice)}
                             </span>
                           </td>
-                          <td className="px-3 py-4 text-right col-gst">
-                            <span className="text-base font-bold text-slate-600 print:text-[10px]">
+                          <td className="px-3 py-2.5 text-right col-gst">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 print:text-[6pt] tabular-nums">
                               {formatNumber(details.gst)}
                             </span>
                           </td>
-                          <td className="px-3 py-4 text-right col-total">
-                            <span className="text-lg font-black text-slate-900 print:text-[11px]">
+                          <td className="px-3 py-2.5 text-right col-total">
+                            <span className="text-[11px] font-black text-slate-900 dark:text-white print:text-[7pt] tabular-nums">
                               {formatNumber(details.subtotal)}
                             </span>
                           </td>
@@ -797,17 +795,17 @@ const ReceiptPage: React.FC = () => {
               }
 
               const gstLabelPct =
-                totalSubtotal > 0.0001
+                Math.abs(totalSubtotal) > 0.0001
                   ? Math.round((totalGST / totalSubtotal) * 1000) / 10
                   : null;
 
               return (
                 <>
-                  <div className="flex justify-between font-semibold text-slate-800">
+                  <div className="flex justify-between font-black text-[11px] text-slate-600 uppercase tracking-widest print:text-[7.5pt]">
                     <span>Total Subtotal:</span>
-                    <span>{formatNumber(totalSubtotal)}</span>
+                    <span className="tabular-nums">{formatNumber(totalSubtotal)}</span>
                   </div>
-                  <div className="flex justify-between font-semibold text-slate-800">
+                  <div className="flex justify-between font-black text-[11px] text-slate-600 uppercase tracking-widest print:text-[7.5pt]">
                     <span>
                       Total GST
                       {gstLabelPct !== null && gstLabelPct > 0
@@ -815,27 +813,28 @@ const ReceiptPage: React.FC = () => {
                         : ''}
                       :
                     </span>
-                    <span>{formatNumber(totalGST)}</span>
+                    <span className="tabular-nums">{formatNumber(totalGST)}</span>
                   </div>
                   {totalDiscount > 0 && (
-                    <div className="flex justify-between font-semibold text-emerald-600">
+                    <div className="flex justify-between font-black text-[11px] text-rose-600 uppercase tracking-widest print:text-[7.5pt]">
                       <span>Total Discount:</span>
-                      <span>-{formatNumber(totalDiscount)}</span>
+                      <span className="tabular-nums">-{formatNumber(totalDiscount)}</span>
                     </div>
                   )}
-                  <div className="border-t border-dashed border-slate-300 pt-3 flex justify-between font-black text-base text-slate-900">
+                  <div className="border-t-[0.4mm] border-dashed border-black pt-3 flex justify-between font-black text-lg text-slate-900 uppercase tracking-tighter print:text-[11pt] print:mt-1">
                     <span>GRAND TOTAL:</span>
-                    <span className="text-emerald-600">{formatNumber(grandTotal)}</span>
+                    <span className="tabular-nums">{formatNumber(grandTotal)}</span>
                   </div>
+                  
                   {sale?.paymentMethod === 'CASH' && (
-                    <div className="mt-4 pt-3 border-t border-slate-200 space-y-1.5">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="font-bold text-slate-500 uppercase tracking-widest">Amount Paid</span>
-                        <span className="font-black text-slate-900">{formatCurrency(toFiniteNumber(sale?.receivedAmount) || 0)}</span>
+                    <div className="mt-4 pt-3 border-t border-slate-100 space-y-2 print:mt-2 print:pt-1.5 print:border-black/5">
+                      <div className="flex justify-between items-center text-[10px] uppercase tracking-widest font-black text-slate-400 print:text-[7pt]">
+                        <span>Amount Paid</span>
+                        <span className="text-slate-900 tabular-nums">{formatCurrency(toFiniteNumber(sale?.receivedAmount) || 0)}</span>
                       </div>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="font-bold text-slate-500 uppercase tracking-widest">Change</span>
-                        <span className="font-black text-blue-600">{formatCurrency(toFiniteNumber(sale?.changeAmount) || 0)}</span>
+                      <div className="flex justify-between items-center text-[11px] uppercase tracking-widest font-extrabold text-slate-900 print:text-[8pt] print:mt-1">
+                        <span>Change</span>
+                        <span className="tabular-nums">{formatCurrency(toFiniteNumber(sale?.changeAmount) || 0)}</span>
                       </div>
                     </div>
                   )}
@@ -868,17 +867,17 @@ const ReceiptPage: React.FC = () => {
           <div className="receipt-divider hidden print:block" />
 
           {/* Footer */}
-          <div className="mt-8 pt-4 border-t-2 border-slate-200 text-center print:mt-4 print:pt-3">
-            <p className="text-sm font-bold text-slate-700">
-              Software by <span className="text-blue-600">Elsa DevOps Technology</span>
+          <div className="mt-8 pt-4  border-slate-200 text-center print:mt-4 print:pt-3">
+            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] print:text-[6.5pt] whitespace-nowrap">
+              Software by <span className="text-slate-900">Elsa DevOps Technology</span>
             </p>
-            <div className="mt-1 text-xs text-slate-500 space-x-4">
+            <div className="mt-2 text-[9px] font-bold text-slate-400 space-x-4 print:text-[6pt] print:mt-1">
               <span className="inline-flex items-center gap-1">
-                <Phone size={12} className="inline" />
+                <Phone size={10} className="inline opacity-50" />
                 03128289654
               </span>
               <span className="inline-flex items-center gap-1">
-                <Globe size={12} className="inline" />
+                <Globe size={10} className="inline opacity-50" />
                 www.elsadevops.com
               </span>
             </div>

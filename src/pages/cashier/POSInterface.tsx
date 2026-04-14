@@ -190,14 +190,13 @@ const POSInterface: React.FC = () => {
 
   // Per-line tax from product % (aligns with server when batch tax is 0). Server: totalAmount = subtotal + totalTax - discount.
   // Tax is already included in the selling price per user requirement.
-  // Using inclusive tax formula: Amount * (TaxRate / (100 + TaxRate))
+  // Calculated as a straight percentage of the subtotal (e.g. 1000 * 18% = 180).
   const tax = useMemo(
     () =>
       cart.reduce((sum, item) => {
         const lineSub = item.price * item.quantity;
         const pct = Number(item.taxPercentage ?? 0);
-        // Inclusive Tax Logic
-        return sum + lineSub * (Number.isFinite(pct) ? pct / (100 + pct) : 0);
+        return sum + lineSub * (Number.isFinite(pct) ? pct / 100 : 0);
       }, 0),
     [cart]
   );
@@ -302,6 +301,17 @@ const POSInterface: React.FC = () => {
 
   const handleRemoveItem = (itemId: string) => {
     setCart((prev) => prev.filter((item) => item.id !== itemId));
+  };
+
+  const handleDirectQuantityChange = (itemId: string, value: string) => {
+    const numericValue = parseInt(value, 10);
+    if (isNaN(numericValue) || numericValue < 1) return;
+    
+    setCart((prev) => 
+      prev.map((item) => 
+        item.id === itemId ? { ...item, quantity: numericValue } : item
+      )
+    );
   };
 
   const handleClearCart = () => {
@@ -759,7 +769,7 @@ const POSInterface: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-x-auto custom-scrollbar min-h-0 min-w-[1200px]">
           {/* Left: Product Selection */}
           <section className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/30">
             {/* Barcode Scanner */}
@@ -776,26 +786,30 @@ const POSInterface: React.FC = () => {
               </div>
             </form>
 
-            {/* Products Table with Filters - takes remaining space */}
-            <div className="flex-1 overflow-auto space-y-4 min-h-0">
-              {/* Filters */}
-              <ProductsFilters
-                searchQuery={productSearch}
-                setSearchQuery={setProductSearch}
-                selectedCategory={productCategory}
-                setSelectedCategory={setProductCategory}
-                stockFilter={productStockFilter}
-                setStockFilter={setProductStockFilter}
-                categories={categories}
-                onReset={handleResetFilters}
-              />
+            {/* Products Table Section */}
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Filters (Pinned at top) */}
+              <div className="flex-shrink-0 p-4 border-b border-slate-100 bg-white">
+                <ProductsFilters
+                  searchQuery={productSearch}
+                  setSearchQuery={setProductSearch}
+                  selectedCategory={productCategory}
+                  setSelectedCategory={setProductCategory}
+                  stockFilter={productStockFilter}
+                  setStockFilter={setProductStockFilter}
+                  categories={categories}
+                  onReset={handleResetFilters}
+                />
+              </div>
 
-              {/* Table */}
-              <ProductsTable
-                products={filteredProducts}
-                loading={productsLoading}
-                onAddToCart={handleAddProductToCart}
-              />
+              {/* Table (Scrollable area) */}
+              <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
+                <ProductsTable
+                  products={filteredProducts}
+                  loading={productsLoading}
+                  onAddToCart={handleAddProductToCart}
+                />
+              </div>
             </div>
 
           
@@ -858,7 +872,7 @@ const POSInterface: React.FC = () => {
     </section>
 
     {/* Right: Added Products & Active Checkout Stack */}
-    <aside className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-white overflow-hidden flex-shrink-0">
+    <aside className="w-full lg:w-[500px] xl:w-[550px] flex flex-col bg-white overflow-hidden flex-shrink-0">
       <div className="flex-1 flex flex-col overflow-hidden border-b border-slate-200">
         <div className="px-5 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
                 <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
@@ -870,83 +884,88 @@ const POSInterface: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
                 {cart.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 py-10">
-                    <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center">
-                      <ShoppingCart size={24} className="opacity-20" />
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 py-10 px-4">
+                    <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <ShoppingCart size={24} className="opacity-20 text-slate-900 dark:text-white" />
                     </div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest opacity-60">Cart is empty</p>
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500 text-center">Your cart is currently empty</p>
                   </div>
                 ) : (
-                  cart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="group flex flex-col gap-2 p-2.5 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-300"
-                    >
-                      <div className="flex gap-3">
-                        {/* Compact Thumbnail */}
-                        <div className="w-12 h-12 flex-shrink-0 bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden border border-slate-50 group-hover:bg-blue-50/50 transition-colors">
-                          <ShoppingCart size={16} className="text-slate-300 group-hover:text-blue-300 transition-colors" />
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-[12px] font-bold text-slate-800 truncate mb-0.5">
-                            {item.name}
-                          </h4>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-medium text-slate-500 uppercase tracking-tighter">Price:</span>
-                            <span className="text-[11px] font-black text-slate-900">{formatCurrency(item.price)}</span>
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(item.id)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all self-start"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                        {/* Quick Quantity Toggle */}
-                        <div className="flex items-center bg-slate-50 rounded-xl p-0.5 border border-slate-100">
-                          <button
-                            type="button"
-                            onClick={() => handleQuantityChange(item.id, -1)}
-                            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all"
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span className="w-8 text-center text-[12px] font-black text-slate-900 tabular-nums">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => handleQuantityChange(item.id, 1)}
-                            className="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-white rounded-lg transition-all"
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
-
-                        {/* Line Total */}
-                        <div className="text-right">
-                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wider leading-none mb-1">Subtotal</p>
-                          <p className="text-[13px] font-black text-indigo-600 tabular-nums leading-none">
+                  <table className="w-full text-left border-separate border-spacing-0">
+                    <thead className="sticky top-0 z-20 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-sm shadow-sm ring-1 ring-slate-200 dark:ring-slate-700">
+                      <tr>
+                        <th className="px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500">Product</th>
+                        <th className="px-2 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Price</th>
+                        <th className="px-2 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center">Qty</th>
+                        <th className="px-2 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 text-right">Subtotal</th>
+                        <th className="px-3 py-3 text-[9px] font-black uppercase tracking-widest text-slate-500 text-right"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {cart.map((item) => (
+                        <tr key={item.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                          <td className="px-3 py-3 align-top min-w-[140px]">
+                            <p className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tight leading-tight">
+                              {item.name}
+                            </p>
+                            <p className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
+                              ID: {item.id.slice(-8)}
+                            </p>
+                          </td>
+                          <td className="px-2 py-3 align-top text-center font-black text-[11px] text-slate-600 dark:text-slate-400 tabular-nums">
+                            {formatCurrency(item.price)}
+                          </td>
+                          <td className="px-2 py-3 align-top text-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5 border border-slate-200 dark:border-slate-700">
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuantityChange(item.id, -1)}
+                                  className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-rose-600 transition-colors"
+                                >
+                                  <Minus size={10} />
+                                </button>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleDirectQuantityChange(item.id, e.target.value)}
+                                  className="w-8 bg-transparent text-center text-[11px] font-black text-slate-900 dark:text-white focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuantityChange(item.id, 1)}
+                                  className="w-5 h-5 flex items-center justify-center text-slate-500 hover:text-emerald-600 transition-colors"
+                                >
+                                  <Plus size={10} />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-2 py-3 align-top text-right font-black text-[12px] text-blue-600 dark:text-blue-400 tabular-nums">
                             {formatCurrency(item.price * item.quantity)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                          </td>
+                          <td className="px-3 py-3 align-top text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(item.id)}
+                              className="w-6 h-6 flex items-center justify-center rounded-lg bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-rose-50 hover:text-rose-500 transition-all ml-auto"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 )}
               </div>
             </div>
 
             {/* Bottom: Active Cart Totals & Checkout */}
-            <div className="flex-shrink-0 bg-white border-t border-slate-100 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)]">
+            <div className="flex-shrink-0 max-h-[60%] overflow-y-auto bg-white border-t border-slate-100 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] custom-scrollbar">
               <div className="px-4 py-2 space-y-1">
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-500 font-medium">Subtotal</span>
