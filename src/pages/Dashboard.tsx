@@ -19,6 +19,7 @@ import {
     ResponsiveContainer
 } from 'recharts';
 import { getSuperAdminOverview } from '@/api/dashboard.api';
+import { formatCurrencyShort, formatNumberShort } from '@/utils/format';
 
 export default function Dashboard() {
     const [dashboardRes, setDashboardRes] = useState<any>(null);
@@ -56,10 +57,10 @@ export default function Dashboard() {
     ];
 
     const statsData = [
-        { name: "Total Stores", stat: stats?.totalStores?.toLocaleString() || "0", change: "+12.5%", changeType: "positive" as const },
-        { name: "Total Revenue", stat: `₨ ${stats?.totalRevenue?.toLocaleString() || "0"}`, change: "+8.2%", changeType: "positive" as const },
-        { name: "Active Devices", stat: stats?.activeDevices?.toLocaleString() || "0", change: "+4.1%", changeType: "positive" as const },
-        { name: "Active Trials", stat: stats?.activeTrials?.toLocaleString() || "0", change: "-2.4%", changeType: "negative" as const },
+        { name: "Total Stores", stat: formatNumberShort(stats?.totalStores || 0), change: "+12.5%", changeType: "positive" as const },
+        { name: "Total Revenue", stat: formatCurrencyShort(stats?.totalRevenue || 0), change: "+8.2%", changeType: "positive" as const },
+        { name: "Active Devices", stat: formatNumberShort(stats?.activeDevices || 0), change: "+4.1%", changeType: "positive" as const },
+        { name: "Active Trials", stat: formatNumberShort(stats?.activeTrials || 0), change: "-2.4%", changeType: "negative" as const },
     ];
 
     return (

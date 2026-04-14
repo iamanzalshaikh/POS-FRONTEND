@@ -1,6 +1,7 @@
-
+import { useNavigate } from 'react-router-dom';
 
 const InventoryHeader = () => {
+    const navigate = useNavigate();
     return (
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -12,7 +13,10 @@ const InventoryHeader = () => {
                 <button className="flex-1 sm:flex-none border border-slate-200 bg-white px-5 py-3 rounded-2xl hover:bg-slate-50 hover:border-indigo-600/30 hover:text-indigo-600 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm">
                     Export Logs
                 </button>
-                <button className="flex-1 sm:flex-none bg-indigo-900 text-white px-6 py-4 rounded-2xl hover:bg-indigo-600 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 border border-indigo-900/20">
+                <button 
+                    onClick={() => navigate('/store-admin/inventory/adjustments')}
+                    className="flex-1 sm:flex-none bg-indigo-900 text-white px-6 py-4 rounded-2xl hover:bg-indigo-600 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 transition-all active:scale-95 border border-indigo-900/20"
+                >
                     Log Adjustment
                 </button>
             </div>

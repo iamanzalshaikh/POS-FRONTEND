@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Download, Plus, Search, Filter, Calendar, CreditCard, CheckCircle2, XCircle, TrendingUp, AlertCircle } from "lucide-react";
 import MetricCard from '@/components/global-components/MetricCard';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from "@/utils/format";
-import ChartAreaAxes from "@/components/global-components/chart-line-dots";
+import MonthlyActivityChart from "@/components/global-components/monthly-activity-chart";
 import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
 
 import { getDashboardSummary } from "@/api/dashboard.api";
@@ -22,6 +22,10 @@ const SalesHistoryPage = () => {
         end: new Date().toISOString().split('T')[0]
     });
 
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [limit] = useState(5);
+
     const [salesDataRes, setSalesDataRes] = useState<any>(null);
     const [salesLoading, setSalesLoading] = useState(true);
     const [dashboardDataRes, setDashboardDataRes] = useState<any>(null);
@@ -29,7 +33,9 @@ const SalesHistoryPage = () => {
 
     const params: any = {
         startDate: dateRange.start,
-        endDate: dateRange.end
+        endDate: dateRange.end,
+        page,
+        limit
     };
 
     if (search) params.search = search;
@@ -65,14 +71,19 @@ const SalesHistoryPage = () => {
 
     useEffect(() => {
         loadSales();
+    }, [search, statusFilter, paymentMethod, dateRange, page, limit]);
+
+    useEffect(() => {
+        setPage(1); // Reset to first page on filter change
     }, [search, statusFilter, paymentMethod, dateRange]);
 
     useEffect(() => {
         loadSummary();
     }, [dateRange]);
 
-    const transactions = salesDataRes?.data || (Array.isArray(salesDataRes) ? salesDataRes : []);
-    const total = salesDataRes?.total || transactions.length;
+    const rawResponseData = salesDataRes?.data;
+    const transactions = Array.isArray(rawResponseData) ? rawResponseData : (rawResponseData?.data || []);
+    const total = rawResponseData?.total || transactions.length;
 
     const reportData = dashboardDataRes?.data || dashboardDataRes;
 
@@ -90,10 +101,29 @@ const SalesHistoryPage = () => {
             .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0)
     };
 
-    const chartsData = reportData?.charts?.revenueByDate?.map((d: any) => ({
-        date: d.date,
-        revenue: Number(d.revenue || 0)
-    })) || [];
+    // Generate full timeline for the chart (fills missing dates with 0)
+    const chartsData = useMemo(() => {
+        const start = new Date(dateRange.start);
+        const end = new Date(dateRange.end);
+        const points: any[] = [];
+        
+        const rawByDate = reportData?.charts?.revenueByDate || [];
+        
+        let curr = new Date(start);
+        while (curr <= end) {
+            const dStr = curr.toISOString().split('T')[0];
+            const found = rawByDate.find((d: any) => d.date === dStr);
+            
+            points.push({
+                month: curr.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+                dateStr: dStr,
+                activity: Number(found?.revenue || 0)
+            });
+            curr.setDate(curr.getDate() + 1);
+        }
+        return points;
+    }, [reportData, dateRange]);
+
 
     const columns: ColumnDef<any>[] = [
         {
@@ -123,11 +153,14 @@ const SalesHistoryPage = () => {
             accessorKey: "customerName",
             meta: { align: 'left' },
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-[11px] font-black text-slate-400 uppercase shadow-sm">
                         {String(row.original.customerName || 'C').charAt(0)}
                     </div>
-                    <span className="text-[10px] font-black tracking-widest uppercase text-slate-600 dark:text-slate-400">{row.original.customerName || 'Walk-in'}</span>
+                    <div>
+                        <span className="text-[10px] font-black tracking-widest uppercase text-slate-900 dark:text-white block">{row.original.customerName || 'Walk-in'}</span>
+                        <span className="text-[9px] font-black tracking-widest uppercase text-slate-400 mt-0.5 block">Tier: Standard</span>
+                    </div>
                 </div>
             )
         },
@@ -156,7 +189,7 @@ const SalesHistoryPage = () => {
             accessorKey: "paymentMethod",
             cell: ({ row }) => (
                 <div className="flex justify-center">
-                    <span className="px-3 py-1 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-lg text-[9px] font-black uppercase tracking-[2px] border border-blue-100 dark:border-blue-900/50">
+                    <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-xl text-[9px] font-black uppercase tracking-[2px] border border-blue-100 dark:border-blue-900/50">
                         {row.original.paymentMethod}
                     </span>
                 </div>
@@ -170,7 +203,7 @@ const SalesHistoryPage = () => {
                 return (
                     <div className="flex justify-center">
                         <span className={cn(
-                            "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[2px] border leading-tight",
+                            "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border leading-tight",
                             s === 'completed' || s === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" :
                             s === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
                             "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
@@ -192,7 +225,7 @@ const SalesHistoryPage = () => {
                                 cancelSale(row.original.id, "Cancelled by admin").then(() => loadSales());
                             }
                         }}
-                        className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90"
+                        className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90 border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50 shadow-sm"
                         title="Cancel Sale"
                     >
                         <AlertCircle size={16} />
@@ -218,10 +251,6 @@ const SalesHistoryPage = () => {
                         <Download size={16} className="text-[#1E1B4B] dark:text-slate-300" />
                         Export CSV
                     </button>
-                    <button className="flex items-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-400/20 border border-blue-500">
-                        <Plus size={16} />
-                        New Sale
-                    </button>
                 </div>
             </div>
 
@@ -229,22 +258,16 @@ const SalesHistoryPage = () => {
             <div className="space-y-8">
                 <SalesSummaryCards data={summary} loading={summaryLoading} />
 
-                {/* Revenue Trend Chart */}
-                <div className="bg-white dark:bg-slate-900 p-8 rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Revenue Trend</h3>
-                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Daily sales performance for selected period</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Revenue</span>
-                        </div>
-                    </div>
-                    <div className="h-[300px] w-full">
-                        <ChartAreaAxes data={chartsData.map((d: any) => ({ date: d.date, sales: d.revenue }))} className="h-[300px]" noWrapper />
-                    </div>
-                </div>
+                {/* Revenue Trend Chart - Synchronized with Dashboard */}
+                <MonthlyActivityChart
+                    title="Revenue Trend"
+                    subtitle="Daily sales performance for selected period"
+                    data={chartsData}
+                    isLoading={summaryLoading}
+                    isCurrency={true}
+                    unit="PKR"
+                    height={300}
+                />
             </div>
 
             {/* Detailed Ledger Area */}
@@ -254,6 +277,13 @@ const SalesHistoryPage = () => {
                     data={transactions}
                     isLoading={loading}
                     onRefresh={loadSales}
+                    manualPagination={true}
+                    hidePagination={false}
+                    pageIndex={page}
+                    pageSize={limit}
+                    pageCount={Math.ceil(total / limit)}
+                    totalItems={total}
+                    onPageChange={(newPageIndex) => setPage(newPageIndex)}
                     placeholder="Search ledger..."
                     headerActions={
                         <div className="flex flex-wrap items-center gap-3">

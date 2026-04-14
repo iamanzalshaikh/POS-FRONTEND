@@ -8,6 +8,7 @@ import {
     Settings,
     ChevronDown,
     ChevronUp,
+    History,
     BarChart3,
     ShoppingCart
 } from "lucide-react";
@@ -42,6 +43,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
         { name: "Sales", icon: ShoppingCart, path: "/store-admin/sales" },
         { name: "Devices", icon: Monitor, path: "/store-admin/devices" },
         { name: "Reports", icon: BarChart3, path: "/store-admin/reports" },
+        { name: "Audit Logs", icon: History, path: "/store-admin/audit-logs" },
         { name: "Store Settings", icon: Settings, path: "/store-admin/settings" },
     ];
 

@@ -34,25 +34,28 @@ const SalesSummaryCards: React.FC<SalesSummaryCardsProps> = ({ data, loading }) 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
             <MetricCard
                 title="Total Revenue"
-                value={formatCurrency(data.revenue)}
+                value={data.revenue}
+                isCurrency={true}
                 icon={TrendingUp}
                 colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
             />
             <MetricCard
-                title="Sales Count"
-                value={`${data.salesCount} Orders`}
+                title="Total Transactions"
+                value={data.salesCount}
                 icon={ShoppingBag}
                 colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
             />
             <MetricCard
                 title="Total Discount"
-                value={formatCurrency(data.discount)}
+                value={data.discount}
+                isCurrency={true}
                 icon={Percent}
                 colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
             />
             <MetricCard
                 title="Total Refunds"
-                value={formatCurrency(data.refunds)}
+                value={data.refunds}
+                isCurrency={true}
                 icon={RotateCcw}
                 colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
             />

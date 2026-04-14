@@ -109,6 +109,14 @@ export default function StoreAdminDashboard() {
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Automatic Refresh Logic
+    // Keeps the dashboard and device status fresh (every 2 minutes)
+    const refreshInterval = setInterval(() => {
+      loadDashboardData();
+    }, 120000); // 2 minutes
+
+    return () => clearInterval(refreshInterval);
   }, [dateRange]);
 
   const loading = dashLoading || devicesLoading || invLoading;
@@ -129,7 +137,8 @@ export default function StoreAdminDashboard() {
     const revByDate = charts.revenueByDate ?? [];
     const payBreakdown = charts.paymentBreakdown ?? [];
     const topProductsRaw = raw.topProducts ?? [];
-    const invItems = (invRes as any)?.data ?? [];
+    const invItemsRaw = (invRes as any)?.data ?? [];
+    const invItems = Array.isArray(invItemsRaw) ? invItemsRaw : (invItemsRaw.data ?? []);
     const stockMap = invItems.reduce((acc: any, item: any) => {
       acc[item.productId] = {
         quantity: item.totalQuantity,
@@ -154,12 +163,18 @@ export default function StoreAdminDashboard() {
         value: p.revenue ?? 0,
         color: colors[i % colors.length],
       })),
-      devices: deviceData.map((d: any) => ({
-        id: d.id,
-        name: d.deviceName || d.name || 'Unknown Device',
-        location: d.location || 'Main Floor',
-        status: d.isActive ? 'online' : 'offline',
-      })),
+      devices: deviceData.map((d: any) => {
+        const lastActive = d.lastActiveAt ? new Date(d.lastActiveAt).getTime() : 0;
+        const now = new Date().getTime();
+        const isRecent = (now - lastActive) < (5 * 60 * 1000); // 5 minutes threshold
+        
+        return {
+          id: d.id,
+          name: d.deviceName || d.name || 'Unknown Device',
+          location: d.location || 'Main Floor',
+          status: (d.isActive && isRecent) ? 'online' : 'offline',
+        };
+      }),
       topProducts: topProductsRaw.map((p: { productId?: string; id?: string; name?: string; sku?: string; quantitySold?: number; revenue?: number }) => {
         const productId = p.productId ?? p.id ?? '';
         const invInfo = stockMap[productId];
@@ -273,7 +288,8 @@ export default function StoreAdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-2">
             <MetricCard
               title="Revenue"
-              value={formatCurrency(data.metrics?.[0]?.value ?? 0)}
+              value={data.metrics?.[0]?.value ?? 0}
+              isCurrency={true}
               change={12.5}
               isPositive={true}
               icon={DollarSign}
@@ -281,7 +297,7 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Transactions"
-              value={Number(data.metrics?.[1]?.value ?? 0).toLocaleString()}
+              value={data.metrics?.[1]?.value ?? 0}
               change={5.1}
               isPositive={true}
               icon={ShoppingCart}
@@ -289,7 +305,7 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Low Stock"
-              value={Number(data.metrics?.[2]?.value ?? 0).toLocaleString()}
+              value={data.metrics?.[2]?.value ?? 0}
               change={0}
               isPositive={true}
               icon={PackageOpen}
@@ -297,7 +313,7 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Refunds"
-              value={Number(data.metrics?.[3]?.value ?? 0).toLocaleString()}
+              value={data.metrics?.[3]?.value ?? 0}
               change={2.1}
               isPositive={false}
               icon={Undo2}
@@ -305,7 +321,8 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Discounts"
-              value={formatCurrency(data.metrics?.[4]?.value ?? 0)}
+              value={data.metrics?.[4]?.value ?? 0}
+              isCurrency={true}
               change={3.2}
               isPositive={true}
               icon={BadgePercent}

@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { formatNumberShort, formatCurrencyShort } from '@/utils/format';
 
 interface MetricCardProps {
     title: string;
@@ -10,6 +11,7 @@ interface MetricCardProps {
     isPositive?: boolean;
     colorClass?: string;
     className?: string;
+    isCurrency?: boolean;
 }
 
 const MetricCard = ({ 
@@ -19,8 +21,14 @@ const MetricCard = ({
     change,
     isPositive = true,
     colorClass = "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400", 
-    className 
-}: MetricCardProps) => (
+    className,
+    isCurrency = false
+}: MetricCardProps) => {
+    const displayValue = typeof value === 'number' 
+        ? (isCurrency ? formatCurrencyShort(value) : formatNumberShort(value))
+        : value;
+
+    return (
     <div className={cn(
         "bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 transition-all group overflow-hidden relative flex flex-col justify-center h-full min-h-[110px]",
         className
@@ -41,7 +49,7 @@ const MetricCard = ({
                         </div>
                     )}
                 </div>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate tabular-nums">{value}</h3>
+                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate tabular-nums">{displayValue}</h3>
             </div>
             <div className={cn("p-3 rounded-2xl transition-all shrink-0 group-hover:scale-110 shadow-sm", colorClass)}>
                 <Icon size={24} strokeWidth={2.5} />
@@ -49,6 +57,7 @@ const MetricCard = ({
         </div>
     </div>
 );
+};
 
 export default MetricCard;
 

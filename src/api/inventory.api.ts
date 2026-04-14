@@ -1,14 +1,14 @@
 import api from "./api";
 
-export const fetchLowStockInventory = () => {
-  return api.get("/inventory?lowStock=true").then(res => res.data);
+export const fetchLowStockInventory = (params?: { limit?: number; page?: number }) => {
+  return api.get("/inventory?lowStock=true", { params }).then(res => res.data);
 };
 
-export const fetchFullInventory = () => {
-  return api.get("/inventory").then(res => res.data);
+export const fetchFullInventory = (params?: { limit?: number; page?: number }) => {
+  return api.get("/inventory", { params }).then(res => res.data);
 };
 
-export const fetchInventoryLogs = (params?: { productId?: string; changeType?: string; limit?: number }) => {
+export const fetchInventoryLogs = (params?: { productId?: string; changeType?: string; limit?: number; page?: number }) => {
   return api.get("/inventory/logs", { params }).then(res => res.data);
 };
 

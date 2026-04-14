@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import StockOverviewCards from '@/components/store-admin/StockOverviewCards';
 import { fetchProducts } from '@/api/products.api';
 import { fetchFullInventory } from '@/api/inventory.api';
@@ -8,8 +9,13 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 
 const StockLevelsPage = () => {
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
+
+    const [page, setPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const pageSize = 10;
 
     const [productsDataRes, setProductsDataRes] = useState<any>(null);
     const [productsLoading, setProductsLoading] = useState(true);
@@ -20,12 +26,13 @@ const StockLevelsPage = () => {
         setProductsLoading(true);
         setInventoryLoading(true);
         try {
-            const [products, inventory] = await Promise.all([
+            const [products, inventoryRes] = await Promise.all([
                 fetchProducts(),
-                fetchFullInventory()
+                fetchFullInventory({ page, limit: pageSize })
             ]);
             setProductsDataRes(products);
-            setInventoryDataRes(inventory);
+            setInventoryDataRes(inventoryRes);
+            setTotalItems(inventoryRes?.data?.total || 0);
         } catch (error) {
             console.error("Failed to load stock data:", error);
         } finally {
@@ -36,37 +43,30 @@ const StockLevelsPage = () => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [page]);
 
     const loading = productsLoading || inventoryLoading;
 
     // Process data
     const productsData = (productsDataRes as any)?.data || (Array.isArray(productsDataRes) ? productsDataRes : []);
-    const inventoryData = (inventoryDataRes as any)?.data || (Array.isArray(inventoryDataRes) ? inventoryDataRes : []);
+    const inventoryData = (inventoryDataRes as any)?.data?.data || (Array.isArray(inventoryDataRes?.data) ? inventoryDataRes.data : []);
 
-    // Map inventory by productId
-    const inventoryMap = inventoryData.reduce((acc: any, inv: any) => {
-        acc[inv.productId] = inv.totalQuantity || inv.stock || 0;
-        return acc;
-    }, {});
-
-    const inventory = productsData.map((item: any) => {
-        const stock = inventoryMap[item.id] || 0;
+    const inventory = inventoryData.map((inv: any) => {
+        const item = inv.product || {};
         return {
-            id: item.id || item._id,
-            productName: item.name || item.productName || 'Unnamed Product',
+            id: inv.productId,
+            productName: item.name || 'Unnamed Product',
             sku: item.sku || 'N/A',
-            currentStock: stock,
+            currentStock: inv.totalQuantity || 0,
             reorderLevel: item.reorderLevel || 10,
             category: typeof item.category === 'object' ? item.category?.name : item.category || 'General',
-            image: (item.image || item.imageUrl) ? `http://localhost:3005${item.image || item.imageUrl}` : null
         };
     });
 
     const stats = {
-        totalItems: inventory.length,
-        lowStockItems: inventory.filter((i: any) => i.currentStock > 0 && i.currentStock <= i.reorderLevel).length,
-        outOfStockItems: inventory.filter((i: any) => i.currentStock === 0).length
+        totalItems: (inventoryDataRes as any)?.data?.total || inventory.length,
+        lowStockItems: (inventoryDataRes as any)?.data?.total || 0, // Placeholder or fetch separately if needed
+        outOfStockItems: 0 // Placeholder
     };
 
     const columns: ColumnDef<any>[] = [
@@ -215,7 +215,10 @@ const StockLevelsPage = () => {
                         <Download size={18} />
                         Export CSV
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1E1B4B] dark:bg-blue-600 rounded-xl text-white font-bold text-sm shadow-lg shadow-[#1E1B4B]/20 dark:shadow-blue-500/20 hover:bg-[#2563EB] dark:hover:bg-blue-700 transition-all border border-[#1E1B4B]/20 dark:border-blue-500">
+                    <button 
+                        onClick={() => navigate('/store-admin/inventory/adjustments')}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-[#1E1B4B] dark:bg-blue-600 rounded-xl text-white font-bold text-sm shadow-lg shadow-[#1E1B4B]/20 dark:shadow-blue-500/20 hover:bg-[#2563EB] dark:hover:bg-blue-700 transition-all border border-[#1E1B4B]/20 dark:border-blue-500"
+                    >
                         <Plus size={18} />
                         Adjust Stock
                     </button>
@@ -229,12 +232,16 @@ const StockLevelsPage = () => {
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
                 <DataTable 
                     columns={columns} 
-                    data={filteredInventory}
+                    data={inventory}
+                    totalItems={totalItems}
+                    pageIndex={page}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
                     isLoading={loading}
                     onRefresh={loadData}
                     placeholder="Search inventory..."
                     hidePagination={false}
-                    manualPagination={false}
+                    manualPagination={true}
                     exportFilename="Stock-Levels-Report"
                     headerActions={
                         <div className="flex items-center gap-3">

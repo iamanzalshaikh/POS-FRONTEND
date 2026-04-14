@@ -11,7 +11,7 @@ import { DataTable } from '@/components/global-components/data-table';
 import { storesApi } from '../../service/api';
 import { startOfMonth, subMonths, format, parseISO } from 'date-fns';
 import { type ChartConfig } from "@/components/ui/chart";
-import { formatPKR } from '@/utils/format';
+import { formatPKR, formatNumberShort, formatCurrencyShort } from '@/utils/format';
 
 const subscriptionConfig = {
     basic: {
@@ -68,11 +68,21 @@ const SuperAdminDashboard: React.FC = () => {
         refetchOverview();
         loadStores();
 
+        // Automatic Global Sync (2 minutes)
+        // Refreshes all infrastructure telemetry and node data
+        const syncInterval = setInterval(() => {
+            refetchOverview();
+            loadStores();
+        }, 120000);
+
         const healthInterval = setInterval(() => {
             reportsApi.getHealth().catch(() => {});
         }, 60000);
 
-        return () => clearInterval(healthInterval);
+        return () => {
+            clearInterval(syncInterval);
+            clearInterval(healthInterval);
+        };
     }, []);
 
     const statsRaw = overviewRes?.data?.data || overviewRes?.data || {};
@@ -225,10 +235,10 @@ const SuperAdminDashboard: React.FC = () => {
             {/* Main Metrics */}
             <div className="w-full">
                 <DashboardStats 
-                    totalStores={statsRaw.totalStores}
-                    totalRevenue={statsRaw.totalRevenue}
-                    activeStores={activeStoresCount}
-                    totalDevices={statsRaw.activeDevices} // Using activeDevices as totalDevices per current API availability
+                    totalStores={formatNumberShort(statsRaw.totalStores || 0)}
+                    totalRevenue={formatCurrencyShort(statsRaw.totalRevenue || 0)}
+                    activeStores={formatNumberShort(activeStoresCount)}
+                    totalDevices={formatNumberShort(statsRaw.activeDevices || 0)} 
                 />
             </div>
 
@@ -279,9 +289,9 @@ const SuperAdminDashboard: React.FC = () => {
                                         <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: row.color }} />
                                         <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{row.name}</span>
                                     </td>
-                                    <td className="px-6 py-4 border-none text-right font-medium text-slate-500 text-sm">{formatPKR(row.price)}</td>
-                                    <td className="px-6 py-4 border-none text-right font-bold text-slate-900 dark:text-slate-100 text-sm">{row.count}</td>
-                                    <td className="px-6 py-4 border-none text-right font-black text-indigo-600 dark:text-indigo-400 text-sm">{formatPKR(row.count * row.price)}</td>
+                                    <td className="px-6 py-4 border-none text-right font-medium text-slate-500 text-sm">{formatCurrencyShort(row.price)}</td>
+                                    <td className="px-6 py-4 border-none text-right font-bold text-slate-900 dark:text-slate-100 text-sm">{formatNumberShort(row.count)}</td>
+                                    <td className="px-6 py-4 border-none text-right font-black text-indigo-600 dark:text-indigo-400 text-sm">{formatCurrencyShort(row.count * row.price)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -289,7 +299,7 @@ const SuperAdminDashboard: React.FC = () => {
                             <tr className="bg-slate-50/50 dark:bg-slate-800/20">
                                 <td colSpan={3} className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Projected Revenue</td>
                                 <td className="px-6 py-4 text-right font-black text-slate-900 dark:text-white text-base">
-                                    {formatPKR(subscriptionTableRows.reduce((acc, row) => acc + (row.count * row.price), 0))}
+                                    {formatCurrencyShort(subscriptionTableRows.reduce((acc, row) => acc + (row.count * row.price), 0))}
                                 </td>
                             </tr>
                         </tfoot>
