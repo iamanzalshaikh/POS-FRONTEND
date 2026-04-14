@@ -212,7 +212,7 @@ function DataTableComponent<TData, TValue>({
                     )}
                     {headerActions}
                 </div>
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
                     {onRefresh && (
                         <Button
                             variant="outline"

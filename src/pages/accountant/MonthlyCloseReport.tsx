@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart, Download } from 'lucide-react';
+import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart } from 'lucide-react';
 import { getSalesReport, getInventoryReport } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
 import type { Expense } from '../../utils/expense-utils';
-import { EXPENSE_CATEGORIES, getCategoryLabel } from '../../utils/expense-utils';
-import { formatCurrency as formatCurrencyUtil, toLocalYMD } from '../../utils/format';
+import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
 import MetricCard from '../../components/global-components/MetricCard';
-import { DataTable } from '../../components/global-components/data-table-2';
-import type { ColumnDef } from '@tanstack/react-table';
 
 interface MonthlyCloseData {
   period: {
@@ -65,7 +62,7 @@ const MonthlyCloseReport: React.FC = () => {
       const startDate = toLocalYMD(new Date(year, month - 1, 1));
       const endDate = toLocalYMD(new Date(year, month, 0));
 
-      console.log('📊 [MonthlyClose] Fetching data for:', { startDate, endDate, selectedMonth });
+      console.log('≡ƒôè [MonthlyClose] Fetching data for:', { startDate, endDate, selectedMonth });
 
       // Fetch sales, inventory, and expenses
       const [salesResponse, inventoryResponse, expensesResponse] = await Promise.all([
@@ -74,9 +71,9 @@ const MonthlyCloseReport: React.FC = () => {
         getExpenses()
       ]);
 
-      console.log('📊 [MonthlyClose] Sales Response:', salesResponse);
-      console.log('📊 [MonthlyClose] Inventory Response:', inventoryResponse);
-      console.log('📊 [MonthlyClose] Expenses Response:', expensesResponse);
+      console.log('≡ƒôè [MonthlyClose] Sales Response:', salesResponse);
+      console.log('≡ƒôè [MonthlyClose] Inventory Response:', inventoryResponse);
+      console.log('≡ƒôè [MonthlyClose] Expenses Response:', expensesResponse);
 
       if (!salesResponse.success || !inventoryResponse.success) {
         throw new Error('Failed to fetch data');
@@ -95,7 +92,7 @@ const MonthlyCloseReport: React.FC = () => {
         });
       }
       
-      console.log('📊 [MonthlyClose] Filtered expenses:', allExpenses.length, 'items');
+      console.log('≡ƒôè [MonthlyClose] Filtered expenses:', allExpenses.length, 'items');
 
       // Calculate sales metrics
       const totalRevenue = salesData.summary.totalRevenue;
@@ -105,7 +102,7 @@ const MonthlyCloseReport: React.FC = () => {
 
       // Calculate actual expenses from API
       const totalExpenses = allExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-      console.log('📊 [MonthlyClose] Total Expenses:', totalExpenses);
+      console.log('≡ƒôè [MonthlyClose] Total Expenses:', totalExpenses);
 
       // Calculate expense breakdown by category
       const expenseByCategory = EXPENSE_CATEGORIES
@@ -122,7 +119,7 @@ const MonthlyCloseReport: React.FC = () => {
         .filter(c => c.amount > 0)
         .sort((a, b) => b.amount - a.amount);
 
-      console.log('📊 [MonthlyClose] Expense by Category:', expenseByCategory);
+      console.log('≡ƒôè [MonthlyClose] Expense by Category:', expenseByCategory);
 
       // Calculate profit with ACTUAL expenses (no estimates)
       const grossProfit = netRevenue - totalExpenses;
@@ -176,34 +173,6 @@ const MonthlyCloseReport: React.FC = () => {
     const date = new Date(year, month - 1);
     return date.toLocaleString('default', { month: 'long', year: 'numeric' });
   };
-
-  // Expense Breakdown Columns
-  const expenseColumns: ColumnDef<{ category: string; amount: number; percentage: number }>[] = [
-    {
-      header: "Category",
-      cell: ({ row }) => (
-        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest font-bold">
-          {row.original.category}
-        </div>
-      )
-    },
-    {
-      header: "Amount",
-      cell: ({ row }) => (
-        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
-          {formatCurrencyUtil(row.original.amount)}
-        </div>
-      )
-    },
-    {
-      header: "Percentage",
-      cell: ({ row }) => (
-        <div className="text-center text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest font-bold">
-          {row.original.percentage.toFixed(1)}%
-        </div>
-      )
-    }
-  ];
 
   if (loading) {
     return (
@@ -331,13 +300,33 @@ const MonthlyCloseReport: React.FC = () => {
         </div>
 
         {/* Expense Breakdown */}
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none col-span-1">
-          <DataTable
-            columns={expenseColumns}
-            data={data.expenses.byCategory}
-            hidePagination={true}
-            placeholder="Search expenses..."
-          />
+        <div className="bg-white border border-slate-200 rounded-3xl p-8">
+          <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
+            <PieChart size={20} className="text-red-400" />
+            Expense Breakdown
+          </h3>
+          {data.expenses.byCategory.length > 0 ? (
+            <div className="space-y-3">
+              {data.expenses.byCategory.map((cat) => (
+                <div key={cat.category} className="flex justify-between items-center py-2">
+                  <span className="text-sm font-bold text-slate-700">{cat.category}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-slate-900">{formatCurrency(cat.amount)}</span>
+                    <span className="text-[10px] font-bold text-slate-500 ml-2">({cat.percentage.toFixed(1)}%)</span>
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between items-center py-3 pt-4 border-t-2 border-slate-200 mt-4">
+                <span className="text-sm font-black uppercase text-slate-700 tracking-widest">Total Expenses</span>
+                <span className="text-lg font-black text-red-600">{formatCurrency(data.expenses.total)}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-400">
+              <PieChart size={48} className="mx-auto mb-3 opacity-20" />
+              <p className="text-sm font-bold">No expenses recorded</p>
+            </div>
+          )}
         </div>
 
         {/* Inventory Status */}

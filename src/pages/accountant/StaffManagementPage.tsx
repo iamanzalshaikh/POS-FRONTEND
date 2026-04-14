@@ -188,7 +188,7 @@ const StaffManagementPage: React.FC = () => {
       header: "Staff ID",
       cell: ({ row }) => (
         <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
-          #{row.original.id.slice(-6).toUpperCase()}
+          {row.original.displayId || `#${row.original.id.slice(-6).toUpperCase()}`}
         </div>
       )
     },
