@@ -65,9 +65,9 @@ export function enrichWithHierarchy(categories: Category[]): Category[] {
 }
 
 // ----------- API calls -----------
-export const getCategories = (params?: { tree?: boolean }) => {
+export const getCategories = (params?: { tree?: boolean; page?: number; limit?: number; search?: string }) => {
   return api
-    .get("/categories", { params: params?.tree ? { tree: "true" } : undefined })
+    .get("/categories", { params })
     .then((res) => res.data)
 }
 

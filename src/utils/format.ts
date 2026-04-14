@@ -9,11 +9,11 @@
  * @returns Formatted string (e.g., "₨ 1,234.56")
  */
 export const formatCurrency = (amount: number | string): string => {
-    const value = typeof amount === 'string' ? parseFloat(amount) : amount;
+    const value = typeof amount === 'string' ? parseFloat(amount.toString().replace(/[^0-9.-]+/g, '')) : amount;
     
-    if (isNaN(value)) return '₨ 0.00';
+    if (isNaN(value)) return 'Rs 0.00';
 
-    return `₨ ${value.toLocaleString('en-PK', {
+    return `Rs ${value.toLocaleString('en-PK', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     })}`;
@@ -24,14 +24,14 @@ export const formatPKR = (amount: number | string): string => {
         ? parseFloat(amount.toString().replace(/[^0-9.-]+/g, ''))
         : amount;
 
-    if (isNaN(value)) return '₨ 0.00';
+    if (isNaN(value)) return 'Rs 0.00';
 
     const formattedValue = value.toLocaleString('en-PK', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 
-    return `₨ ${formattedValue}`;
+    return `Rs ${formattedValue}`;
 };
 
 /**
@@ -47,4 +47,52 @@ export const formatDate = (dateString: string | Date): string => {
         dateStyle: 'medium',
         timeStyle: 'short',
     });
+};
+
+/**
+ * Formats a number into a short string (K, M, B)
+ * @param num - The number to format
+ * @returns Formatted string (e.g., 1.5K, 2M)
+ */
+export const formatNumberShort = (num: number | string): string => {
+    const value = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(value)) return "0";
+    if (value < 1000) return value.toString();
+    
+    const format = (v: number, suffix: string) => {
+        // Show 1 decimal place only if it's not .0
+        const formatted = v.toFixed(1).replace(/\.0$/, '');
+        return formatted + suffix;
+    };
+
+    if (value >= 1e9) return format(value / 1e9, "B");
+    if (value >= 1e6) return format(value / 1e6, "M");
+    if (value >= 1e3) return format(value / 1e3, "K");
+    
+    return value.toString();
+};
+
+/**
+ * Formats a currency value with short-form suffixes
+ * @param amount - The numeric value
+ * @returns Formatted string (e.g., "₨ 1.5K")
+ */
+export const formatCurrencyShort = (amount: number | string): string => {
+    const value = typeof amount === 'string' ? parseFloat(amount.toString().replace(/[^0-9.-]+/g, '')) : amount;
+    if (isNaN(value)) return "Rs 0";
+    if (value < 1000) return formatCurrency(value).replace('.00', '');
+    return `Rs ${formatNumberShort(value)}`;
+};
+
+/**
+ * Returns a YYYY-MM-DD string in the user's local timezone.
+ * Avoids the "one day off" bug common with .toISOString().
+ * @param date - The date object
+ * @returns Formatted string (e.g., "2024-04-14")
+ */
+export const toLocalYMD = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 };

@@ -202,25 +202,25 @@ export default function DevicesManagementPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                 <MetricCard 
                     title="Hardware Hub" 
-                    value={String(terminals.length)} 
+                    value={terminals.length} 
                     icon={Monitor} 
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                 />
                 <MetricCard 
                     title="Online Terminals" 
-                    value={String(terminals.filter((t: any) => t.status === 'online').length)} 
+                    value={terminals.filter((t: any) => t.status === 'online').length} 
                     icon={Wifi} 
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
                     title="System Offline" 
-                    value={String(terminals.filter((t: any) => t.status === 'offline').length)} 
+                    value={terminals.filter((t: any) => t.status === 'offline').length} 
                     icon={WifiOff} 
                     colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
                 />
                 <MetricCard 
                     title="Active Registries" 
-                    value={String(terminals.filter((t: any) => t.connectedTo).length)} 
+                    value={terminals.filter((t: any) => t.connectedTo).length} 
                     icon={User} 
                     colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
                 />

@@ -16,6 +16,7 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { getFinanceSummary, getSalesReport } from '../../api/finance.api';
 import type { FinanceSummaryData } from '../../api/finance.api';
+import { toLocalYMD } from '@/utils/format';
 import ExpenseTracker from './ExpenseTracker';
 import AccountantDashboardHome, { type AccountantPeriodPreset } from './AccountantDashboardHome';
 import ExpensesPage from './ExpensesPage';
@@ -31,13 +32,6 @@ import SuppliersPage from '@/pages/store-admin/purchasing/SuppliersPage';
 import SupplierPurchasesListPage from '@/pages/store-admin/purchasing/SupplierPurchasesListPage';
 import NewSupplierPurchasePage from '@/pages/store-admin/purchasing/NewSupplierPurchasePage';
 import SupplierPurchaseDetailPage from '@/pages/store-admin/purchasing/SupplierPurchaseDetailPage';
-
-function toLocalYMD(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 /** Today = single day. Week = Monday–today (this week). Month = 1st of month–today. */
 function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string; endDate: string } {

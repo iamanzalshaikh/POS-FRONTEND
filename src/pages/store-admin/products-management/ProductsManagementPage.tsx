@@ -6,7 +6,8 @@ import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { Plus, Trash, Box, Search, ShoppingCart, PackageOpen, AlertTriangle } from 'lucide-react';
-import { formatCurrency } from "@/utils/format";
+import { Button } from "@/components/ui/button";
+import { formatCurrency, formatCurrencyShort, formatNumberShort } from "@/utils/format";
 import AddStockModal from "@/components/store-admin/AddStockModal";
 
 import { fetchProducts } from "@/api/products.api";
@@ -91,7 +92,8 @@ export default function ProductsManagementPage() {
     // Merge Logic
     const getMergedProducts = () => {
         const productsRaw = productsDataRes?.data || (Array.isArray(productsDataRes) ? productsDataRes : [])
-        const inventoryRaw = inventoryDataRes?.data || (Array.isArray(inventoryDataRes) ? inventoryDataRes : [])
+        const invResData = inventoryDataRes?.data
+        const inventoryRaw = Array.isArray(invResData) ? invResData : (invResData?.data || [])
 
         const inventoryMap = inventoryRaw.reduce((acc: any, inv: any) => {
             acc[inv.productId] = inv.totalQuantity || inv.stock || 0
@@ -152,7 +154,7 @@ export default function ProductsManagementPage() {
             accessorKey: "purchasePrice",
             cell: ({ row }) => (
                 <div className="text-center text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {Number(row.getValue("purchasePrice")).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatCurrencyShort(row.getValue("purchasePrice"))}
                 </div>
             )
         },
@@ -161,7 +163,7 @@ export default function ProductsManagementPage() {
             accessorKey: "sellingPrice",
             cell: ({ row }) => (
                 <div className="text-center text-[#1e293b] dark:text-slate-300 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {Number(row.getValue("sellingPrice")).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatCurrencyShort(row.getValue("sellingPrice"))}
                 </div>
             )
         },
@@ -192,9 +194,9 @@ export default function ProductsManagementPage() {
                             "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-[2px] border",
                             stock === 0 ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50" :
                             stock <= reorder ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
-                            "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50"
+                            "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50"
                         )}>
-                            {stock} UNITS
+                            {formatNumberShort(stock)} UNITS
                         </span>
                     </div>
                 );
@@ -205,19 +207,25 @@ export default function ProductsManagementPage() {
             header: "Actions",
             cell: ({ row }) => (
                 <div className="flex justify-center items-center gap-2">
-                    <button 
+                    <Button 
+                        variant="secondary"
+                        size="icon"
                         onClick={() => {
                             setSelectedProductForStock(row.original);
                             setIsAddStockModalOpen(true);
                         }}
-                        className="p-2.5 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 rounded-xl hover:bg-blue-600 hover:text-white transition-all active:scale-90 border border-blue-100 dark:border-blue-900/50 group"
+                        className="w-9 h-9 rounded-xl"
                         title="Add Stock"
                     >
                         <Plus size={16} />
-                    </button>
-                    <button className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90">
+                    </Button>
+                    <Button 
+                        variant="ghost"
+                        size="icon"
+                        className="w-9 h-9 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 rounded-xl"
+                    >
                         <Trash size={16} />
-                    </button>
+                    </Button>
                 </div>
             )
         }
@@ -230,25 +238,25 @@ export default function ProductsManagementPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                 <MetricCard 
                     title="Total Products" 
-                    value={String(products.length)} 
+                    value={products.length} 
                     icon={ShoppingCart} 
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                 />
                 <MetricCard 
                     title="Active Store" 
-                    value={String(products.filter((p: any) => p.isActive).length)} 
+                    value={products.filter((p: any) => p.isActive).length} 
                     icon={PackageOpen} 
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
                     title="Low Stock" 
-                    value={String(products.filter((p: any) => p.stock > 0 && p.stock <= (p.reorderLevel || 10)).length)} 
+                    value={products.filter((p: any) => p.stock > 0 && p.stock <= (p.reorderLevel || 10)).length} 
                     icon={AlertTriangle} 
                     colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
                 />
                 <MetricCard 
                     title="Categories" 
-                    value={String(categories.length)} 
+                    value={categories.length} 
                     icon={Box} 
                     colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
                 />

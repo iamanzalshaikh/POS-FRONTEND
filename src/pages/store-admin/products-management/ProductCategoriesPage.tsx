@@ -2,22 +2,36 @@ import { useEffect, useState } from "react"
 import AddCategoryModal from "@/components/store-admin/AddCategoryModal"
 import { CheckCircle2, Plus, Search, Box, Trash2 } from "lucide-react"
 import { deleteCategory, getCategories } from "@/api/category.api";
+import { toast } from '@/lib/toast';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const ProductCategoriesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
 
-  const [categoriesRes, setCategoriesRes] = useState<any>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const limit = 5;
 
-  const fetchCategories = async () => {
+  const fetchCategories = async (p = page, q = searchQuery) => {
     setLoading(true);
     try {
-      const data = await getCategories();
-      setCategoriesRes(data);
+      const resp = await getCategories({ page: p, limit, search: q });
+      const rawPayload = resp?.data;
+
+      if (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+        // Paginated response: { data: [], total: 10, ... }
+        setCategories(rawPayload.data || []);
+        setTotal(rawPayload.total || 0);
+      } else {
+        // Flat array response: [...]
+        const data = Array.isArray(rawPayload) ? rawPayload : [];
+        setCategories(data);
+        setTotal(data.length);
+      }
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     } finally {
@@ -25,38 +39,40 @@ const ProductCategoriesPage = () => {
     }
   };
 
+  // Handle Search Input Change (Debounced)
   useEffect(() => {
-    fetchCategories();
-  }, []);
-  
-  const categories = (categoriesRes as any)?.data || (Array.isArray(categoriesRes) ? categoriesRes : []);
+    const timer = setTimeout(() => {
+      if (page !== 1) {
+        setPage(1);
+      } else {
+        fetchCategories(1, searchQuery);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
-  const filtered = categories.filter((c: any) => {
-    const q = searchQuery.toLowerCase()
-    const parentName = c.parent?.name?.toLowerCase() || ""
-    return (
-      c.name.toLowerCase().includes(q) ||
-      parentName.includes(q) ||
-      (c.slug && String(c.slug).toLowerCase().includes(q))
-    )
-  });
+  // Handle Page Change
+  useEffect(() => {
+    fetchCategories(page, searchQuery);
+  }, [page]);
 
   const handleDelete = async (c: any) => {
     const childCount = c._count?.children ?? 0
     const productCount = c._count?.products ?? 0
     if (childCount > 0 || productCount > 0) {
-      window.alert(
-        `Cannot delete: ${childCount} subcategories, ${productCount} products. Remove or reassign them first.`
+      toast.warning(
+        `Cannot delete: ${childCount} subcategories, ${productCount} products. Remove or reassign them first.`,
+        "Dependency Found"
       )
       return
     }
     if (!window.confirm(`Delete category “${c.name}”? This cannot be undone.`)) return
     try {
       await deleteCategory(c.id)
-      setSuccessMessage("Category deleted.")
+      toast.success("Category deleted.", "Success")
       await fetchCategories()
     } catch (e: any) {
-      window.alert(e.response?.data?.message || "Delete failed.")
+      toast.error(e.response?.data?.message || "Delete failed.", "Action Failed")
     }
   };
 
@@ -65,7 +81,7 @@ const ProductCategoriesPage = () => {
         header: "ID",
         cell: ({ row }) => (
             <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
-                {String(row.index + 1).padStart(2, '0')}
+                {String(((page - 1) * limit) + row.index + 1).padStart(2, '0')}
             </div>
         )
     },
@@ -136,27 +152,13 @@ const ProductCategoriesPage = () => {
     }
   ];
 
-  // Auto-dismiss success toast
-  useEffect(() => {
-    if (!successMessage) return
-    const t = setTimeout(() => setSuccessMessage(""), 3000)
-    return () => clearTimeout(t)
-  }, [successMessage])
-
   const handleCategoryAdded = () => {
-    fetchCategories()
-    setSuccessMessage("Category created successfully!")
+    fetchCategories(page, searchQuery)
+    toast.success("Category created successfully!", "Success")
   }
 
   return (
     <div className="animate-in fade-in duration-500 space-y-8">
-      {/* Success Toast */}
-      {successMessage && (
-        <div className="flex items-center gap-3 bg-white dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 px-5 py-4 rounded-2xl shadow-lg shadow-emerald-50 dark:shadow-none animate-in slide-in-from-top duration-300">
-          <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
-          <span className="text-sm font-bold tracking-tight">{successMessage}</span>
-        </div>
-      )}
 
       {/* Inline Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
@@ -173,14 +175,20 @@ const ProductCategoriesPage = () => {
         </button>
       </div>
 
-      {/* Management Ledger Area */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
         <DataTable 
             columns={columns} 
-            data={filtered}
+            data={categories}
             isLoading={loading}
-            onRefresh={fetchCategories}
+            onRefresh={() => fetchCategories(page, searchQuery)}
             placeholder="Search categories..."
+            hidePagination={false}
+            manualPagination={true}
+            pageIndex={page}
+            pageSize={limit}
+            totalItems={total}
+            pageCount={Math.ceil(total / limit)}
+            onPageChange={(newPageIndex) => setPage(newPageIndex)}
             headerActions={
                 <div className="flex items-center gap-3">
                     <div className="relative group">

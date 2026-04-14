@@ -7,6 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { formatNumberShort } from "@/utils/format";
 
 interface GlobalPieChartProps {
   data: any[];
@@ -46,9 +47,9 @@ export default function GlobalPieChart({
       {(title || subtitle) && (
         <div className={`flex items-center justify-between ${compact ? 'mb-4' : 'mb-8'}`}>
           <div>
-            {title && <h3 className="text-xl font-black text-slate-900 tracking-tight">{title}</h3>}
+            {title && <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{title}</h3>}
             {subtitle && (
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">
                 {subtitle}
               </p>
             )}
@@ -68,7 +69,7 @@ export default function GlobalPieChart({
                       >
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">{payload[0].name}</p>
                         <div className="flex items-baseline gap-1.5">
-                          <p className="text-sm font-black">{Number(payload[0].value).toLocaleString()}</p>
+                          <p className="text-sm font-black">{formatNumberShort(payload[0].value as number)}</p>
                           <p className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">
                             {total > 0 ? `(${( (Number(payload[0].value) / total) * 100).toFixed(1)}%)` : ''}
                           </p>
@@ -94,7 +95,8 @@ export default function GlobalPieChart({
                   <Cell
                     key={`cell-${index}`}
                     fill={entry.color || `var(--chart-${(index % 5) + 1})`}
-                    stroke="none"
+                    className="stroke-white dark:stroke-slate-900 outline-none"
+                    strokeWidth={2}
                   />
                 ))}
                 {showLabels && (
@@ -114,8 +116,10 @@ export default function GlobalPieChart({
                       if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                         return (
                           <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                            <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 text-3xl font-extrabold">{centerLabel}</tspan>
-                            <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-slate-500 font-bold text-xs uppercase tracking-widest">Total</tspan>
+                            <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 dark:fill-white text-3xl font-extrabold">
+                              {typeof centerLabel === 'number' ? formatNumberShort(centerLabel) : centerLabel}
+                            </tspan>
+                            <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-slate-500 dark:fill-slate-400 font-bold text-xs uppercase tracking-widest">Total</tspan>
                           </text>
                         )
                       }
@@ -125,18 +129,18 @@ export default function GlobalPieChart({
               </Pie>
             </PieChart>
         </ChartContainer>
-      <div className={`grid grid-cols-2 ${compact ? 'gap-2 mt-4' : 'gap-4 mt-8'}`}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${compact ? 'gap-2 mt-4' : 'gap-4 mt-8'}`}>
         {data.map((cat, idx) => (
-          <div key={idx} className={`flex items-center gap-3 ${compact ? 'p-2' : 'p-3'} bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-blue-100 transition-all`}>
+          <div key={idx} className={`flex items-center gap-3 ${compact ? 'p-2' : 'p-3'} bg-slate-50/50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 hover:border-blue-100 dark:hover:border-blue-900/50 transition-all`}>
             <div
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: cat.color || `var(--chart-${(idx % 5) + 1})` }}
             ></div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate">
                 {cat[nameKey]}
               </p>
-              <p className="text-sm font-black text-slate-900 tabular-nums">
+              <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
                 {total > 0 ? (((cat[dataKey] || 0) / total) * 100).toFixed(0) : 0}%
               </p>
             </div>
@@ -151,7 +155,7 @@ export default function GlobalPieChart({
   }
 
   return (
-    <div className={`bg-white ${compact ? 'p-5' : 'p-8'} rounded-[32px] border border-slate-100 shadow-sm flex flex-col ${compact ? 'h-fit' : 'h-full'} hover:shadow-lg transition-all duration-300`}>
+    <div className={`bg-white dark:bg-slate-900 ${compact ? 'p-5' : 'p-8'} rounded-[32px] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col ${compact ? 'h-fit' : 'h-full'} hover:shadow-lg transition-all duration-300`}>
       {chartContent}
     </div>
   );

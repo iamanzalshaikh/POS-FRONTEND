@@ -4,6 +4,7 @@ import SalesFilters from "@/components/store-admin/SalesFilters"
 import SalesTable from "@/components/store-admin/SalesTable"
 
 import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api"
+import { toast } from "@/lib/toast"
 
 const SalesTransactionsPage = () => {
 
@@ -55,10 +56,11 @@ const SalesTransactionsPage = () => {
     if (!window.confirm("Are you sure you want to cancel this sale?")) return;
     try {
       await cancelSale(id, "Cancelled by admin")
+      toast.success("Sale cancelled successfully", "Transaction Updated")
       await loadSales(params);
     } catch (err) {
       console.error("Failed to cancel sale", err)
-      alert("Failed to cancel sale")
+      toast.error("Failed to cancel sale", "Operation Failed")
     }
   }
 
@@ -66,10 +68,11 @@ const SalesTransactionsPage = () => {
     if (!window.confirm("Are you sure you want to refund this sale?")) return;
     try {
       await refundSale(id, "Refunded by admin")
+      toast.success("Sale refunded successfully", "Transaction Updated")
       await loadSales(params);
     } catch (err) {
       console.error("Failed to refund sale", err)
-      alert("Failed to refund sale")
+      toast.error("Failed to refund sale", "Operation Failed")
     }
   }
 

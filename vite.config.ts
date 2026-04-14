@@ -13,3 +13,5 @@ export default defineConfig({
     },
   },
 })
+// Force restart to clear module cache
+// Rebuild deps

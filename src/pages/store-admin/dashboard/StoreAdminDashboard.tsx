@@ -13,6 +13,7 @@ import {
 import DashboardGrid from './components/DashboardGrid';
 import MonthlyActivityChart from '@/components/global-components/monthly-activity-chart';
 import StatsCards from '@/components/global-components/StatsCards';
+import { Button } from '@/components/ui/button';
 
 import CategoryPieChart from './components/CategoryPieChart';
 import ActiveDevicesPanel from './components/ActiveDevicesPanel';
@@ -21,7 +22,7 @@ import MetricCard from '@/components/global-components/MetricCard';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { cn } from '@/lib/utils';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, toLocalYMD } from '@/utils/format';
 import { getDashboardSummary, getInventory } from '@/api/dashboard.api';
 import * as deviceApi from '@/api/devices.api';
 
@@ -62,8 +63,8 @@ export default function StoreAdminDashboard() {
       start.setHours(0, 0, 0, 0);
     }
     return {
-      startDate: start.toISOString().split('T')[0],
-      endDate: end.toISOString().split('T')[0]
+      startDate: toLocalYMD(start),
+      endDate: toLocalYMD(end)
     };
   };
 
@@ -109,6 +110,14 @@ export default function StoreAdminDashboard() {
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Automatic Refresh Logic
+    // Keeps the dashboard and device status fresh (every 2 minutes)
+    const refreshInterval = setInterval(() => {
+      loadDashboardData();
+    }, 120000); // 2 minutes
+
+    return () => clearInterval(refreshInterval);
   }, [dateRange]);
 
   const loading = dashLoading || devicesLoading || invLoading;
@@ -129,7 +138,8 @@ export default function StoreAdminDashboard() {
     const revByDate = charts.revenueByDate ?? [];
     const payBreakdown = charts.paymentBreakdown ?? [];
     const topProductsRaw = raw.topProducts ?? [];
-    const invItems = (invRes as any)?.data ?? [];
+    const invItemsRaw = (invRes as any)?.data ?? [];
+    const invItems = Array.isArray(invItemsRaw) ? invItemsRaw : (invItemsRaw.data ?? []);
     const stockMap = invItems.reduce((acc: any, item: any) => {
       acc[item.productId] = {
         quantity: item.totalQuantity,
@@ -154,12 +164,18 @@ export default function StoreAdminDashboard() {
         value: p.revenue ?? 0,
         color: colors[i % colors.length],
       })),
-      devices: deviceData.map((d: any) => ({
-        id: d.id,
-        name: d.deviceName || d.name || 'Unknown Device',
-        location: d.location || 'Main Floor',
-        status: d.isActive ? 'online' : 'offline',
-      })),
+      devices: deviceData.map((d: any) => {
+        const lastActive = d.lastActiveAt ? new Date(d.lastActiveAt).getTime() : 0;
+        const now = new Date().getTime();
+        const isRecent = (now - lastActive) < (5 * 60 * 1000); // 5 minutes threshold
+        
+        return {
+          id: d.id,
+          name: d.deviceName || d.name || 'Unknown Device',
+          location: d.location || 'Main Floor',
+          status: (d.isActive && isRecent) ? 'online' : 'offline',
+        };
+      }),
       topProducts: topProductsRaw.map((p: { productId?: string; id?: string; name?: string; sku?: string; quantitySold?: number; revenue?: number }) => {
         const productId = p.productId ?? p.id ?? '';
         const invInfo = stockMap[productId];
@@ -234,9 +250,12 @@ export default function StoreAdminDashboard() {
           <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">System Error</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">{error || 'Failed to establish connection to POS core.'}</p>
-          <button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-900 dark:bg-indigo-600 text-white rounded-3xl font-bold uppercase tracking-widest hover:bg-slate-800 dark:hover:bg-indigo-700 transition-all active:scale-95">
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="w-full h-14 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all transition-transform"
+          >
             Emergency Reload
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -252,18 +271,19 @@ export default function StoreAdminDashboard() {
         </div>
         <div className="flex items-center gap-3 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           {['Today', '7D', '30D'].map((range) => (
-            <button
+            <Button
               key={range}
               onClick={() => setDateRange(range)}
+              variant={dateRange === range ? "default" : "ghost"}
               className={cn(
-                "px-6 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all",
+                "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all h-auto",
                 dateRange === range
-                  ? "bg-slate-900 dark:bg-indigo-600 text-white shadow-lg shadow-slate-200 dark:shadow-none"
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none"
                   : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
               )}
             >
               {range}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -273,7 +293,8 @@ export default function StoreAdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-2">
             <MetricCard
               title="Revenue"
-              value={formatCurrency(data.metrics?.[0]?.value ?? 0)}
+              value={data.metrics?.[0]?.value ?? 0}
+              isCurrency={true}
               change={12.5}
               isPositive={true}
               icon={DollarSign}
@@ -281,7 +302,7 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Transactions"
-              value={Number(data.metrics?.[1]?.value ?? 0).toLocaleString()}
+              value={data.metrics?.[1]?.value ?? 0}
               change={5.1}
               isPositive={true}
               icon={ShoppingCart}
@@ -289,7 +310,7 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Low Stock"
-              value={Number(data.metrics?.[2]?.value ?? 0).toLocaleString()}
+              value={data.metrics?.[2]?.value ?? 0}
               change={0}
               isPositive={true}
               icon={PackageOpen}
@@ -297,7 +318,7 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Refunds"
-              value={Number(data.metrics?.[3]?.value ?? 0).toLocaleString()}
+              value={data.metrics?.[3]?.value ?? 0}
               change={2.1}
               isPositive={false}
               icon={Undo2}
@@ -305,7 +326,8 @@ export default function StoreAdminDashboard() {
             />
             <MetricCard
               title="Discounts"
-              value={formatCurrency(data.metrics?.[4]?.value ?? 0)}
+              value={data.metrics?.[4]?.value ?? 0}
+              isCurrency={true}
               change={3.2}
               isPositive={true}
               icon={BadgePercent}
@@ -340,7 +362,7 @@ export default function StoreAdminDashboard() {
                 // Daily points for 7D or 30D
                 let curr = new Date(start);
                 while (curr <= end) {
-                  const dStr = curr.toISOString().split('T')[0];
+                  const dStr = toLocalYMD(curr);
                   points.push({ 
                     label: curr.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
                     dateStr: dStr,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Store, CreditCard, CheckCircle, Laptop2 } from 'lucide-react';
-import { formatPKR } from '@/utils/format';
+import { formatPKR, formatNumberShort, formatCurrencyShort } from '@/utils/format';
 
 export interface DashboardStatsProps {
   totalStores?: number | string;
@@ -31,10 +31,10 @@ const StatCard: React.FC<{ title: string; value: string; icon?: React.ReactNode;
 };
 
 const DashboardStats: React.FC<DashboardStatsProps> = ({ totalStores, totalRevenue, activeStores, totalDevices }) => {
-  const totalStoresStr = typeof totalStores === 'number' ? totalStores.toLocaleString() : (totalStores || '0');
-  const revenueStr = typeof totalRevenue === 'number' ? formatPKR(totalRevenue) : (totalRevenue ? String(totalRevenue) : formatPKR(0));
-  const activeStoresStr = typeof activeStores === 'number' ? activeStores.toLocaleString() : (activeStores || '0');
-  const totalDevicesStr = typeof totalDevices === 'number' ? totalDevices.toLocaleString() : (totalDevices || '0');
+  const totalStoresStr = typeof totalStores === 'number' ? formatNumberShort(totalStores) : (totalStores || '0');
+  const revenueStr = typeof totalRevenue === 'number' ? formatCurrencyShort(totalRevenue) : (totalRevenue ? String(totalRevenue) : formatCurrencyShort(0));
+  const activeStoresStr = typeof activeStores === 'number' ? formatNumberShort(activeStores) : (activeStores || '0');
+  const totalDevicesStr = typeof totalDevices === 'number' ? formatNumberShort(totalDevices) : (totalDevices || '0');
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

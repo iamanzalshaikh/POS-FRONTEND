@@ -16,10 +16,11 @@ import {
 } from '../../utils/expense-utils';
 import ExpenseModal, { type ExpenseFormData } from '../../components/accountant/ExpenseModal';
 import CategoryModal from '../../components/accountant/CategoryModal';
-import Toast, { type ToastType } from '../../components/ui/Toast';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
+import { toast } from '@/lib/toast';
+import { Button } from '@/components/ui/button';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const ExpensesPage: React.FC = () => {
@@ -31,7 +32,6 @@ const ExpensesPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [summary, setSummary] = useState({ today: 0, thisMonth: 0, total: 0 });
 
   useEffect(() => {
@@ -93,8 +93,8 @@ const ExpensesPage: React.FC = () => {
     }
   };
 
-  const showToast = (message: string, type: ToastType) => {
-    setToast({ message, type });
+  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
+    toast[type](message);
   };
 
   const filteredExpenses = expenses.filter(e => {
@@ -191,12 +191,6 @@ const ExpensesPage: React.FC = () => {
           onClick: () => setIsCategoryModalOpen(true)
         }}
       />
-
-      {toast && (
-        <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-right-4">
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard

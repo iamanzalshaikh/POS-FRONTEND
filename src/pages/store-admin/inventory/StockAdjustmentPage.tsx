@@ -12,17 +12,23 @@ const StockAdjustmentPage = () => {
     const [auditLogsRes, setAuditLogsRes] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const pageSize = 5;
+
     const loadData = async () => {
         setLoading(true);
         try {
-            const [products, logs, auditLogs] = await Promise.all([
+            const [products, paginatedLogs, auditLogs] = await Promise.all([
                 fetchProducts(),
-                fetchInventoryLogs({ limit: 40 }),
+                fetchInventoryLogs({ limit: pageSize, page }),
                 getAuditLogs({ limit: 100 })
             ]);
             setProductsRes(products);
-            setLogsRes(logs);
+            setLogsRes(paginatedLogs); // Now returns { data: logs, total }
             setAuditLogsRes(auditLogs);
+            setTotalItems(paginatedLogs?.data?.total || 0);
         } catch (error) {
             console.error("Failed to load adjustment data:", error);
         } finally {
@@ -32,14 +38,15 @@ const StockAdjustmentPage = () => {
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [page]);
 
     const handleSuccess = () => {
+        setPage(1);
         loadData();
     };
 
     const products = (productsRes as any)?.data || (Array.isArray(productsRes) ? productsRes : []);
-    const logs = (logsRes as any)?.data || (Array.isArray(logsRes) ? logsRes : []);
+    const logs = (logsRes as any)?.data?.data || (Array.isArray(logsRes?.data) ? logsRes.data : []);
     const auditLogs = (auditLogsRes as any)?.data?.logs || (Array.isArray(auditLogsRes?.logs) ? auditLogsRes.logs : []);
 
     // Merge Audit Logs into Inventory Logs to get User Attribution
@@ -71,7 +78,7 @@ const StockAdjustmentPage = () => {
                     <Skeleton className="h-10 w-64" />
                     <Skeleton className="h-4 w-96" />
                 </div>
-                <div className="max-w-5xl">
+                <div className="w-full">
                     <Skeleton className="h-[300px] rounded-[32px]" />
                 </div>
                 <div className="space-y-4">
@@ -98,12 +105,18 @@ const StockAdjustmentPage = () => {
 
             <div className="space-y-12">
                 {/* Adjustment Form */}
-                <div className="max-w-5xl">
+                <div className="w-full">
                     <StockAdjustmentForm products={products} onSuccess={handleSuccess} />
                 </div>
 
                 {/* Recent Adjustments Table */}
-                <StockAdjustmentTable adjustments={enrichedLogs} />
+                <StockAdjustmentTable 
+                    adjustments={enrichedLogs} 
+                    totalItems={totalItems}
+                    pageIndex={page}
+                    pageSize={pageSize}
+                    onPageChange={setPage}
+                />
             </div>
         </div>
     );

@@ -14,6 +14,7 @@ import { Cell, Pie, PieChart } from 'recharts';
 import type { ChartConfig } from '@/components/ui/chart';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import MetricCard from '@/components/global-components/MetricCard';
+import GlobalPieChart from '@/components/global-components/PieChart';
 import BarChartLabelCustom from '@/components/global-components/BarChartLabelCustom';
 import { formatCurrency } from '@/utils/format';
 import type { FinanceSummaryData } from '@/api/finance.api';
@@ -223,52 +224,17 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
             </h2>
           </div>
           {pieRows.length > 0 ? (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center">
-              <ChartContainer
-                config={pieConfig}
-                className="mx-auto aspect-square w-full max-w-[280px] min-h-[220px]"
-              >
-                <PieChart>
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value: number) => (
-                          <span className="font-black tabular-nums">{formatCurrency(Number(value))}</span>
-                        )}
-                      />
-                    }
-                  />
-                  <Pie
-                    data={pieRows}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={56}
-                    outerRadius={88}
-                    paddingAngle={3}
-                    strokeWidth={2}
-                    className="stroke-white dark:stroke-slate-900"
-                  >
-                    {pieRows.map((row) => (
-                      <Cell key={row.key} fill={`var(--color-${row.key})`} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
-              <ul className="mt-4 flex flex-wrap justify-center gap-4 text-xs font-semibold text-slate-600 dark:text-slate-400 normal-case">
-                {pieRows.map((row) => (
-                  <li key={row.key} className="flex items-center gap-2">
-                    <span
-                      className="h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: `var(--color-${row.key})` }}
-                    />
-                    <span>
-                      {row.name}: {formatCurrency(row.value)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            <div className="flex-1">
+              <GlobalPieChart
+                data={pieRows}
+                dataKey="value"
+                nameKey="name"
+                innerRadius={56}
+                outerRadius={88}
+                paddingAngle={3}
+                noWrapper
+                compact
+              />
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center text-sm font-medium text-slate-400">

@@ -221,25 +221,25 @@ export default function StaffManagementPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                 <MetricCard 
                     title="Total Team" 
-                    value={String(staff.length)} 
+                    value={staff.length} 
                     icon={Users} 
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                 />
                 <MetricCard 
                     title="Active Now" 
-                    value={String(staff.filter((m: any) => m.status === 'active').length)} 
+                    value={staff.filter((m: any) => m.status === 'active').length} 
                     icon={UserCheck} 
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
                     title="Managers" 
-                    value={String(staff.filter((m: any) => m.role === 'ADMIN').length)} 
+                    value={staff.filter((m: any) => m.role === 'ADMIN').length} 
                     icon={ShieldCheck} 
                     colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
                 />
                 <MetricCard 
                     title="Cashiers" 
-                    value={String(staff.filter((m: any) => m.role === 'CASHIER').length)} 
+                    value={staff.filter((m: any) => m.role === 'CASHIER').length} 
                     icon={BadgeInfo} 
                     colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
                 />

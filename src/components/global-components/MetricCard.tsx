@@ -1,6 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { formatNumberShort, formatCurrencyShort } from '@/utils/format';
 
 interface MetricCardProps {
     title: string;
@@ -12,6 +13,7 @@ interface MetricCardProps {
     subtitle?: string;
     colorClass?: string;
     className?: string;
+    isCurrency?: boolean;
     /**
      * `stacked`: icon top-right, title/value bottom — equal heights in grids.
      * `horizontal`: original side-by-side layout (default).
@@ -57,6 +59,7 @@ const MetricCard = ({
     subtitle,
     colorClass = 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400',
     className,
+    isCurrency = false,
     variant = 'horizontal',
     compact = false,
 }: MetricCardProps) => {
@@ -64,6 +67,11 @@ const MetricCard = ({
         'font-black text-slate-400 dark:text-slate-500 uppercase leading-tight',
         compact ? 'text-[9px] tracking-[0.14em]' : 'text-[10px] tracking-[0.18em]'
     );
+
+    const numericValue = typeof value === 'string' ? parseFloat(value.toString().replace(/[^0-9.-]+/g, '')) : value;
+    const displayValue = (typeof numericValue === 'number' && !isNaN(numericValue))
+        ? (isCurrency ? formatCurrencyShort(numericValue) : formatNumberShort(numericValue))
+        : value;
 
     if (variant === 'stacked') {
         return (
@@ -99,7 +107,7 @@ const MetricCard = ({
                             compact ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'
                         )}
                     >
-                        {value}
+                        {displayValue}
                     </h3>
                     <div className={compact ? 'min-h-8' : 'min-h-10'}>
                         {subtitle ? (
@@ -121,7 +129,7 @@ const MetricCard = ({
     return (
         <div
             className={cn(
-                'group relative flex min-h-[110px] flex-col justify-center overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-6 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900',
+                'group relative flex min-h-[110px] flex-col justify-center overflow-hidden rounded-[2rem] border border-slate-100 bg-white px-4 py-5 sm:px-5 shadow-sm transition-all dark:border-slate-800 dark:bg-slate-900',
                 'hover:shadow-xl hover:shadow-indigo-500/10',
                 className
             )}
@@ -131,11 +139,11 @@ const MetricCard = ({
             <div className="relative z-10 flex w-full items-center justify-between gap-4">
                 <div className="min-w-0 flex-1">
                     <div className="mb-1.5 flex min-h-[22px] flex-wrap items-center gap-2">
-                        <p className={cn(titleClass, 'truncate')}>{title}</p>
+                        <p className={titleClass}>{title}</p>
                         {changeBadge(change, isPositive, false)}
                     </div>
-                    <h3 className="truncate text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
-                        {value}
+                    <h3 className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white leading-none mt-1">
+                        {displayValue}
                     </h3>
                     {subtitle ? (
                         <p className="mt-1.5 line-clamp-2 text-[10px] font-semibold leading-snug tracking-normal text-slate-500 normal-case dark:text-slate-400">

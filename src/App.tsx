@@ -8,6 +8,7 @@ import { SidebarProvider } from '@/components/ui/sidebar';
 import PageLoader from '@/components/ui/PageLoader';
 import HomeRedirect from '@/components/shared/HomeRedirect';
 import StoreAdminLayout from '@/components/layout/StoreAdminLayout';
+import { Toaster } from '@/components/ui/toaster';
 
 // Lazy loading pages
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
@@ -30,7 +31,8 @@ const InventoryManagement = lazy(() => import('@/pages/store-admin/inventory/Inv
 const StockLevelsPage = lazy(() => import('@/pages/store-admin/inventory/StockLevelsPage'));
 const SettingsPage = lazy(() => import('@/pages/store-admin/settings/SettingsPage'));
 const StockAdjustmentPage = lazy(() => import('@/pages/store-admin/inventory/StockAdjustmentPage'));
-const ReportsPage = lazy(() => import('@/pages/store-admin/reports/ReportsPage'));
+import ReportsPage from './pages/store-admin/reports/ReportsPage';
+import AuditLogsPage from './pages/store-admin/audit-logs/AuditLogsPage';
 const StaffDetailPage = lazy(() => import('@/pages/store-admin/staff-management/StaffDetailPage'));
 const SuppliersPage = lazy(() => import('@/pages/store-admin/purchasing/SuppliersPage'));
 const SupplierPurchasesListPage = lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchasesListPage'));
@@ -71,6 +73,7 @@ const App: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <SidebarProvider defaultOpen={true}>
+        <Toaster />
         <Router>
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -99,6 +102,7 @@ const App: React.FC = () => {
                   <Route path="/store-admin/sales" element={<SalesHistoryPage />} />
                   <Route path="/store-admin/categories" element={<ProductCategories />} />
                   <Route path="/store-admin/reports" element={<ReportsPage />} />
+                  <Route path="/store-admin/audit-logs" element={<AuditLogsPage />} />
                   <Route path="/store-admin/purchasing/suppliers" element={<SuppliersPage />} />
                   <Route path="/store-admin/purchasing/purchases" element={<SupplierPurchasesListPage />} />
                   <Route path="/store-admin/purchasing/purchases/new" element={<NewSupplierPurchasePage />} />
