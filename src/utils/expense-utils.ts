@@ -11,6 +11,7 @@
 
 export interface Expense {
   id: string;
+  displayId?: string;
   category: string;
   customCategoryId?: string | null;
   description: string;
