@@ -7,6 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { formatNumberShort } from "@/utils/format";
 
 interface GlobalPieChartProps {
   data: any[];
@@ -68,7 +69,7 @@ export default function GlobalPieChart({
                       >
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-1">{payload[0].name}</p>
                         <div className="flex items-baseline gap-1.5">
-                          <p className="text-sm font-black">{Number(payload[0].value).toLocaleString()}</p>
+                          <p className="text-sm font-black">{formatNumberShort(payload[0].value as number)}</p>
                           <p className="text-[10px] font-bold opacity-70 uppercase tracking-tighter">
                             {total > 0 ? `(${( (Number(payload[0].value) / total) * 100).toFixed(1)}%)` : ''}
                           </p>
@@ -114,7 +115,9 @@ export default function GlobalPieChart({
                       if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                         return (
                           <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                            <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 text-3xl font-extrabold">{centerLabel}</tspan>
+                            <tspan x={viewBox.cx} y={viewBox.cy} className="fill-slate-900 text-3xl font-extrabold">
+                              {typeof centerLabel === 'number' ? formatNumberShort(centerLabel) : centerLabel}
+                            </tspan>
                             <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-slate-500 font-bold text-xs uppercase tracking-widest">Total</tspan>
                           </text>
                         )

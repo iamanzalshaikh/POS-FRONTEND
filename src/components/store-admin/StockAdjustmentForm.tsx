@@ -58,7 +58,7 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
     };
 
     return (
-        <div className="bg-white p-8 rounded-[32px] shadow-sm border border-gray-100 space-y-8 animate-fade-in text-slate-800">
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-6 lg:p-8 rounded-[32px] shadow-sm border border-gray-100 dark:border-slate-800 space-y-8 animate-fade-in text-slate-800 dark:text-slate-100">
             <div className="flex items-center gap-3">
                 <div className="p-3 bg-green-50 text-green-600 rounded-2xl">
                     <Package size={24} />

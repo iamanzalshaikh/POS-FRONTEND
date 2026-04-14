@@ -45,8 +45,9 @@ const InventoryStatsWidget: React.FC<InventoryStatsWidgetProps> = ({ onStatsUpda
     try {
       const res = await fetchFullInventory();
 
-      if (res.data?.success) {
-        const items = Array.isArray(res.data.data) ? res.data.data : res.data.data?.items || [];
+      if (res?.success) {
+        const invData = res.data;
+        const items = Array.isArray(invData) ? invData : (invData?.data || []);
         
         let inStockCount = 0;
         let lowStockCount = 0;

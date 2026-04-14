@@ -7,7 +7,8 @@ import {
     MoreHorizontal,
     ChevronLeft,
     ChevronRight,
-    School,
+    Box,
+    Activity,
     User
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -154,11 +155,11 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                                         <td className="px-6 py-4 hidden md:table-cell">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 text-blue-600 rounded-lg">
-                                                    <School size={16} />
+                                                    <Box size={16} />
                                                 </div>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-black text-slate-900 dark:text-white">
-                                                        {log.store?.name || 'System Network'}
+                                                        {log.store?.name || 'Main System'}
                                                     </span>
                                                     <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                                                         {log.entity} Event

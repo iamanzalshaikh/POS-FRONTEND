@@ -48,3 +48,37 @@ export const formatDate = (dateString: string | Date): string => {
         timeStyle: 'short',
     });
 };
+
+/**
+ * Formats a number into a short string (K, M, B)
+ * @param num - The number to format
+ * @returns Formatted string (e.g., 1.5K, 2M)
+ */
+export const formatNumberShort = (num: number | string): string => {
+    const value = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(value)) return "0";
+    if (value < 1000) return value.toString();
+    
+    if (value >= 1e9) {
+        return (value / 1e9).toFixed(1).replace(/\.0$/, '') + "B";
+    }
+    if (value >= 1e6) {
+        return (value / 1e6).toFixed(1).replace(/\.0$/, '') + "M";
+    }
+    if (value >= 1e3) {
+        return (value / 1e3).toFixed(1).replace(/\.0$/, '') + "K";
+    }
+    return value.toString();
+};
+
+/**
+ * Formats a currency value with short-form suffixes
+ * @param amount - The numeric value
+ * @returns Formatted string (e.g., "₨ 1.5K")
+ */
+export const formatCurrencyShort = (amount: number | string): string => {
+    const value = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(value)) return "₨ 0";
+    if (value < 1000) return formatCurrency(value);
+    return `₨ ${formatNumberShort(value)}`;
+};

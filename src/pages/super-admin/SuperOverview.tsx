@@ -3,14 +3,13 @@ import { Store, CreditCard, Laptop2, Activity, CalendarDays, Download, Loader2, 
 import { reportsApi } from '../../service/api';
 import { StatsCard } from '../../components/ui/StatsCard';
 import { DataTable } from '@/components/global-components/data-table';
-import { formatPKR } from '@/utils/format';
+import { formatPKR, formatNumberShort, formatCurrencyShort } from '@/utils/format';
 
 const SuperOverview: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
     const fetchStats = async () => {
       try {
         const res = await reportsApi.getSuperAdminOverview();
@@ -25,7 +24,12 @@ const SuperOverview: React.FC = () => {
         setLoading(false);
       }
     };
+
     fetchStats();
+    
+    // Auto-refresh stats every 2 minutes
+    const interval = setInterval(fetchStats, 120000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -66,14 +70,21 @@ const SuperOverview: React.FC = () => {
       cell: ({ row }) => <span className="text-slate-500 font-medium truncate max-w-[150px]">{row.original.store?.city || 'Unknown'}, {row.original.store?.state || ''}</span>,
     },
     {
-      accessorKey: 'isActive',
+      id: 'status',
       header: 'Status',
-      cell: ({ getValue }) => {
-        const active = getValue<boolean>();
+      cell: ({ row }) => {
+        const device = row.original;
+        const lastActive = device.lastActiveAt ? new Date(device.lastActiveAt).getTime() : 0;
+        const now = Date.now();
+        const isOnline = (now - lastActive) < (5 * 60 * 1000) && device.isActive;
+
         return (
-          <span className={`px-3 py-1 rounded-md text-xs font-bold ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-            {active ? 'Active' : 'Inactive'}
-          </span>
+          <div className="flex items-center gap-2">
+            <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-300'}`}></div>
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest ${isOnline ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}>
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+          </div>
         );
       },
     },
@@ -109,7 +120,7 @@ const SuperOverview: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard 
           title="Total Stores"
-          value={stats?.totalStores?.toLocaleString() || '0'}
+          value={formatNumberShort(stats?.totalStores || 0)}
           icon={Store}
           iconColorClass="text-indigo-600"
           iconBgClass="bg-indigo-50"
@@ -118,7 +129,7 @@ const SuperOverview: React.FC = () => {
         />
         <StatsCard 
           title="Total Revenue"
-          value={formatPKR(stats?.totalRevenue || 0)}
+          value={formatCurrencyShort(stats?.totalRevenue || 0)}
           icon={CreditCard}
           iconColorClass="text-emerald-600"
           iconBgClass="bg-emerald-50"
@@ -127,7 +138,7 @@ const SuperOverview: React.FC = () => {
         />
         <StatsCard 
           title="Active Devices"
-          value={stats?.activeDevices?.toLocaleString() || '0'}
+          value={formatNumberShort(stats?.activeDevices || 0)}
           icon={Laptop2}
           iconColorClass="text-blue-600"
           iconBgClass="bg-blue-50"
@@ -136,7 +147,7 @@ const SuperOverview: React.FC = () => {
         />
         <StatsCard 
           title="Active Trials"
-          value={stats?.activeTrials?.toLocaleString() || '0'}
+          value={formatNumberShort(stats?.activeTrials || 0)}
           icon={Activity}
           iconColorClass="text-rose-600"
           iconBgClass="bg-rose-50"
@@ -159,7 +170,7 @@ const SuperOverview: React.FC = () => {
           
           <div className="mb-4">
             <div className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              {formatPKR(stats?.totalRevenue || 0)}
+              {formatCurrencyShort(stats?.totalRevenue || 0)}
             </div>
             <div className="text-xs font-bold text-slate-400 flex items-center mt-2">
               <span className="text-slate-500">Total Lifetime Revenue</span>

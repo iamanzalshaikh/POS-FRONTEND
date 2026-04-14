@@ -14,10 +14,28 @@ import ReturnRefundPage from './ReturnRefundPage';
 import OfflineSalesPage from './OfflineSalesPage';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import * as devicesApi from '../../api/devices.api';
 
 const CashierDashboard: React.FC = () => {
   const { deviceId } = useDeviceStore();
   const { user } = useAuthStore();
+
+  // Integrated Automated Status Sync (Heartbeat)
+  // Periodically notifies the backend that this terminal is active
+  React.useEffect(() => {
+    if (!deviceId) return;
+
+    // Pulse immediately on mount
+    devicesApi.heartbeat(deviceId).catch(err => console.error("[HEARTBEAT] Initial Pulse Failure:", err));
+
+    const interval = setInterval(() => {
+      devicesApi.heartbeat(deviceId).catch(err => {
+        console.error("[HEARTBEAT] Sync Failure:", err);
+      });
+    }, 60000); // 1 minute interval
+
+    return () => clearInterval(interval);
+  }, [deviceId]);
   const terminal = user?.assignedTerminals?.[0];
   const displayTerminalId = terminal?.id ?? null;
   const displayTerminalName = terminal?.deviceName ?? null;
