@@ -106,7 +106,7 @@ const POSInterface: React.FC = () => {
   });
   const [discountMode, setDiscountMode] = useState<DiscountMode>('amount');
   const [discountValue, setDiscountValue] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<string | null>('CASH');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -199,7 +199,10 @@ const POSInterface: React.FC = () => {
     [cart]
   );
 
-  const total = Math.max(0, subtotal + tax - discountAmount);
+  // Tax is already included in the selling price per user requirement.
+  // Tax = Subtotal * 0.18 (for display/reporting)
+  // Total = Subtotal - Discount
+  const total = Math.max(0, subtotal - discountAmount);
 
   // Change calculation logic (frontend only)
   const receivedAmountNum = parseFloat(receivedAmount) || 0;
@@ -208,7 +211,9 @@ const POSInterface: React.FC = () => {
   const hasExactAmount = receivedAmount && receivedAmountNum === total;
   const hasChange = receivedAmount && receivedAmountNum > total;
 
-  const canCompleteSale = cart.length > 0 && !!paymentMethod && !!deviceId;
+  const canCompleteSale = cart.length > 0 && !!paymentMethod && !!deviceId && (
+    paymentMethod !== 'CASH' || (receivedAmount !== '' && receivedAmountNum >= total)
+  );
 
   const handleAddProductToCart = (product: Product) => {
     const unitPrice = Number(
@@ -305,7 +310,8 @@ const POSInterface: React.FC = () => {
     console.log('[POSInterface] Clearing cart...');
     setCart([]);
     setDiscountValue(0);
-    setPaymentMethod(null);
+    setPaymentMethod('CASH');
+    setReceivedAmount('');
     setNotes('');
     setError(null);
   };
@@ -440,6 +446,8 @@ const POSInterface: React.FC = () => {
       paymentMethod: paymentMethod,
       discountAmount: numericDiscountAmount,
       notes: notes || undefined,
+      receivedAmount: paymentMethod === 'CASH' ? receivedAmountNum : undefined,
+      changeAmount: paymentMethod === 'CASH' ? changeAmount : undefined,
       items: itemsPayload,
     };
 
@@ -490,7 +498,8 @@ const POSInterface: React.FC = () => {
           // Clear cart
           setCart([]);
           setDiscountValue(0);
-          setPaymentMethod(null);
+          setPaymentMethod('CASH');
+          setReceivedAmount('');
           setNotes('');
           
           // Navigate to receipt page with autoPrint flag
@@ -516,6 +525,8 @@ const POSInterface: React.FC = () => {
           paymentMethod,
           discountAmount: numericDiscountAmount,
           notes: notes || undefined,
+          receivedAmount: paymentMethod === 'CASH' ? receivedAmountNum : undefined,
+          changeAmount: paymentMethod === 'CASH' ? changeAmount : undefined,
           items: payload.items,
           totals: { subtotal, tax, total },
           createdAt: new Date().toISOString(),
@@ -530,7 +541,8 @@ const POSInterface: React.FC = () => {
         // Clear cart
         setCart([]);
         setDiscountValue(0);
-        setPaymentMethod(null);
+        setPaymentMethod('CASH');
+        setReceivedAmount('');
         setNotes('');
 
         // Store sale in sessionStorage for instant access
@@ -547,6 +559,8 @@ const POSInterface: React.FC = () => {
               paymentMethod,
               discountAmount: numericDiscountAmount,
               notes: notes || undefined,
+              receivedAmount: paymentMethod === 'CASH' ? receivedAmountNum : undefined,
+              changeAmount: paymentMethod === 'CASH' ? changeAmount : undefined,
               saleItems: payload.items.map((item: any) => ({
                 productName: item.productName,
                 quantity: item.quantity,
@@ -1198,7 +1212,7 @@ const POSInterface: React.FC = () => {
                     }`}
                   >
                     <CreditCard size={12} />
-                    <span>{isSubmitting ? 'Wait...' : 'COMPLETE'}</span>
+                    <span>{isSubmitting ? 'Wait...' : 'CHECKOUT'}</span>
                   </button>
                 </div>
               </div>

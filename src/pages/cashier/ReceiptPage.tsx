@@ -53,17 +53,17 @@ const thermalPrintStyles = `
   }
 
   .receipt-table th, .receipt-table td {
-    padding: 1mm 0.5mm !important;
+    padding: 0.5mm 0.2mm !important;
     word-wrap: break-word;
+    font-size: 7pt !important;
   }
 
-  /* Specific column adjustments for 80mm */
+  /* Specific column adjustments for 80mm - REMOVED DISCOUNT COLUMN */
   .col-item { width: 35%; text-align: left; }
   .col-qty { width: 10%; text-align: center; }
-  .col-price { width: 15%; text-align: right; }
-  .col-gst { width: 10%; text-align: right; }
-  .col-disc { width: 10%; text-align: right; }
-  .col-total { width: 20%; text-align: right; }
+  .col-price { width: 18%; text-align: right; }
+  .col-gst { width: 15%; text-align: right; }
+  .col-total { width: 22%; text-align: right; }
 
   .receipt-header-text {
     font-size: 12pt !important;
@@ -152,6 +152,8 @@ type SaleData = {
   };
   paymentMethod?: string;
   paymentStatus?: string;
+  receivedAmount?: number;
+  changeAmount?: number;
   createdAt?: string;
   syncStatus?: 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED';
 };
@@ -665,7 +667,6 @@ const ReceiptPage: React.FC = () => {
                 <th className="px-3 py-3 text-center col-qty">Qty</th>
                 <th className="px-3 py-3 text-right col-price">Price</th>
                 <th className="px-3 py-3 text-right col-gst">GST</th>
-                <th className="px-3 py-3 text-right col-disc">Disc</th>
                 <th className="px-3 py-3 text-right col-total">Total</th>
               </tr>
             </thead>
@@ -713,7 +714,7 @@ const ReceiptPage: React.FC = () => {
 
                   return itemDetails.map((details: any, idx: number) => {
                     const itemDiscount = details.subtotal * discountPercentage;
-                    const lineTotal = details.subtotal + details.gst - itemDiscount;
+                    const lineTotal = details.subtotal - itemDiscount;
 
                     return (
                       <tr
@@ -725,31 +726,26 @@ const ReceiptPage: React.FC = () => {
                             {details.productName}
                           </div>
                         </td>
-                        <td className="px-3 py-4 text-center col-qty">
-                          <span className="text-base font-bold text-slate-800 print:text-xs">
-                            {details.quantity}
-                          </span>
-                        </td>
-                        <td className="px-3 py-4 text-right col-price">
-                          <span className="text-base font-bold text-slate-800 print:text-xs">
-                            {formatNumber(details.unitPrice)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-4 text-right col-gst">
-                          <span className="text-base font-bold text-slate-600 print:text-xs">
-                            {formatNumber(details.gst)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-4 text-right col-disc">
-                          <span className="text-base font-bold text-blue-600 print:text-xs">
-                            {formatNumber(itemDiscount)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-4 text-right col-total">
-                          <span className="text-lg font-black text-slate-900 print:text-sm">
-                            {formatNumber(lineTotal)}
-                          </span>
-                        </td>
+                          <td className="px-3 py-4 text-center col-qty">
+                            <span className="text-base font-bold text-slate-800 print:text-[10px]">
+                              {details.quantity}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4 text-right col-price">
+                            <span className="text-base font-bold text-slate-800 print:text-[10px]">
+                              {formatNumber(details.unitPrice)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4 text-right col-gst">
+                            <span className="text-base font-bold text-slate-600 print:text-[10px]">
+                              {formatNumber(details.gst)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4 text-right col-total">
+                            <span className="text-lg font-black text-slate-900 print:text-[11px]">
+                              {formatNumber(details.subtotal)}
+                            </span>
+                          </td>
                       </tr>
                     );
                   });
@@ -796,7 +792,7 @@ const ReceiptPage: React.FC = () => {
                   const subtotal = unitPrice * quantity;
                   const gst = lineItemGst(item, subtotal);
                   const itemDiscount = subtotal * discountPercentage;
-                  grandTotal += subtotal + gst - itemDiscount;
+                  grandTotal += subtotal - itemDiscount;
                 });
               }
 
@@ -831,6 +827,18 @@ const ReceiptPage: React.FC = () => {
                     <span>GRAND TOTAL:</span>
                     <span className="text-emerald-600">{formatNumber(grandTotal)}</span>
                   </div>
+                  {sale?.paymentMethod === 'CASH' && (
+                    <div className="mt-4 pt-3 border-t border-slate-200 space-y-1.5">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-500 uppercase tracking-widest">Amount Paid</span>
+                        <span className="font-black text-slate-900">{formatCurrency(toFiniteNumber(sale.receivedAmount) || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="font-bold text-slate-500 uppercase tracking-widest">Change</span>
+                        <span className="font-black text-blue-600">{formatCurrency(toFiniteNumber(sale.changeAmount) || 0)}</span>
+                      </div>
+                    </div>
+                  )}
                 </>
               );
             })()}

@@ -12,6 +12,8 @@ interface Product {
   category?: any;
   inventoryStock?: { totalQuantity?: number };
   discountPercentage?: number;
+  unitType?: string;
+  unitQuantity?: number;
 }
 
 interface ProductsTableProps {
@@ -69,6 +71,9 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                 Price
               </th>
               <th className="text-left py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">
+                Unit
+              </th>
+              <th className="text-left py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">
                 Stock
               </th>
               <th className="text-right py-4 px-6 text-[10px] font-black uppercase text-slate-500 tracking-widest">
@@ -113,6 +118,12 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                   <td className="py-4 px-6">
                     <span className="text-base font-black text-slate-900">
                       ₨ {price.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-700">
+                      {product.unitType || "PIECE"} 
+                      {product.unitQuantity ? ` (${Number(product.unitQuantity)})` : ''}
                     </span>
                   </td>
                   <td className="py-4 px-6">

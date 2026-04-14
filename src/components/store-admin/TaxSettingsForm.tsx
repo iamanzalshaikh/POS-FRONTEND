@@ -11,7 +11,7 @@ const TaxSettingsForm = ({ data, isLoading }: { data: any; isLoading: boolean })
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-3">Default Tax (%)</label>
                         <input 
                             type="number" 
-                            defaultValue={data?.taxPercentage || "13"}
+                            defaultValue={data?.taxPercentage || "18"}
                             className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 focus:bg-white focus:border-[#1E1B4B]/30 focus:ring-4 focus:ring-[#1E1B4B]/5 outline-none transition-all"
                         />
                     </div>
