@@ -14,8 +14,8 @@ export interface CreateProductData {
   sku: string;
   barcode: string;
   categoryId: string;
-  purchasePrice: number;
-  sellingPrice: number;
+  purchasePrice?: number;
+  sellingPrice?: number;
   taxPercentage?: number;
   discountPercentage?: number;
   reorderLevel?: number;
@@ -93,6 +93,18 @@ export const createProduct = async (data: CreateProductData | FormData) => {
     console.error('❌ [Products API] Failed to create product:', error);
     throw error;
   }
+};
+
+export const createProductMaster = async (data: Omit<CreateProductData, "purchasePrice" | "sellingPrice" | "initialStock" | "reorderLevel" | "discountPercentage" | "taxPercentage">) => {
+  return createProduct({
+    ...data,
+    purchasePrice: 0,
+    sellingPrice: 0,
+    initialStock: 0,
+    reorderLevel: 0,
+    discountPercentage: 0,
+    taxPercentage: 18,
+  });
 };
 
 export const updateProduct = (id: string, data: FormData) => {

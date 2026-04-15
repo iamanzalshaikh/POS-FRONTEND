@@ -6,6 +6,11 @@ export interface Supplier {
   name: string;
   phone: string | null;
   address: string | null;
+  companyName?: string | null;
+  addressLine?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -69,18 +74,43 @@ export const getSuppliers = (params?: { activeOnly?: boolean }) =>
 export const getSupplier = (id: string) =>
   api.get<{ success: boolean; data: Supplier }>(`/suppliers/${id}`);
 
-export const createSupplier = (body: { name: string; phone?: string; address?: string }) =>
+export const createSupplier = (body: {
+  name: string;
+  companyName?: string;
+  phone?: string;
+  address?: string;
+  addressLine?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+}) =>
   api.post<{ success: boolean; data: Supplier }>("/suppliers", body);
 
 export const updateSupplier = (
   id: string,
-  body: Partial<{ name: string; phone: string; address: string; isActive: boolean }>
+  body: Partial<{
+    name: string;
+    companyName: string;
+    phone: string;
+    address: string;
+    addressLine: string;
+    city: string;
+    state: string;
+    country: string;
+    isActive: boolean;
+  }>
 ) => api.patch<{ success: boolean; data: Supplier }>(`/suppliers/${id}`, body);
 
 export interface CreatePurchaseLine {
   productId: string;
   quantity: number;
-  unitPrice: number;
+  unitPrice?: number;
+  purchaseCost?: number;
+  sellingPrice?: number;
+  gstPercentage?: number;
+  lineDiscount?: number;
+  initialStock?: number;
+  alertAt?: number;
 }
 
 export const createSupplierPurchase = (body: {

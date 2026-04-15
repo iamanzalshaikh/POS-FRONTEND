@@ -8,7 +8,16 @@ import type { Supplier } from '@/api/suppliers.api';
 interface AddSupplierModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onAdd: (data: { name: string; phone?: string; address?: string }) => Promise<{ success: boolean; error?: string }>;
+    onAdd: (data: {
+        name: string;
+        companyName?: string;
+        phone?: string;
+        address?: string;
+        addressLine?: string;
+        city?: string;
+        state?: string;
+        country?: string;
+    }) => Promise<{ success: boolean; error?: string }>;
     editSupplier?: Supplier | null;
     onEdit?: (id: string, data: any) => Promise<{ success: boolean; error?: string }>;
 }
@@ -16,8 +25,12 @@ interface AddSupplierModalProps {
 export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier, onEdit }: AddSupplierModalProps) {
     const [formData, setFormData] = useState({
         name: '',
+        companyName: '',
         phone: '',
-        address: ''
+        addressLine: '',
+        city: '',
+        state: '',
+        country: ''
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -28,11 +41,15 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
             if (editSupplier) {
                 setFormData({
                     name: editSupplier.name,
+                    companyName: (editSupplier as any).companyName || '',
                     phone: editSupplier.phone || '',
-                    address: editSupplier.address || ''
+                    addressLine: (editSupplier as any).addressLine || '',
+                    city: (editSupplier as any).city || '',
+                    state: (editSupplier as any).state || '',
+                    country: (editSupplier as any).country || ''
                 });
             } else {
-                setFormData({ name: '', phone: '', address: '' });
+                setFormData({ name: '', companyName: '', phone: '', addressLine: '', city: '', state: '', country: '' });
             }
             setError(null);
         } else {
@@ -47,7 +64,7 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
 
     const handleClose = () => {
         setError(null);
-        setFormData({ name: '', phone: '', address: '' });
+        setFormData({ name: '', companyName: '', phone: '', addressLine: '', city: '', state: '', country: '' });
         onClose();
     };
 
@@ -64,13 +81,21 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
         const result = editSupplier && onEdit
             ? await onEdit(editSupplier.id, {
                 name: formData.name.trim(),
+                companyName: formData.companyName.trim() || undefined,
                 phone: formData.phone.trim() || undefined,
-                address: formData.address.trim() || undefined
+                addressLine: formData.addressLine.trim() || undefined,
+                city: formData.city.trim() || undefined,
+                state: formData.state.trim() || undefined,
+                country: formData.country.trim() || undefined
               })
             : await onAdd({
                 name: formData.name.trim(),
+                companyName: formData.companyName.trim() || undefined,
                 phone: formData.phone.trim() || undefined,
-                address: formData.address.trim() || undefined
+                addressLine: formData.addressLine.trim() || undefined,
+                city: formData.city.trim() || undefined,
+                state: formData.state.trim() || undefined,
+                country: formData.country.trim() || undefined
               });
         setLoading(false);
 
@@ -126,9 +151,22 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
                                     placeholder="Enter vendor name"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white lowercase first-letter:uppercase placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                                    className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                 />
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[#1e293b] dark:text-slate-300">
+                                Company Name
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Optional company name"
+                                value={formData.companyName}
+                                onChange={e => setFormData({ ...formData, companyName: e.target.value })}
+                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                            />
                         </div>
 
                         <div className="space-y-2">
@@ -149,18 +187,41 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
 
                         <div className="space-y-2">
                             <label className="text-[#1e293b] dark:text-slate-300">
-                                Business Address
+                                Address Line
                             </label>
                             <div className="relative group">
                                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                 <input
                                     type="text"
-                                    placeholder="Street, City, Country"
-                                    value={formData.address}
-                                    onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                    placeholder="Street / Area"
+                                    value={formData.addressLine}
+                                    onChange={e => setFormData({ ...formData, addressLine: e.target.value })}
                                     className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                 />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input
+                                type="text"
+                                placeholder="City"
+                                value={formData.city}
+                                onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                            />
+                            <input
+                                type="text"
+                                placeholder="State"
+                                value={formData.state}
+                                onChange={e => setFormData({ ...formData, state: e.target.value })}
+                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Country"
+                                value={formData.country}
+                                onChange={e => setFormData({ ...formData, country: e.target.value })}
+                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                            />
                         </div>
                     </div>
 

@@ -315,4 +315,4 @@ const ErrorState = ({ message }: { message: string }) => (
   </div>
 );
 
-export default ProfitLossReport;
+export default ProfitLossReport;
