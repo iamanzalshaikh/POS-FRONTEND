@@ -15,7 +15,8 @@ import { fetchFullInventory } from "@/api/inventory.api";
 import { getCategories } from "@/api/category.api"
 
 export default function ProductsManagementPage() {
-    const [openModal, setOpenModal] = useState(false)
+    const [openOpeningModal, setOpenOpeningModal] = useState(false)
+    const [openMasterModal, setOpenMasterModal] = useState(false)
 
     const [isAddStockModalOpen, setIsAddStockModalOpen] = useState(false);
     const [selectedProductForStock, setSelectedProductForStock] = useState<any>(null);
@@ -233,7 +234,10 @@ export default function ProductsManagementPage() {
 
     return (
         <div className="animate-fade-in space-y-8">
-            <ProductsHeader openModal={() => setOpenModal(true)} />
+            <ProductsHeader
+                openOpeningModal={() => setOpenOpeningModal(true)}
+                openMasterModal={() => setOpenMasterModal(true)}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                 <MetricCard 
@@ -316,9 +320,17 @@ export default function ProductsManagementPage() {
             />
 
             <AddProductModal
-                open={openModal}
-                onClose={() => setOpenModal(false)}
+                open={openOpeningModal}
+                onClose={() => setOpenOpeningModal(false)}
                 onSuccess={() => refetchProducts()}
+                mode="opening"
+            />
+
+            <AddProductModal
+                open={openMasterModal}
+                onClose={() => setOpenMasterModal(false)}
+                onSuccess={() => refetchProducts()}
+                mode="master"
             />
         </div>
     )

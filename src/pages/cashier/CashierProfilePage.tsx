@@ -5,7 +5,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 const CashierProfilePage: React.FC = () => {
   const { user, setUser, logout } = useAuthStore();
-  const [name, setName] = useState(user?.name || '');
+  const [firstName, setFirstName] = useState((user?.name || '').split(' ').slice(0, 1).join(' '));
+  const [lastName, setLastName] = useState((user?.name || '').split(' ').slice(1).join(' '));
   const [phone, setPhone] = useState(user?.phone || '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -25,7 +26,9 @@ const CashierProfilePage: React.FC = () => {
         const res = await profileApi.getProfile();
         if (res.data?.success && res.data.data?.user) {
           setUser(res.data.data.user);
-          setName(res.data.data.user.name || '');
+          const fullName = res.data.data.user.name || '';
+          setFirstName(fullName.split(' ').slice(0, 1).join(' '));
+          setLastName(fullName.split(' ').slice(1).join(' '));
           setPhone(res.data.data.user.phone || '');
         }
       } catch {
@@ -39,6 +42,7 @@ const CashierProfilePage: React.FC = () => {
     setSaving(true);
     setMessage(null);
     try {
+      const name = `${firstName} ${lastName}`.trim();
       const res = await profileApi.updateProfile({ name, phone });
       if (res.data?.success && res.data.data?.user) {
         setUser(res.data.data.user);
@@ -62,7 +66,7 @@ const CashierProfilePage: React.FC = () => {
     setPasswordMessage(null);
     try {
       const res = await authApi.changePassword({
-        currentPassword,
+        oldPassword: currentPassword,
         newPassword,
       });
       if (res.data?.success) {
@@ -115,11 +119,21 @@ const CashierProfilePage: React.FC = () => {
           <div className="space-y-2 text-xs">
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                Name
+                First Name
               </label>
               <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                Last Name
+              </label>
+              <input
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
               />
             </div>
@@ -135,7 +149,7 @@ const CashierProfilePage: React.FC = () => {
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-600 mb-1">
-                Phone
+                Contact Number
               </label>
               <input
                 value={phone}

@@ -279,86 +279,6 @@ export default function SupplierPurchaseDetailPage() {
                 </div>
 
                 <div className="space-y-8">
-                    {/* Record Payment Section */}
-                    {balance > 0 && !readOnly && (
-                        <div className="bg-[#2563eb] rounded-[2.5rem] p-8 shadow-xl shadow-blue-500/20 text-white relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500">
-                                <PlusCircle size={120} />
-                            </div>
-                            <div className="relative z-10">
-                                <h3 className="text-[11px] font-black uppercase tracking-[3px] text-blue-100 mb-6 flex items-center gap-2">
-                                    <CreditCard size={14} /> Settlement Portal
-                                </h3>
-                                <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl mb-6">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-blue-100 mb-1">Unpaid Balance</p>
-                                    <p className="text-3xl font-black tracking-tight">{formatCurrencyShort(balance)}</p>
-                                </div>
-
-                                {payError && (
-                                    <div className="mb-6 p-4 bg-rose-500/20 border border-white/20 rounded-xl text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
-                                        <AlertCircle size={16} />
-                                        {payError}
-                                    </div>
-                                )}
-
-                                <form onSubmit={submitPayment} className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-blue-100 pl-1 text-left block">Amount To Pay</label>
-                                        <Input
-                                            type="number"
-                                            min={0.01}
-                                            step="0.01"
-                                            max={balance}
-                                            className="h-12 bg-white/10 border-white/20 text-white font-black text-lg placeholder:text-blue-200 focus:bg-white/20 focus:ring-0 focus:border-white animate-transition border-[1.5px] rounded-xl"
-                                            value={payAmount}
-                                            onChange={(e) => setPayAmount(e.target.value)}
-                                            placeholder="0.00"
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-blue-100 pl-1 text-left block">Settlement Date</label>
-                                        <Input
-                                            type="date"
-                                            className="h-12 bg-white/10 border-white/20 text-white font-black text-sm focus:bg-white/20 focus:ring-0 focus:border-white animate-transition border-[1.5px] rounded-xl"
-                                            value={payDate}
-                                            onChange={(e) => setPayDate(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-blue-100 pl-1 text-left block">Payment Gateway</label>
-                                        <select
-                                            className="h-12 w-full px-4 bg-white/10 border-white/20 text-white font-black text-xs focus:bg-white/20 focus:ring-0 outline-none border-[1.5px] rounded-xl appearance-none cursor-pointer"
-                                            value={payMethod}
-                                            onChange={(e) => setPayMethod(e.target.value as typeof payMethod)}
-                                        >
-                                            <option value="CASH" className="text-slate-900 uppercase tracking-widest font-black">Cash Handover</option>
-                                            <option value="BANK" className="text-slate-900 uppercase tracking-widest font-black">Bank Transfer</option>
-                                            <option value="CHEQUE" className="text-slate-900 uppercase tracking-widest font-black">Account Payee Cheque</option>
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-blue-100 pl-1 text-left block">Transaction Notes</label>
-                                        <Input
-                                            className="h-12 bg-white/10 border-white/20 text-white font-black text-xs placeholder:text-blue-200 focus:bg-white/20 focus:ring-0 border-[1.5px] rounded-xl"
-                                            value={payNotes}
-                                            onChange={(e) => setPayNotes(e.target.value)}
-                                            placeholder="Reference #, Bank Details..."
-                                        />
-                                    </div>
-                                    <Button
-                                        type="submit"
-                                        disabled={paySaving}
-                                        className="w-full h-14 bg-white text-blue-600 hover:bg-white/90 rounded-2xl font-black uppercase tracking-[2px] text-[10px] mt-4 shadow-lg shadow-blue-900/30 active:scale-95 transition-all"
-                                    >
-                                        {paySaving ? "Validating..." : "Settle Balance"}
-                                    </Button>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
                     {/* Meta Information Card */}
                     <div className="bg-slate-50 dark:bg-slate-800/50 rounded-[2.5rem] p-8 space-y-6">
                         <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
@@ -395,6 +315,83 @@ export default function SupplierPurchaseDetailPage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Record Payment Section */}
+                    {balance > 0 && !readOnly && (
+                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800/50 shadow-sm relative">
+                            <div className="relative z-10">
+                                <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 mb-6 flex items-center gap-2">
+                                    <CreditCard size={14} className="text-blue-500" /> Settlement Portal
+                                </h3>
+                                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl mb-6 border border-slate-100 dark:border-slate-700/50">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Unpaid Balance</p>
+                                    <p className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">{formatCurrencyShort(balance)}</p>
+                                </div>
+
+                                {payError && (
+                                    <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
+                                        <AlertCircle size={16} />
+                                        {payError}
+                                    </div>
+                                )}
+
+                                <form onSubmit={submitPayment} className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-slate-500 pl-1 text-left block">Amount To Pay</label>
+                                        <Input
+                                            type="number"
+                                            min={0.01}
+                                            step="0.01"
+                                            max={balance}
+                                            className="h-12 bg-slate-50 border-slate-200 text-slate-900 font-black text-lg placeholder:text-slate-400 rounded-xl"
+                                            value={payAmount}
+                                            onChange={(e) => setPayAmount(e.target.value)}
+                                            placeholder="0.00"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-slate-500 pl-1 text-left block">Settlement Date</label>
+                                        <Input
+                                            type="date"
+                                            className="h-12 bg-slate-50 border-slate-200 text-slate-900 font-black text-sm rounded-xl"
+                                            value={payDate}
+                                            onChange={(e) => setPayDate(e.target.value)}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-slate-500 pl-1 text-left block">Payment Gateway</label>
+                                        <select
+                                            className="h-12 w-full px-4 bg-slate-50 border border-slate-200 text-slate-900 font-black text-xs rounded-xl appearance-none cursor-pointer"
+                                            value={payMethod}
+                                            onChange={(e) => setPayMethod(e.target.value as typeof payMethod)}
+                                        >
+                                            <option value="CASH" className="uppercase tracking-widest font-black">Cash Handover</option>
+                                            <option value="BANK" className="uppercase tracking-widest font-black">Bank Transfer</option>
+                                            <option value="CHEQUE" className="uppercase tracking-widest font-black">Account Payee Cheque</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[2px] text-slate-500 pl-1 text-left block">Transaction Notes</label>
+                                        <Input
+                                            className="h-12 bg-slate-50 border-slate-200 text-slate-900 font-black text-xs placeholder:text-slate-400 rounded-xl"
+                                            value={payNotes}
+                                            onChange={(e) => setPayNotes(e.target.value)}
+                                            placeholder="Reference #, Bank Details..."
+                                        />
+                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={paySaving}
+                                        className="w-full h-14 bg-blue-600 text-white hover:bg-blue-700 rounded-2xl font-black uppercase tracking-[2px] text-[10px] mt-4"
+                                    >
+                                        {paySaving ? "Validating..." : "Settle Balance"}
+                                    </Button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

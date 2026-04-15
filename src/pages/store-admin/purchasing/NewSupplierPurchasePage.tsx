@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { 
     ArrowLeft, 
     Truck, 
     Calendar, 
     FileText, 
-    Plus, 
-    Trash2, 
+    Plus,
     ShoppingCart,
     Wallet,
     CheckCircle2,
@@ -16,13 +15,26 @@ import { getSuppliers, createSupplierPurchase } from "@/api/suppliers.api";
 import { fetchProducts } from "@/api/products.api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePurchasingBasePath } from "@/hooks/usePurchasingBasePath";
-import { formatCurrencyShort } from "@/utils/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
-
-type Line = { key: string; productId: string; quantity: string; unitPrice: string };
+type ProductRow = {
+    key: string;
+    productId: string;
+    name: string;
+    category: string;
+    sku: string;
+    barcode: string;
+    unitType: string;
+    qtyPerUnit: string;
+    quantity: string;
+    purchaseCost: string;
+    sellingPrice: string;
+    gstPercentage: string;
+    lineDiscount: string;
+    initialStock: string;
+    alertAt: string;
+};
 
 export default function NewSupplierPurchasePage() {
     const navigate = useNavigate();
@@ -30,14 +42,12 @@ export default function NewSupplierPurchasePage() {
     const base = usePurchasingBasePath();
     
     const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
-    const [products, setProducts] = useState<{ id: string; name: string; sku: string }[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
+    const [selectedProductId, setSelectedProductId] = useState("");
     const [supplierId, setSupplierId] = useState("");
     const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
-    const [paidAmount, setPaidAmount] = useState("0");
     const [notes, setNotes] = useState("");
-    const [items, setItems] = useState<Line[]>([
-        { key: "1", productId: "", quantity: "1", unitPrice: "" },
-    ]);
+    const [items, setItems] = useState<ProductRow[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -48,44 +58,38 @@ export default function NewSupplierPurchasePage() {
         });
         void fetchProducts({ isActive: true }).then((body: any) => {
             const raw = body?.data || (Array.isArray(body) ? body : []);
-            setProducts(
-                raw.map((p: any) => ({
-                    id: p.id,
-                    name: p.name,
-                    sku: p.sku || "",
-                }))
-            );
+            setProducts(raw);
         });
     }, []);
-
-    const { lineTotals, grandTotal, paidNum, balance } = useMemo(() => {
-        let sum = 0;
-        const lt = items.map((l) => {
-            const q = parseInt(l.quantity, 10);
-            const u = parseFloat(l.unitPrice);
-            const t = Number.isFinite(q) && Number.isFinite(u) && q > 0 && u >= 0 ? q * u : 0;
-            sum += t;
-            return t;
-        });
-        const paid = parseFloat(paidAmount);
-        const p = Number.isFinite(paid) && paid >= 0 ? paid : 0;
-        return {
-            lineTotals: lt,
-            grandTotal: sum,
-            paidNum: p,
-            balance: sum - p,
-        };
-    }, [items, paidAmount]);
-
-    const addLine = () => {
-        setItems((prev) => [...prev, { key: `${Date.now()}`, productId: "", quantity: "1", unitPrice: "" }]);
+    const addSelectedProduct = () => {
+        if (!selectedProductId) return;
+        const p = products.find((prod) => prod.id === selectedProductId);
+        if (!p) return;
+        if (items.some((it) => it.productId === p.id)) return;
+        setItems((prev) => [
+            ...prev,
+            {
+                key: `${Date.now()}`,
+                productId: p.id,
+                name: p.name || "",
+                category: p.category?.name || "",
+                sku: p.sku || "",
+                barcode: p.barcode || "",
+                unitType: p.unitType || "PIECE",
+                qtyPerUnit: p.unitQuantity ? String(p.unitQuantity) : "",
+                quantity: "1",
+                purchaseCost: p.purchasePrice ? String(p.purchasePrice) : "0",
+                sellingPrice: p.sellingPrice ? String(p.sellingPrice) : "0",
+                gstPercentage: "18",
+                lineDiscount: "0",
+                initialStock: "1",
+                alertAt: String(p.reorderLevel ?? 10),
+            },
+        ]);
+        setSelectedProductId("");
     };
 
-    const removeLine = (key: string) => {
-        setItems((prev) => (prev.length <= 1 ? prev : prev.filter((l) => l.key !== key)));
-    };
-
-    const updateLine = (key: string, patch: Partial<Line>) => {
+    const updateLine = (key: string, patch: Partial<ProductRow>) => {
         setItems((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
     };
 
@@ -101,7 +105,12 @@ export default function NewSupplierPurchasePage() {
             .map((l) => ({
                 productId: l.productId,
                 quantity: parseInt(l.quantity, 10),
-                unitPrice: parseFloat(l.unitPrice),
+                purchaseCost: parseFloat(l.purchaseCost),
+                sellingPrice: parseFloat(l.sellingPrice),
+                gstPercentage: parseFloat(l.gstPercentage),
+                lineDiscount: parseFloat(l.lineDiscount),
+                initialStock: parseInt(l.initialStock, 10),
+                alertAt: parseInt(l.alertAt, 10),
             }));
         
         for (const it of apiItems) {
@@ -109,7 +118,7 @@ export default function NewSupplierPurchasePage() {
                 setError("Negative or fractional quantity detected in product lines.");
                 return;
             }
-            if (Number.isNaN(it.unitPrice) || it.unitPrice < 0) {
+            if (Number.isNaN(it.purchaseCost) || it.purchaseCost < 0) {
                 setError("Invalid cost basis detected in product lines.");
                 return;
             }
@@ -120,18 +129,13 @@ export default function NewSupplierPurchasePage() {
             return;
         }
         
-        if (paidNum > grandTotal + 0.0001) {
-            setError("Financial discrepancy: Paid amount cannot exceed total invoice value.");
-            return;
-        }
-
         setSaving(true);
         try {
             const res = await createSupplierPurchase({
                 supplierId,
                 purchaseDate: new Date(purchaseDate + "T12:00:00").toISOString(),
                 items: apiItems,
-                paidAmount: paidNum,
+                paidAmount: 0,
                 notes: notes.trim() || undefined,
             });
             toast.success("Purchase manifest committed and stock received successfully.", "Ledger Updated");
@@ -152,7 +156,7 @@ export default function NewSupplierPurchasePage() {
     }
 
     return (
-        <div className="animate-fade-in space-y-10 max-w-6xl pb-10">
+        <div className="animate-fade-in space-y-10 max-w-[96rem] w-full pb-10">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-1">
@@ -176,8 +180,8 @@ export default function NewSupplierPurchasePage() {
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2 space-y-8">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+                <div className="lg:col-span-3 space-y-8">
                     {/* Header Information Section */}
                     <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800/50">
                         <div className="flex items-center gap-2 mb-8">
@@ -233,89 +237,59 @@ export default function NewSupplierPurchasePage() {
 
                     {/* Line Items Table Section */}
                     <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800/50">
-                        <div className="flex items-center justify-between mb-8">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-3">
                             <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 flex items-center gap-2">
-                                <ShoppingCart size={14} className="text-indigo-500" /> Inventory manifest
+                                <ShoppingCart size={14} className="text-indigo-500" /> Product Selection
                             </h3>
-                            <Button 
-                                type="button" 
-                                variant="secondary" 
-                                size="sm" 
-                                onClick={addLine} 
-                                className="h-10 px-4 rounded-xl text-blue-600 bg-blue-50 hover:bg-blue-100 font-black uppercase tracking-widest text-[9px] gap-2 active:scale-95 transition-all border border-blue-100"
-                            >
-                                <Plus size={14} /> Add row
-                            </Button>
+                            <div className="flex gap-2 w-full md:w-auto">
+                                <select
+                                    className="h-10 w-full min-w-[260px] px-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-blue-500/5"
+                                    value={selectedProductId}
+                                    onChange={(e) => setSelectedProductId(e.target.value)}
+                                >
+                                    <option value="">Select Product...</option>
+                                    {products.map((p) => (
+                                        <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
+                                    ))}
+                                </select>
+                                <Button type="button" onClick={addSelectedProduct} className="h-10 px-4 rounded-xl">
+                                    <Plus size={14} /> Add
+                                </Button>
+                            </div>
                         </div>
-                        
-                        <div className="overflow-x-auto min-h-[200px]">
-                            <table className="w-full">
+
+                        <div className="min-h-[200px]">
+                            <table className="w-full table-fixed">
                                 <thead>
                                     <tr className="border-b border-slate-50">
-                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Product Identifer</th>
-                                        <th className="pb-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Qty</th>
-                                        <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Price</th>
-                                        <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Total</th>
-                                        <th className="pb-4" />
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[22%]">Product</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Unit</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Qty/Unit</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">Qty</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Buy</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Sell</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">GST</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Disc</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Initial</th>
+                                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Alert</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {items.map((line, idx) => (
+                                    {items.map((line) => (
                                         <tr key={line.key}>
-                                            <td className="py-4 pr-4">
-                                                <div className="relative">
-                                                    <select
-                                                        className="h-11 w-full min-w-[240px] px-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold uppercase tracking-tighter outline-none focus:ring-4 focus:ring-blue-500/5 appearance-none cursor-pointer"
-                                                        value={line.productId}
-                                                        onChange={(e) => updateLine(line.key, { productId: e.target.value })}
-                                                    >
-                                                        <option value="">Identify Product...</option>
-                                                        {products.map((p) => (
-                                                            <option key={p.id} value={p.id}>
-                                                                {p.name} ({p.sku})
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </div>
+                                            <td className="py-3 pr-2">
+                                                <p className="text-xs font-black text-slate-900 truncate">{line.name}</p>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">{line.category} • {line.sku}</p>
                                             </td>
-                                            <td className="py-4 px-2">
-                                                <Input
-                                                    type="number"
-                                                    min={1}
-                                                    step={1}
-                                                    className="w-20 h-11 text-center font-black bg-slate-50 border-slate-100 rounded-xl"
-                                                    value={line.quantity}
-                                                    onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
-                                                />
-                                            </td>
-                                            <td className="py-4 px-2">
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    step="0.01"
-                                                    className="w-28 h-11 text-right font-black bg-slate-50 border-slate-100 rounded-xl"
-                                                    value={line.unitPrice}
-                                                    onChange={(e) => updateLine(line.key, { unitPrice: e.target.value })}
-                                                    placeholder="0.00"
-                                                />
-                                            </td>
-                                            <td className="py-4 pl-4 text-right">
-                                                <span className="text-sm font-black text-slate-900 tracking-tight">
-                                                    {formatCurrencyShort(lineTotals[idx] || 0)}
-                                                </span>
-                                            </td>
-                                            <td className="py-4 pl-4 text-right">
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => removeLine(line.key)}
-                                                    disabled={items.length <= 1}
-                                                    className="h-9 w-9 p-0 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </Button>
-                                            </td>
+                                            <td className="py-3 pr-2 text-xs">{line.unitType}</td>
+                                            <td className="py-3 px-1"><Input className="h-9 w-full" value={line.qtyPerUnit} onChange={(e) => updateLine(line.key, { qtyPerUnit: e.target.value })} /></td>
+                                            <td className="py-3 px-1"><Input type="number" className="h-9 w-full" value={line.quantity} onChange={(e) => updateLine(line.key, { quantity: e.target.value })} /></td>
+                                            <td className="py-3 px-1"><Input type="number" className="h-9 w-full" value={line.purchaseCost} onChange={(e) => updateLine(line.key, { purchaseCost: e.target.value })} /></td>
+                                            <td className="py-3 px-1"><Input type="number" className="h-9 w-full" value={line.sellingPrice} onChange={(e) => updateLine(line.key, { sellingPrice: e.target.value })} /></td>
+                                            <td className="py-3 px-1"><Input type="number" className="h-9 w-full" value={line.gstPercentage} onChange={(e) => updateLine(line.key, { gstPercentage: e.target.value })} /></td>
+                                            <td className="py-3 px-1"><Input type="number" className="h-9 w-full" value={line.lineDiscount} onChange={(e) => updateLine(line.key, { lineDiscount: e.target.value })} /></td>
+                                            <td className="py-3 px-1"><Input type="number" className="h-9 w-full" value={line.initialStock} onChange={(e) => updateLine(line.key, { initialStock: e.target.value })} /></td>
+                                            <td className="py-3 px-1"><Input type="number" className="h-9 w-full" value={line.alertAt} onChange={(e) => updateLine(line.key, { alertAt: e.target.value })} /></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -325,66 +299,18 @@ export default function NewSupplierPurchasePage() {
                 </div>
 
                 <div className="space-y-8">
-                    {/* Financial Reconciliation Summary */}
-                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 p-8 shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform duration-700 text-slate-900 dark:text-white">
-                           <Wallet size={160} />
-                        </div>
-                        <div className="relative z-10">
-                            <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 dark:text-slate-500 mb-8 flex items-center gap-2">
-                                <Wallet size={14} /> Settlement Control
-                            </h3>
-                            
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-end border-b border-slate-100 dark:border-slate-800 pb-6">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Invoice Total</span>
-                                    <span className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">{formatCurrencyShort(grandTotal)}</span>
-                                </div>
-
-                                <div className="space-y-2 pt-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1">Amount Paid Now</label>
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        step="0.01"
-                                        className="h-14 bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-black text-xl placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:bg-white dark:focus:bg-slate-800 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all rounded-2xl"
-                                        value={paidAmount}
-                                        onChange={(e) => setPaidAmount(e.target.value)}
-                                        placeholder="0.00"
-                                    />
-                                </div>
-
-                                <div className={cn(
-                                    "p-6 rounded-2xl flex justify-between items-center transition-all",
-                                    balance > 0 ? "bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20" : "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20"
-                                )}>
-                                    <div>
-                                        <p className={cn("text-[9px] font-black uppercase tracking-widest", balance > 0 ? "text-amber-500" : "text-emerald-500")}>Outstanding Balance</p>
-                                        <p className={cn("text-xl font-black tracking-tight", balance > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400")}>{formatCurrencyShort(balance)}</p>
-                                    </div>
-                                    <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", balance > 0 ? "bg-amber-500/20 text-amber-500" : "bg-emerald-500/20 text-emerald-500")}>
-                                        {balance > 0 ? <AlertCircle size={20} /> : <CheckCircle2 size={20} />}
-                                    </div>
-                                </div>
-
-                                <Button 
-                                    type="submit" 
-                                    disabled={saving} 
-                                    className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-[2px] text-[10px] mt-6 shadow-xl shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center gap-2"
-                                >
-                                    {saving ? (
-                                        <span className="animate-pulse text-[10px]">Committing Ledger...</span>
-                                    ) : (
-                                        <>
-                                            <CheckCircle2 size={18} />
-                                            <span>Commit & Receive Stock</span>
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </div>
+                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 p-8 shadow-sm">
+                        <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 mb-4 flex items-center gap-2">
+                            <Wallet size={14} /> Submit Purchase
+                        </h3>
+                        <Button
+                            type="submit"
+                            disabled={saving}
+                            className="w-full h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black uppercase tracking-[2px] text-[10px] shadow-xl shadow-blue-500/20"
+                        >
+                            {saving ? "Committing..." : "Commit & Receive Stock"}
+                        </Button>
                     </div>
-
                 </div>
             </form>
         </div>

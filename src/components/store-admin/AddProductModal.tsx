@@ -11,6 +11,7 @@ const GST_PRESETS = [18] as const;
 
 const UNIT_TYPES = [
   { value: 'PIECE', label: 'Piece / Unit' },
+  { value: 'GRAM', label: 'Gram (g)' },
   { value: 'KG', label: 'Kilogram (KG)' },
   { value: 'ML', label: 'Millilitre (ML)' },
   { value: 'LITER', label: 'Litre' },
@@ -21,9 +22,10 @@ interface AddProductModalProps {
   open: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  mode?: "opening" | "master";
 }
 
-export default function AddProductModal({ open, onClose, onSuccess }: AddProductModalProps) {
+export default function AddProductModal({ open, onClose, onSuccess, mode = "opening" }: AddProductModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -43,6 +45,20 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
   const [unitQuantity, setUnitQuantity] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
+  const isMasterOnly = mode === "master";
+
+  const getCategoryCode = (id: string) => {
+    const cat = categories.find((c) => c.id === id);
+    const raw = (cat?.name || "PRD").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    return (raw.slice(0, 3) || "PRD").padEnd(3, "X");
+  };
+
+  const autoGenerateCodes = () => {
+    const categoryCode = getCategoryCode(categoryId);
+    const suffix = Date.now().toString().slice(-4);
+    if (!sku.trim()) setSku(`${categoryCode}${suffix}`);
+    if (!barcode.trim()) setBarcode(`${Date.now()}`);
+  };
 
   useEffect(() => {
     if (open) {
@@ -111,12 +127,12 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
     formData.append('sku', sku.trim());
     formData.append('barcode', barcode.trim());
     formData.append('categoryId', categoryId);
-    formData.append('purchasePrice', purchasePrice);
-    formData.append('sellingPrice', sellingPrice);
+    formData.append('purchasePrice', isMasterOnly ? '0' : purchasePrice);
+    formData.append('sellingPrice', isMasterOnly ? '0' : sellingPrice);
     formData.append('taxPercentage', taxPercentage);
     formData.append('discountPercentage', discountPercentage);
-    formData.append('initialStock', initialStock);
-    formData.append('reorderLevel', reorderLevel);
+    formData.append('initialStock', isMasterOnly ? '0' : initialStock);
+    formData.append('reorderLevel', isMasterOnly ? '0' : reorderLevel);
     formData.append('unitType', unitType);
     if (description.trim()) formData.append('description', description.trim());
     const uq = unitQuantity.trim();
@@ -162,7 +178,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
               <Package size={20} />
             </div>
             <h2 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">
-              Add New Product
+              {isMasterOnly ? "Add Product" : "Add Opening Product"}
             </h2>
           </div>
           <button
@@ -230,6 +246,11 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
                     />
                   </div>
                 </div>
+                <div className="flex justify-end">
+                  <Button type="button" variant="outline" onClick={autoGenerateCodes} className="h-8 text-[10px] uppercase tracking-widest">
+                    Auto-generate SKU/Barcode
+                  </Button>
+                </div>
                 <div className="space-y-2">
                   <label className={labelClass}>Description (optional)</label>
                   <textarea
@@ -271,6 +292,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
               </div>
             </div>
 
+            {!isMasterOnly && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <DollarSign size={14} />
@@ -362,6 +384,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
                 </div>
               </div>
             </div>
+            )}
 
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
@@ -398,6 +421,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
               </div>
             </div>
 
+            {!isMasterOnly && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <Archive size={14} />
@@ -452,6 +476,7 @@ export default function AddProductModal({ open, onClose, onSuccess }: AddProduct
                 )}
               </div>
             </div>
+            )}
           </div>
 
           <div className="p-6 shrink-0 border-t border-slate-100 dark:border-slate-800 flex gap-4 bg-white dark:bg-slate-900">

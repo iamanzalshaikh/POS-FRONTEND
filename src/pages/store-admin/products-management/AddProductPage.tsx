@@ -39,7 +39,7 @@ export default function AddProductPage() {
                     <ChevronLeft size={18} className="transition-transform group-hover:-translate-x-1" />
                     <span>Back to Products</span>
                 </button>
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Add New Product</h1>
+                <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">Add Opening Product</h1>
                 <p className="text-gray-500 font-medium">Create a new item in your inventory with detailed pricing and stock.</p>
             </div>
 
