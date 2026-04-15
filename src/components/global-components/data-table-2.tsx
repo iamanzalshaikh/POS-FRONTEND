@@ -195,30 +195,32 @@ function DataTableComponent<TData, TValue>({
     return (
         <div className="w-full space-y-4">
             {/* Toolbar row: search + headerActions | refresh + columns */}
-            <div className="flex items-center justify-between gap-4">
-                <div className="flex flex-1 items-center gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-4">
                     {searchKey && (
-                        <div className="relative flex-1 max-w-sm">
+                        <div className="relative flex-1 max-w-full md:max-w-sm">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                            <Input
+                            <input
                                 placeholder={placeholder}
                                 value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ""}
                                 onChange={(event) =>
                                     table.getColumn(searchKey)?.setFilterValue(event.target.value)
                                 }
-                                className="pl-10 h-11 border-input bg-background/50 text-foreground shadow-sm focus:ring-primary/20 rounded-xl font-bold"
+                                className="pl-10 h-11 w-full border border-slate-200 dark:border-slate-800 bg-background/50 text-foreground shadow-sm focus:ring-primary/20 rounded-xl font-bold text-xs uppercase tracking-widest outline-none focus:border-indigo-500 transition-all"
                             />
                         </div>
                     )}
-                    {headerActions}
+                    <div className="flex-1">
+                        {headerActions}
+                    </div>
                 </div>
-            <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                     {onRefresh && (
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={handleRefresh}
-                            className="h-9 w-9 p-0"
+                            className="h-10 w-10 p-0 shrink-0 border-slate-200 dark:border-slate-800"
                             title="Refresh data"
                         >
                             <RefreshCw className={`h-4 w-4 transition-transform duration-700 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -228,21 +230,21 @@ function DataTableComponent<TData, TValue>({
                         variant="outline"
                         size="sm"
                         onClick={exportToExcel}
-                        className="h-10 border-input bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-100"
+                        className="h-10 border-input bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-bold text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border-emerald-100 dark:border-emerald-900/50 dark:bg-emerald-950/20 shrink-0"
                         title="Export to Excel"
                     >
                         <Upload className="h-4 w-4" />
-                        <span className="hidden sm:inline">Export</span>
+                        <span className="text-[10px] uppercase tracking-widest">Export</span>
                     </Button>
                     {showColumnVisibility && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" className="h-10 border-slate-200 dark:border-slate-800 bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl px-5">
+                                <Button variant="outline" className="h-10 border-slate-200 dark:border-slate-800 bg-background shadow-sm hover:shadow-md transition-all flex items-center gap-2 font-black text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:hover:text-white rounded-xl px-4 shrink-0">
                                     <Filter className="h-3.5 w-3.5" />
-                                    Columns <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                                    <span>Columns</span>
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="z-50 min-w-[8rem] overflow-hidden rounded-[1.5rem] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 shadow-2xl">
+                            <DropdownMenuContent align="end" className="z-50 min-w-[12rem] overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-2 shadow-2xl">
                                 {table
                                     .getAllColumns()
                                     .filter((column) => column.getCanHide())
@@ -263,6 +265,7 @@ function DataTableComponent<TData, TValue>({
                     )}
                 </div>
             </div>
+
 
             {/* Table wrapper with vertical and horizontal scroll */}
             <div className="rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-none bg-white dark:bg-slate-900 relative overflow-hidden">

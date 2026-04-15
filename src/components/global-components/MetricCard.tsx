@@ -142,7 +142,7 @@ const MetricCard = ({
                         <p className={titleClass}>{title}</p>
                         {changeBadge(change, isPositive, false)}
                     </div>
-                    <h3 className="text-xl sm:text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white leading-none mt-1">
+                    <h3 className="text-lg sm:text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white leading-none mt-1">
                         {displayValue}
                     </h3>
                     {subtitle ? (
