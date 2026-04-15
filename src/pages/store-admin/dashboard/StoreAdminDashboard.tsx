@@ -289,7 +289,7 @@ export default function StoreAdminDashboard() {
       </div>
 
       <DashboardGrid>
-        <div className="xl:col-span-12">
+        <div className="col-span-1 lg:col-span-4 xl:col-span-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-2">
             <MetricCard
               title="Revenue"
@@ -337,7 +337,7 @@ export default function StoreAdminDashboard() {
         </div>
 
         {/* Unified Activity Chart */}
-        <div className="xl:col-span-8">
+        <div className="col-span-1 lg:col-span-4 xl:col-span-8">
           <MonthlyActivityChart
             title="Revenue Performance"
             data={(() => {
@@ -381,25 +381,26 @@ export default function StoreAdminDashboard() {
               return points.map(({ label, activity }) => ({ month: label, activity }));
             })()}
             isLoading={dashLoading}
-            height={260}
+            height={280}
             isCurrency={true}
             unit="PKR"
             subtitle={dateRange === 'Today' ? "Hourly Revenue Flow" : `Daily Performance (${dateRange})`}
           />
         </div>
 
-        <div className="xl:col-span-4">
+        <div className="col-span-1 lg:col-span-4 xl:col-span-4">
           <CategoryPieChart data={data?.categories ?? []} />
         </div>
 
         {/* Row 2: Top Selling Inventory & Active Devices */}
-        <div className="xl:col-span-8">
+        <div className="col-span-1 lg:col-span-4 xl:col-span-8">
           <TopProductsTable products={data?.topProducts ?? []} />
         </div>
-        <div className="xl:col-span-4">
+        <div className="col-span-1 lg:col-span-4 xl:col-span-4">
           <ActiveDevicesPanel devices={data?.devices ?? []} />
         </div>
       </DashboardGrid>
+
     </div>
   );
 }

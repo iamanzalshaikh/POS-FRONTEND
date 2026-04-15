@@ -45,12 +45,12 @@ const SettingsPage = () => {
                 <StoreIdentityCard data={storeData} isLoading={isLoading} />
 
                 {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-3 pt-6 border-t border-slate-100 dark:border-slate-800">
-                    <button className="flex items-center gap-2 px-6 py-4 bg-white dark:bg-slate-900 text-[#1E1B4B] dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-slate-200 dark:border-slate-800 shadow-sm active:scale-95">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-8 border-t border-slate-100 dark:border-slate-800">
+                    <button className="flex items-center justify-center gap-2 px-6 py-4 bg-white dark:bg-slate-900 text-[#1E1B4B] dark:text-slate-300 font-black text-[10px] uppercase tracking-[2px] rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-all border border-slate-100 dark:border-slate-800 shadow-sm active:scale-95">
                         <X size={16} className="text-rose-600" />
                         Discard Changes
                     </button>
-                    <button className="flex items-center gap-2 px-10 py-4 bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl hover:bg-indigo-800 shadow-xl shadow-indigo-400/20 transition-all border border-indigo-600 active:scale-95">
+                    <button className="flex items-center justify-center gap-2 px-10 py-4 bg-[#2563EB] text-white font-black text-[10px] uppercase tracking-[2px] rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-500/20 transition-all border border-blue-600 active:scale-95">
                         <Save size={16} />
                         Save Profile Settings
                     </button>

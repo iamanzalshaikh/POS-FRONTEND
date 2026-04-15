@@ -25,7 +25,13 @@ export interface SupplierPurchaseItem {
   unitPrice: string | number;
   totalPrice: string | number;
   batchId?: string | null;
-  product?: { id: string; name: string; sku: string; barcode: string };
+  product?: { 
+    id: string; 
+    name: string; 
+    sku: string; 
+    barcode: string;
+    unitType?: string;
+  };
   batch?: { id: string; batchNumber: string | null; quantityRemaining?: number };
 }
 
@@ -43,6 +49,15 @@ export interface SupplierPurchase {
   updatedAt: string;
   supplier?: { id: string; name: string; phone?: string | null };
   user?: { id: string; name: string; email: string };
+  store?: {
+    id: string;
+    name: string;
+    address: string;
+    phone?: string | null;
+    email?: string | null;
+    taxNtn?: string | null;
+    taxStrn?: string | null;
+  };
   items?: SupplierPurchaseItem[];
   payments?: SupplierPurchasePayment[];
   _count?: { items: number; payments: number };

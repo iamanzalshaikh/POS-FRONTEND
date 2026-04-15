@@ -244,24 +244,24 @@ const StockLevelsPage = () => {
                     manualPagination={true}
                     exportFilename="Stock-Levels-Report"
                     headerActions={
-                        <div className="flex items-center gap-3">
-                            <div className="relative group">
+                        <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
+                            <div className="relative group w-full lg:w-auto">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Search product, SKU..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-full lg:w-[240px]"
                                 />
                             </div>
-                            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl h-10 px-2">
+                            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl h-10 px-2 overflow-x-auto no-scrollbar w-full sm:w-auto">
                                 {['All', 'OK', 'Low', 'Out'].map((filter) => (
                                     <button
                                         key={filter}
                                         onClick={() => setActiveFilter(filter)}
                                         className={cn(
-                                            "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all",
+                                            "px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                                             activeFilter === filter
                                                 ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
                                                 : "text-slate-400 dark:text-slate-550 hover:text-blue-600 dark:hover:text-blue-400"
