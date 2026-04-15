@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart } from 'lucide-react';
+import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart, Download, Search, Loader2, ArrowDownRight } from 'lucide-react';
 import { getSalesReport, getInventoryReport } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
 import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
@@ -7,6 +7,9 @@ import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
 import { toLocalYMD } from '../../utils/format';
 import MetricCard from '../../components/global-components/MetricCard';
+import PageHeader from '../../components/global-components/PageHeader';
+import { DataTable } from '../../components/global-components/data-table-2';
+import type { ColumnDef } from '@tanstack/react-table';
 
 interface MonthlyCloseData {
   period: {
@@ -175,262 +178,285 @@ const MonthlyCloseReport: React.FC = () => {
     return date.toLocaleString('default', { month: 'long', year: 'numeric' });
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <div className="text-sm font-bold text-slate-500">Loading monthly close report...</div>
+  if (loading) return <LoadingState />;
+  if (error) return <ErrorState message={error} />;
+  if (!data) return null;
+
+  const totalRevenue = data.sales.totalRevenue;
+  const grossProfit = data.profit.grossProfit;
+  const netProfit = data.profit.netProfit;
+
+  const tableRows = [
+    {
+      id: 'revenue',
+      item: 'Gross Revenue',
+      category: 'Revenue',
+      amount: data.sales.totalRevenue,
+      percentage: 100,
+      status: 'revenue' as const
+    },
+    {
+      id: 'discount',
+      item: 'Discounts Applied',
+      category: 'Adjustments',
+      amount: data.sales.totalDiscount,
+      percentage: (data.sales.totalDiscount / data.sales.totalRevenue) * 100,
+      status: 'cost' as const
+    },
+    {
+      id: 'tax',
+      item: 'Tax Collected',
+      category: 'Adjustments',
+      amount: data.sales.totalTax,
+      percentage: (data.sales.totalTax / data.sales.totalRevenue) * 100,
+      status: 'revenue' as const
+    },
+    {
+      id: 'net-revenue',
+      item: 'Net Revenue',
+      category: 'Subtotal',
+      amount: data.sales.netRevenue,
+      percentage: (data.sales.netRevenue / data.sales.totalRevenue) * 100,
+      status: 'revenue' as const
+    },
+    {
+      id: 'expenses',
+      item: 'Total Expenses',
+      category: 'Operating',
+      amount: data.expenses.total,
+      percentage: (data.expenses.total / data.sales.totalRevenue) * 100,
+      status: 'expense' as const
+    },
+    {
+      id: 'net-profit',
+      item: 'Net Profit',
+      category: 'Bottom Line',
+      amount: data.profit.netProfit,
+      percentage: data.profit.netMargin,
+      status: (data.profit.netProfit >= 0 ? 'revenue' : 'cost') as const
+    }
+  ];
+
+  const columns: ColumnDef<typeof tableRows[0]>[] = [
+    {
+      header: "Line Item",
+      cell: ({ row }) => (
+        <div className="text-left">
+          <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.item}</p>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">{row.original.category}</p>
+        </div>
+      )
+    },
+    {
+      header: "Amount",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
+          {new Intl.NumberFormat('en-PK', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(row.original.amount)}
+        </div>
+      )
+    },
+    {
+      header: "% of Revenue",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-600 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest tabular-nums">
+          {row.original.percentage.toFixed(1)}%
+        </div>
+      )
+    },
+    {
+      header: "Status",
+      cell: ({ row }) => {
+        const statusConfig: Record<'revenue' | 'cost' | 'expense', { text: string; bg: string; color: string; icon: string }> = {
+          'revenue': { text: 'Revenue', bg: 'bg-emerald-50 dark:bg-emerald-950/30', color: 'text-emerald-700 dark:text-emerald-400', icon: '+' },
+          'cost': { text: 'Cost', bg: 'bg-red-50 dark:bg-red-950/30', color: 'text-red-700 dark:text-red-400', icon: '−' },
+          'expense': { text: 'Expense', bg: 'bg-amber-50 dark:bg-amber-950/30', color: 'text-amber-700 dark:text-amber-400', icon: '−' }
+        };
+        const config = statusConfig[row.original.status];
+        
+        return (
+          <div className="flex justify-center">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${config.bg} ${config.color}`}>
+              <span>{config.icon}</span>
+              {config.text}
+            </span>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="bg-red-50 border border-red-200 rounded-3xl p-8 text-center">
-          <AlertCircle size={48} className="mx-auto mb-4 text-red-400" />
-          <p className="text-sm font-bold text-red-600">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center">
-          <p className="text-sm font-bold text-slate-400">No data available for this period</p>
-        </div>
-      </div>
-    );
-  }
+        );
+      }
+    }
+  ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header with Month Selector */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-              <FileText size={28} className="text-blue-400" />
-              Monthly Close Report
-            </h2>
-            <p className="text-sm font-bold text-slate-500 mt-2">
-              Financial summary and closing statement
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Calendar size={20} className="text-slate-400" />
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-            />
-          </div>
-        </div>
+    <div className="animate-fade-in space-y-8">
+      <PageHeader
+        title="Monthly Close Report"
+        description="Financial summary and closing statement"
+        primaryAction={{
+          label: "Export Report",
+          icon: Download,
+          onClick: () => {
+            // Export functionality
+          }
+        }}
+      />
 
-        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6">
-          <h3 className="text-lg font-black text-blue-900 mb-2">
-            {getMonthName(selectedMonth)}
-          </h3>
-          <p className="text-xs font-bold text-blue-700 uppercase tracking-widest">
-            {data.period.startDate} to {data.period.endDate}
-          </p>
-        </div>
+      {/* Month Selector */}
+      <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-fit">
+        <Calendar size={18} className="text-slate-400" />
+        <input
+          type="month"
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="px-3 py-1 bg-transparent border-none text-sm font-black uppercase text-slate-900 dark:text-white outline-none cursor-pointer"
+        />
+        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-4">
+          {data.period.startDate} to {data.period.endDate}
+        </span>
       </div>
 
-      {/* Financial Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Summary Metric Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
-          title="Total Revenue"
-          value={formatCurrencyLocal(data.sales.totalRevenue)}
+          title="Gross Revenue"
+          value={new Intl.NumberFormat('en-PK', {
+            style: 'currency',
+            currency: 'PKR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(totalRevenue).replace('PKR', 'Rs').trim()}
           icon={DollarSign}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <MetricCard
-          title="Net Revenue"
-          value={formatCurrencyLocal(data.sales.netRevenue)}
+          title="Gross Profit"
+          value={new Intl.NumberFormat('en-PK', {
+            style: 'currency',
+            currency: 'PKR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(grossProfit).replace('PKR', 'Rs').trim()}
           icon={TrendingUp}
           colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
         <MetricCard
-          title="Gross Profit"
-          value={formatCurrencyLocal(data.profit.grossProfit)}
-          icon={TrendingUp}
-          colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
-        />
-        <MetricCard
-          title="Stock Value"
-          value={formatCurrencyLocal(data.inventory.closingStock)}
-          icon={FileText}
-          colorClass="bg-purple-50 text-purple-600 dark:bg-purple-950/50 dark:text-purple-400"
+          title="Net Profit"
+          value={new Intl.NumberFormat('en-PK', {
+            style: 'currency',
+            currency: 'PKR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(netProfit).replace('PKR', 'Rs').trim()}
+          icon={PieChart}
+          colorClass={netProfit >= 0 ? "bg-slate-900 text-white dark:bg-slate-800" : "bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"}
         />
       </div>
 
-      {/* Detailed Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Sales Breakdown */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-8">
-          <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
-            <DollarSign size={20} className="text-emerald-400" />
-            Sales Breakdown
-          </h3>
+      {/* Data Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+        <DataTable
+          columns={columns}
+          data={tableRows}
+          isLoading={loading}
+          onRefresh={fetchMonthlyData}
+          placeholder="Search line items..."
+          hidePagination={true}
+          manualPagination={false}
+          headerActions={
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="Search line items..."
+                  className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                />
+              </div>
+            </div>
+          }
+        />
+      </div>
+
+      {/* Summary Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">Margin Analysis</h3>
           <div className="space-y-4">
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm font-bold text-slate-600">Gross Revenue</span>
-              <span className="text-sm font-black text-slate-900">{formatCurrency(data.sales.totalRevenue)}</span>
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Gross Margin</span>
+              <span className="text-[12px] font-black text-emerald-600 dark:text-emerald-400 tabular-nums">{data.profit.grossMargin.toFixed(1)}%</span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm font-bold text-slate-600">Discounts Given</span>
-              <span className="text-sm font-black text-red-600">-{formatCurrency(data.sales.totalDiscount)}</span>
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Expense Ratio</span>
+              <span className="text-[12px] font-black text-red-600 dark:text-red-400 tabular-nums">{data.expenses.total > 0 ? ((data.expenses.total / data.sales.totalRevenue) * 100).toFixed(1) : 0}%</span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm font-bold text-slate-600">Tax Collected</span>
-              <span className="text-sm font-black text-slate-900">{formatCurrency(data.sales.totalTax)}</span>
-            </div>
-            <div className="flex justify-between items-center py-3 pt-4">
-              <span className="text-sm font-black uppercase text-slate-700 tracking-widest">Net Revenue</span>
-              <span className="text-lg font-black text-emerald-600">{formatCurrency(data.sales.netRevenue)}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Net Margin</span>
+              <span className={`text-[12px] font-black tabular-nums ${data.profit.netMargin >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>{data.profit.netMargin.toFixed(1)}%</span>
             </div>
           </div>
         </div>
 
-        {/* Expense Breakdown */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-8">
-          <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
-            <PieChart size={20} className="text-red-400" />
-            Expense Breakdown
-          </h3>
-          {data.expenses.byCategory.length > 0 ? (
-            <div className="space-y-3">
-              {data.expenses.byCategory.map((cat) => (
-                <div key={cat.category} className="flex justify-between items-center py-2">
-                  <span className="text-sm font-bold text-slate-700">{cat.category}</span>
-                  <div className="text-right">
-                    <span className="text-sm font-black text-slate-900">{formatCurrency(cat.amount)}</span>
-                    <span className="text-[10px] font-bold text-slate-500 ml-2">({cat.percentage.toFixed(1)}%)</span>
-                  </div>
-                </div>
-              ))}
-              <div className="flex justify-between items-center py-3 pt-4 border-t-2 border-slate-200 mt-4">
-                <span className="text-sm font-black uppercase text-slate-700 tracking-widest">Total Expenses</span>
-                <span className="text-lg font-black text-red-600">{formatCurrency(data.expenses.total)}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-slate-400">
-              <PieChart size={48} className="mx-auto mb-3 opacity-20" />
-              <p className="text-sm font-bold">No expenses recorded</p>
-            </div>
-          )}
-        </div>
-
-        {/* Inventory Status */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-8">
-          <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
-            <FileText size={20} className="text-purple-400" />
-            Inventory Status
-          </h3>
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">Financial Metrics</h3>
           <div className="space-y-4">
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm font-bold text-slate-600">Closing Stock Value</span>
-              <span className="text-sm font-black text-slate-900">{formatCurrency(data.inventory.closingStock)}</span>
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Total Transactions</span>
+              <span className="text-[12px] font-black text-slate-900 dark:text-white tabular-nums">{data.sales.totalTransactions} sales</span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm font-bold text-slate-600">Low Stock Items</span>
-              <span className="text-sm font-black text-blue-600">{data.inventory.lowStockCount}</span>
+            <div className="flex justify-between items-center pb-4 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Stock Value</span>
+              <span className="text-[12px] font-black text-slate-900 dark:text-white tabular-nums">Rs {new Intl.NumberFormat('en-IN', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+              }).format(data.inventory.closingStock)}</span>
             </div>
-            <div className="flex justify-between items-center py-3 border-b border-slate-100">
-              <span className="text-sm font-bold text-slate-600">Out of Stock Items</span>
-              <span className="text-sm font-black text-red-600">{data.inventory.outOfStockCount}</span>
-            </div>
-            <div className="flex justify-between items-center py-3 pt-4">
-              <span className="text-sm font-black uppercase text-slate-700 tracking-widest">Stock Health</span>
+            <div className="flex justify-between items-center">
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Stock Status</span>
               {data.inventory.outOfStockCount === 0 && data.inventory.lowStockCount === 0 ? (
-                <span className="flex items-center gap-2 text-emerald-600">
-                  <CheckCircle size={16} />
-                  <span className="text-sm font-black">Excellent</span>
+                <span className="flex items-center gap-2 text-[12px] font-black text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle size={14} />
+                  Excellent
                 </span>
               ) : (
-                <span className="flex items-center gap-2 text-blue-600">
-                  <AlertCircle size={16} />
-                  <span className="text-sm font-black">Needs Attention</span>
+                <span className="flex items-center gap-2 text-[12px] font-black text-amber-600 dark:text-amber-400">
+                  <AlertCircle size={14} />
+                  Needs Attention
                 </span>
               )}
             </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+};
 
-      {/* Profit Summary */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-8">
-        <h3 className="text-lg font-black text-slate-900 mb-6 flex items-center gap-3">
-          <TrendingUp size={20} className="text-blue-400" />
-          Profit Summary
-        </h3>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center py-4 border-b border-slate-100">
-            <span className="text-base font-bold text-slate-700">Net Revenue</span>
-            <span className="text-xl font-black text-emerald-600">{formatCurrency(data.sales.netRevenue)}</span>
-          </div>
-          <div className="flex justify-between items-center py-4 border-b border-slate-100">
-            <span className="text-base font-bold text-slate-700">Total Expenses</span>
-            <span className="text-xl font-black text-red-600">-{formatCurrency(data.expenses.total)}</span>
-          </div>
-          <div className="flex justify-between items-center py-6 px-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border-2 border-blue-200 mt-4">
-            <div>
-              <span className="text-base font-black uppercase text-blue-900 tracking-widest">Net Profit</span>
-              <div className="text-[10px] font-bold text-blue-700 mt-1">
-                {data.profit.netMargin.toFixed(1)}% margin
-              </div>
-            </div>
-            <span className="text-3xl font-black text-blue-600">{formatCurrency(data.profit.netProfit)}</span>
-          </div>
-        </div>
+const LoadingState = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+    <div className="flex flex-col items-center gap-6">
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-blue-100 dark:border-blue-900/30 rounded-full" />
+        <Loader2 className="w-16 h-16 text-blue-600 animate-spin absolute inset-0" />
       </div>
+      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 animate-pulse">Loading Monthly Close...</p>
+    </div>
+  </div>
+);
 
-      {/* Action Items */}
-      {(data.inventory.lowStockCount > 0 || data.inventory.outOfStockCount > 0) && (
-        <div className="bg-blue-50 border border-blue-200 rounded-3xl p-6">
-          <h3 className="text-lg font-black text-blue-900 mb-4 flex items-center gap-3">
-            <AlertCircle size={20} />
-            Action Required
-          </h3>
-          <div className="space-y-3">
-            {data.inventory.outOfStockCount > 0 && (
-              <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl border border-red-200">
-                <AlertCircle size={20} className="text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-red-900">
-                    {data.inventory.outOfStockCount} product(s) out of stock
-                  </p>
-                  <p className="text-xs font-bold text-red-700 mt-1">
-                    Immediate replenishment required
-                  </p>
-                </div>
-              </div>
-            )}
-            {data.inventory.lowStockCount > 0 && (
-              <div className="flex items-start gap-3 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                <AlertCircle size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-bold text-amber-900">
-                    {data.inventory.lowStockCount} product(s) below reorder level
-                  </p>
-                  <p className="text-xs font-bold text-amber-700 mt-1">
-                    Consider placing purchase orders
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+const ErrorState = ({ message }: { message: string }) => {
+  return (
+    <div className="min-h-screen p-10 flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+      <div className="max-w-md w-full p-8 bg-red-50 dark:bg-red-900/10 border-2 border-red-100 dark:border-red-900/30 rounded-[2.5rem] text-center">
+        <ArrowDownRight className="w-12 h-12 text-red-500 mx-auto mb-6 rotate-45" />
+        <h3 className="text-sm font-black text-red-900 dark:text-red-400 uppercase tracking-widest mb-2">
+          Unable to Load Report
+        </h3>
+        <p className="text-xs font-bold text-red-600 dark:text-red-800/70 uppercase tracking-tight">
+          {message}
+        </p>
+      </div>
     </div>
   );
 };

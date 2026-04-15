@@ -374,20 +374,16 @@ const ExpenseTracker: React.FC = () => {
                   <td className="px-6 py-4 text-right">
                     <span className="text-sm font-bold text-slate-600 tabular-nums">
                       {tx.tax != null && tx.tax > 0
-                        ? new Intl.NumberFormat('en-IN', {
-                            style: 'currency',
-                            currency: 'INR',
+                        ? `Rs ${new Intl.NumberFormat('en-IN', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
-                          }).format(tx.tax)
+                          }).format(tx.tax)}`
                         : '—'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <span className="text-sm font-black text-slate-900 tabular-nums">
-                      {new Intl.NumberFormat('en-IN', {
-                        style: 'currency',
-                        currency: 'INR',
+                      Rs {new Intl.NumberFormat('en-IN', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       }).format(tx.amount)}
@@ -415,9 +411,7 @@ const ExpenseTracker: React.FC = () => {
             <span className="ml-3">
               Total:{' '}
               <span className="font-black text-slate-900">
-                {new Intl.NumberFormat('en-IN', {
-                  style: 'currency',
-                  currency: 'INR',
+                Rs {new Intl.NumberFormat('en-IN', {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 }).format(totalAmount)}
