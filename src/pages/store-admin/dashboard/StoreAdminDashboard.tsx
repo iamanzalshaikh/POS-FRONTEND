@@ -63,7 +63,7 @@ export default function StoreAdminDashboard() {
   } = useQuery({
     queryKey: ['dashboard-summary', dateRange],
     queryFn: () => getDashboardSummary({ startDate, endDate }),
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 30000, 
   });
 
   const { 
@@ -73,7 +73,7 @@ export default function StoreAdminDashboard() {
   } = useQuery({
     queryKey: ['devices'],
     queryFn: () => deviceApi.fetchDevices(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30000,
   });
 
   const { 
@@ -83,7 +83,7 @@ export default function StoreAdminDashboard() {
   } = useQuery({
     queryKey: ['inventory'],
     queryFn: () => getInventory(),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 30000,
   });
 
   const loading = dashLoading || devicesLoading || invLoading;

@@ -304,7 +304,7 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ sale }) => {
                 totalSubtotal += subtotal;
                 totalGST += lineItemGst(item, subtotal);
               });
-              grandTotal = totalSubtotal + totalGST - totalDiscount;
+              grandTotal = totalSubtotal - totalDiscount;
             }
 
             const gstLabelPct = Math.abs(totalSubtotal) > 0.0001

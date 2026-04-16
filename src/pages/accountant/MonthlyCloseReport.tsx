@@ -365,7 +365,7 @@ const MonthlyCloseReport: React.FC = () => {
           isLoading={loading}
           onRefresh={fetchMonthlyData}
           placeholder="Search line items..."
-          hidePagination={true}
+          hidePagination={false}
           manualPagination={false}
           headerActions={
             <div className="flex flex-wrap items-center gap-3">

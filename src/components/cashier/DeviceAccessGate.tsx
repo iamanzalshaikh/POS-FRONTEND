@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   AlertTriangle, 
@@ -53,44 +54,50 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
   const [lastChecked, setLastChecked] = useState<Date>(new Date());
 
   /**
-   * Fetch available devices from API
+   * TanStack Query for available devices
+   * Intelligent polling: only refetch if no deviceId is set
    */
-  const loadAvailableDevices = useCallback(async () => {
-    try {
-      const res = await devicesApi.getAll();
-      if (res.data?.success) {
-        const allDevices = (res.data.data?.devices || res.data.data || []) as Device[];
-        
-        // Filter: Only active devices
-        const activeDevices = allDevices.filter((d) => d.isActive);
-        
-        setAvailableDevices(activeDevices);
-        setLastChecked(new Date());
-        
-        // If we have a deviceId but it's no longer available, clear it
-        if (deviceId && !activeDevices.find((d) => d.id === deviceId)) {
-          console.warn('[DeviceGate] Current device no longer available');
-        }
-        
-        // Auto-select if only one free device available
-        const freeDevices = activeDevices.filter((d) => !d.currentUserId);
-        if (freeDevices.length === 1 && !deviceId) {
-          console.log('[DeviceGate] Auto-selecting single free device');
-          handleSelectDevice(freeDevices[0]);
-        }
+  const { 
+    data: devicesRes, 
+    isLoading: devicesLoading,
+    error: devicesError,
+    refetch
+  } = useQuery({
+    queryKey: ['available-devices'],
+    queryFn: () => devicesApi.getAll(),
+    refetchInterval: deviceId ? false : 5000, // Poll every 5s if not connected
+    enabled: true,
+  });
+
+  // Simplified loading and error state from useQuery
+  useEffect(() => {
+    if (devicesLoading !== undefined) setIsLoading(devicesLoading);
+    if (devicesError) setError((devicesError as any).message || 'Failed to check device availability');
+  }, [devicesLoading, devicesError]);
+
+  // Handle results from useQuery
+  useEffect(() => {
+    if (devicesRes?.data?.success) {
+      const allDevices = (devicesRes.data.data?.devices || devicesRes.data.data || []) as Device[];
+      const activeDevices = allDevices.filter((d) => d.isActive);
+      
+      setAvailableDevices(activeDevices);
+      setLastChecked(new Date());
+      
+      // Auto-select if only one free device available
+      const freeDevices = activeDevices.filter((d) => !d.currentUserId);
+      if (freeDevices.length === 1 && !deviceId && !isSelecting) {
+        console.log('[DeviceGate] Auto-selecting single free device');
+        handleSelectDevice(freeDevices[0]);
       }
-    } catch (err: any) {
-      console.error('[DeviceGate] Failed to load devices:', err);
-      setError(err.response?.data?.message || 'Failed to check device availability');
-    } finally {
-      setIsLoading(false);
     }
-  }, [deviceId]);
+  }, [devicesRes, deviceId, isSelecting]);
 
   /**
    * Handle device selection
    */
   const handleSelectDevice = async (device: Device) => {
+    if (isSelecting) return;
     setIsSelecting(true);
     setError(null);
     try {
@@ -121,31 +128,7 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
   };
 
   /**
-   * Initial load and polling
-   */
-  useEffect(() => {
-    // Check if already has device
-    if (deviceId) {
-      setHasDevice(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // Load available devices
-    loadAvailableDevices();
-
-    // Poll every 5 seconds for newly available devices
-    const pollInterval = setInterval(() => {
-      if (!deviceId) {
-        loadAvailableDevices();
-      }
-    }, 5000);
-
-    return () => clearInterval(pollInterval);
-  }, [deviceId, loadAvailableDevices]);
-
-  /**
-   * Update hasDevice state when deviceId changes
+   * Sync hasDevice state
    */
   useEffect(() => {
     if (deviceId) {
@@ -216,7 +199,7 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
                   </div>
                 </div>
                 <button
-                  onClick={loadAvailableDevices}
+                  onClick={() => refetch()}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all"
                 >
                   <RefreshCcw size={14} />

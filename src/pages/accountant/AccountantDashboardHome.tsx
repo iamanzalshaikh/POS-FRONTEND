@@ -36,7 +36,10 @@ function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string
   const today = new Date();
   const endDate = toLocalYMD(today);
   if (preset === 'today') {
-    return { startDate: endDate, endDate };
+    return { 
+      startDate: endDate, 
+      endDate 
+    };
   }
   if (preset === 'week') {
     const start = new Date(today);
@@ -57,19 +60,26 @@ const AccountantDashboardHome: React.FC = () => {
   const { data: summaryRes, isLoading: summaryLoading } = useQuery({
       queryKey: ['finance-summary', startDate, endDate],
       queryFn: () => getFinanceSummary({ startDate, endDate }),
-      staleTime: 1000 * 60 * 5,
+      staleTime: 30000, 
   });
 
   const { data: salesRes, isLoading: salesLoading } = useQuery({
       queryKey: ['finance-sales-report', startDate, endDate],
       queryFn: () => getSalesReport({ startDate, endDate }),
-      staleTime: 1000 * 60 * 5,
+      staleTime: 30000,
   });
 
   const summary = summaryRes?.success ? summaryRes.data : null;
+  const salesData = salesRes?.success ? salesRes.data.data : [];
+
+  const marginDisplay = useMemo(() => {
+    if (!summary || summary.grossMarginPercent === null) return '0%';
+    return `${summary.grossMarginPercent > 0 ? '+' : ''}${summary.grossMarginPercent}%`;
+  }, [summary]);
+
   const dailyRevenue = useMemo(() => {
-      if (salesRes?.success && salesRes.data?.data?.length) {
-          return salesRes.data.data.map((r: any) => ({
+      if (salesData?.length) {
+          return salesData.map((r: any) => ({
               label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',
@@ -91,10 +101,7 @@ const AccountantDashboardHome: React.FC = () => {
     ].filter(r => r.value > 0);
   }, [summary]);
 
-  const marginDisplay =
-    summary?.grossMarginPercent != null && Number.isFinite(summary.grossMarginPercent)
-      ? `${summary.grossMarginPercent.toFixed(1)}%`
-      : '0%';
+
 
   const presetBtn = (preset: AccountantPeriodPreset, label: string) => (
     <button
@@ -128,33 +135,103 @@ const AccountantDashboardHome: React.FC = () => {
       </PageHeader>
 
       {/* Main Stats Grid - Consolidated KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Main Stats Grid - Detailed Financial KPIs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <MetricCard
-          title="Total Sales"
-          value={formatCurrency(summary?.totalRevenue ?? 0)}
+          title="Total Sales (Net)"
+          value={summary?.totalRevenue ?? 0}
+          isCurrency={true}
           icon={DollarSign}
-          isPositive={summary ? summary.revenueChange >= 0 : true}
+          change={summary?.revenueChange}
+          isPositive={summary ? (summary.revenueChange ?? 0) >= 0 : true}
           colorClass="bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50"
         />
         <MetricCard
-          title="Total Expense"
-          value={formatCurrency((summary?.totalExpenses ?? 0) - (summary?.salaries ?? 0))}
+          title="Cost of Sales (COGS)"
+          value={summary?.cogs ?? 0}
+          isCurrency={true}
+          icon={Package}
+          colorClass="bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800/30 dark:border-slate-700/50"
+        />
+        <MetricCard
+          title="Gross Profit"
+          value={summary?.grossProfit ?? 0}
+          isCurrency={true}
+          icon={TrendingUp}
+          colorClass={cn(
+            "border-emerald-100 dark:border-emerald-900/50",
+            (summary?.grossProfit ?? 0) >= 0 
+              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30" 
+              : "bg-rose-50 text-rose-600 dark:bg-rose-950/30"
+          )}
+          subtitle={`Margin: ${marginDisplay}`}
+        />
+        <MetricCard
+          title="Operating Expenses"
+          value={summary?.operatingExpenses ?? 0}
+          isCurrency={true}
           icon={Calculator}
           colorClass="bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
         />
         <MetricCard
           title="Staff Payroll"
-          value={formatCurrency(summary?.salaries ?? 0)}
+          value={summary?.salaries ?? 0}
+          isCurrency={true}
           icon={Wallet}
+          subtitle={`Source: ${summary?.salariesSource || 'N/A'}`}
           colorClass="bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50"
         />
         <MetricCard
+          title="Tax Liability"
+          value={summary?.taxLiability ?? 0}
+          isCurrency={true}
+          icon={Percent}
+          colorClass="bg-indigo-50 text-indigo-600 border-indigo-100 dark:bg-indigo-950/30 dark:border-indigo-900/50"
+        />
+        <MetricCard
+          title="Inventory Sourcing"
+          value={summary?.totalStockProcurement ?? 0}
+          isCurrency={true}
+          icon={Package}
+          colorClass="bg-violet-50 text-violet-600 border-violet-100 dark:bg-violet-950/30 dark:border-violet-900/50"
+        />
+        <MetricCard
+          title="Supplier Cash Paid"
+          value={summary?.totalStockPaid ?? 0}
+          isCurrency={true}
+          icon={Wallet}
+          colorClass="bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50"
+        />
+        <MetricCard
+          title="Supplier Payables"
+          value={summary?.outstandingPayables ?? 0}
+          isCurrency={true}
+          icon={Activity}
+          colorClass={cn(
+            "border-orange-100 dark:border-orange-900/50",
+            (summary?.outstandingPayables ?? 0) > 0 
+              ? "bg-orange-50 text-orange-600 dark:bg-orange-950/30 font-bold" 
+              : "bg-slate-50 text-slate-400 dark:bg-slate-900/30"
+          )}
+          subtitle={(summary?.outstandingPayables ?? 0) > 0 ? "Pending Payment" : "All Settled"}
+        />
+        <MetricCard
           title="Net Profit"
-          value={formatCurrency(summary?.netProfit ?? 0)}
+          value={summary?.netProfit ?? 0}
+          isCurrency={true}
           icon={TrendingUp}
           change={summary?.profitChange}
-          isPositive={summary ? summary.profitChange >= 0 : true}
+          isPositive={summary ? (summary.profitChange ?? 0) >= 0 : true}
           colorClass="bg-slate-900 text-white shadow-lg shadow-slate-200 dark:shadow-none"
+        />
+        <MetricCard
+          title="Total Expenses"
+          value={summary?.totalExpenses ?? 0}
+          isCurrency={true}
+          icon={Scale}
+          change={summary?.expensesChange}
+          isPositive={summary ? (summary.expensesChange ?? 0) <= 0 : true}
+          colorClass="bg-slate-100 text-slate-900 border-slate-200 dark:bg-slate-200 dark:text-slate-900 dark:border-slate-300"
         />
       </div>
 

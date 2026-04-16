@@ -84,7 +84,7 @@ export default function TopProductsTable({ products }: TopProductsTableProps) {
             <DataTable 
                 columns={columns} 
                 data={topProducts} 
-                hidePagination={true}
+                hidePagination={false}
                 manualPagination={false}
                 showColumnVisibility={false}
                 isLoading={false}

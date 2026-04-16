@@ -1,22 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { reportsApi } from '../../service/api';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { reportsApi, storesApi } from '../../service/api';
 import {
     RefreshCcw,
-    AlertTriangle
+    AlertTriangle,
+    LayoutDashboard, 
+    Globe, 
+    Zap, 
+    Users2, 
+    Database
 } from 'lucide-react';
 import MonthlyActivityChart from '@/components/global-components/monthly-activity-chart';
 import ChartBarStacked from '@/components/global-components/ChartBarStacked';
-import DashboardStats from '@/components/global-components/DashboardStats';
 import { DataTable } from '@/components/global-components/data-table';
-import { storesApi } from '../../service/api';
 import { startOfMonth, subMonths, format, parseISO } from 'date-fns';
 import { type ChartConfig } from "@/components/ui/chart";
-import { formatPKR, formatNumberShort, formatCurrencyShort } from '@/utils/format';
+import { formatNumberShort, formatCurrencyShort } from '@/utils/format';
 import PageHeader from '@/components/global-components/PageHeader';
 import MetricCard from '@/components/global-components/MetricCard';
-import { LayoutDashboard, Globe, Zap, Users2, Database } from 'lucide-react';
 
 const subscriptionConfig = {
+    // ... exactly the same
     basic: {
         label: "Basic",
         color: "#6366f1",
@@ -32,61 +36,36 @@ const subscriptionConfig = {
 } satisfies ChartConfig;
 
 const SuperAdminDashboard: React.FC = () => {
-    const [overviewRes, setOverviewRes] = useState<any>(null);
-    const [isOverviewLoading, setIsOverviewLoading] = useState(true);
-    const [isOverviewError, setIsOverviewError] = useState(false);
-    const [isOverviewRefetching, setIsOverviewRefetching] = useState(false);
+    // 1. Fetch Overview Data
+    const { 
+        data: overviewRes, 
+        isLoading: isOverviewLoading, 
+        isError: isOverviewError, 
+        refetch: refetchOverview,
+        isRefetching: isOverviewRefetching 
+    } = useQuery({
+        queryKey: ['super-admin-overview'],
+        queryFn: () => reportsApi.getSuperAdminOverview(),
+        refetchInterval: 120000, // 2 minutes auto-sync
+    });
 
-    const [storesRes, setStoresRes] = useState<any>(null);
-    const [isStoresLoading, setIsStoresLoading] = useState(true);
+    // 2. Fetch Stores Data
+    const { 
+        data: storesRes, 
+        isLoading: isStoresLoading 
+    } = useQuery({
+        queryKey: ['stores'],
+        queryFn: () => storesApi.getAll(),
+        refetchInterval: 120000,
+    });
 
-    const refetchOverview = async () => {
-        setIsOverviewRefetching(true);
-        setIsOverviewError(false);
-        try {
-            const res = await reportsApi.getSuperAdminOverview();
-            setOverviewRes(res);
-        } catch (error) {
-            console.error("Failed to fetch overview:", error);
-            setIsOverviewError(true);
-        } finally {
-            setIsOverviewLoading(false);
-            setIsOverviewRefetching(false);
-        }
-    };
-
-    const loadStores = async () => {
-        setIsStoresLoading(true);
-        try {
-            const res = await storesApi.getAll();
-            setStoresRes(res);
-        } catch (error) {
-            console.error("Failed to fetch stores:", error);
-        } finally {
-            setIsStoresLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        refetchOverview();
-        loadStores();
-
-        // Automatic Global Sync (2 minutes)
-        // Refreshes all infrastructure telemetry and node data
-        const syncInterval = setInterval(() => {
-            refetchOverview();
-            loadStores();
-        }, 120000);
-
-        const healthInterval = setInterval(() => {
-            reportsApi.getHealth().catch(() => {});
-        }, 60000);
-
-        return () => {
-            clearInterval(syncInterval);
-            clearInterval(healthInterval);
-        };
-    }, []);
+    // 3. Health Check (Background)
+    useQuery({
+        queryKey: ['system-health'],
+        queryFn: () => reportsApi.getHealth(),
+        refetchInterval: 60000, // 1 minute
+        enabled: true,
+    });
 
     const statsRaw = overviewRes?.data?.data || overviewRes?.data || {};
 

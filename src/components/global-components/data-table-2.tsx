@@ -75,9 +75,9 @@ function DataTableComponent<TData, TValue>({
     exportFilename = "Table-Export",
     onExport,
     isLoading = false,
-    hidePagination = true,
-    maxHeight = "calc(100vh - 400px)",
-    pageSize = 1000,
+    hidePagination = false,
+    maxHeight = "none",
+    pageSize = 10,
     showColumnVisibility = true
 }: DataTableProps<TData, TValue>) {
     const [isRefreshing, setIsRefreshing] = React.useState(false)
@@ -121,7 +121,7 @@ function DataTableComponent<TData, TValue>({
             columnFilters,
             columnVisibility,
             rowSelection,
-            ...((manualPagination || !hidePagination) && {
+            ...(manualPagination && {
                 pagination: {
                     pageIndex: (pageIndex ?? 1) - 1,
                     pageSize: pageSize,
@@ -357,7 +357,65 @@ function DataTableComponent<TData, TValue>({
             </div>
         </div>
 
-            {/* Footer removed per user requirement for scroll-based navigation */}
+            {/* Pagination Controls */}
+            {!hidePagination && (
+                <div className="flex flex-col sm:flex-row items-center justify-between px-4 py-8 bg-slate-50/50 dark:bg-slate-800/20 rounded-b-[2rem] border-t border-slate-100 dark:border-slate-800 gap-6">
+                    <div className="flex items-center gap-8">
+                        <div className="flex flex-col gap-1">
+                            <p className="text-[9px] font-black uppercase tracking-[2px] text-slate-400">Display Range</p>
+                            <div className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 tabular-nums">
+                                {(table.getState().pagination.pageIndex * table.getState().pagination.pageSize) + 1} - {Math.min((table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize, table.getFilteredRowModel().rows.length)} of {table.getFilteredRowModel().rows.length}
+                            </div>
+                        </div>
+                        <div className="w-px h-8 bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+                        <div className="flex flex-col gap-1">
+                            <p className="text-[9px] font-black uppercase tracking-[2px] text-slate-400">Rows Per Page</p>
+                            <select
+                                className="bg-transparent text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 outline-none cursor-pointer"
+                                value={table.getState().pagination.pageSize}
+                                onChange={(e) => {
+                                    table.setPageSize(Number(e.target.value))
+                                }}
+                            >
+                                {[10, 25, 50, 100].map((pageSize) => (
+                                    <option key={pageSize} value={pageSize} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                                        Show {pageSize}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-end gap-1 px-4 border-r border-slate-200 dark:border-slate-700">
+                            <p className="text-[9px] font-black uppercase tracking-[2px] text-slate-400">Navigation</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-10 w-10 rounded-xl border-slate-200 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all flex items-center justify-center p-0 disabled:opacity-30 active:scale-95"
+                                onClick={() => table.previousPage()}
+                                disabled={!table.getCanPreviousPage()}
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-10 w-10 rounded-xl border-slate-200 dark:border-slate-800 hover:bg-white dark:hover:bg-slate-800 transition-all flex items-center justify-center p-0 disabled:opacity-30 active:scale-95 text-blue-600 dark:text-blue-400"
+                                onClick={() => table.nextPage()}
+                                disabled={!table.getCanNextPage()}
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {children}
         </div>

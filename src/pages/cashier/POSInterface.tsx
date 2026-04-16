@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState,  } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   ShoppingCart,
@@ -111,14 +112,12 @@ const POSInterface: React.FC = () => {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [productsError, setProductsError] = useState<string | null>(null);
   
   // Filter states for products table
   const [productSearch, setProductSearch] = useState('');
   const [productCategory, setProductCategory] = useState('ALL');
   const [productStockFilter, setProductStockFilter] = useState('ALL');
+  const queryClient = useQueryClient();
   const [now, setNow] = useState<Date>(new Date());
   const [receivedAmount, setReceivedAmount] = useState<string>('');
   const [lastSaleForReceipt, setLastSaleForReceipt] = useState<any | null>(null);
@@ -128,47 +127,36 @@ const POSInterface: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch all products for grid display
-  useEffect(() => {
-    const loadProducts = async () => {
-      setProductsLoading(true);
-      setProductsError(null);
-      try {
-        console.log('� [POS] Loading products...');
-        const res = await fetchProducts();
-        
-        // Extract products from response
-        let products: Product[] = [];
-        
-        if (res?.success && Array.isArray(res.data)) {
-          products = res.data;
-        } else if (res?.data?.data && Array.isArray(res.data.data)) {
-          products = res.data.data;
-        } else if (res?.data && Array.isArray(res.data)) {
-          products = res.data;
-        } else if (Array.isArray(res)) {
-          products = res;
-        }
+  const { 
+    data: productsRes, 
+    isLoading: productsLoading, 
+    error: pQueryError,
+    refetch: refetchProducts 
+  } = useQuery({
+    queryKey: ['pos-products'],
+    queryFn: () => fetchProducts(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 1000 * 60 * 5,
+  });
 
-        console.log('📦 [POS] Parsed', products.length, 'products');
-        
-        // Filter active products
-        const activeProducts = products.filter((p: any) => p.isActive !== false);
-        console.log('✅ [POS] Loaded', activeProducts.length, 'products:', activeProducts);
-        
-        setAllProducts(activeProducts);
-      } catch (err: any) {
-        console.error('❌ [POS] Failed to load products:', err.message);
-        const errorMsg = err.response?.data?.message || err.message || 'Failed to load products';
-        setProductsError(errorMsg);
-        setAllProducts([]);
-      } finally {
-        setProductsLoading(false);
-      }
-    };
+  const productsError = pQueryError ? (pQueryError as any).message : null;
+
+  const allProducts = useMemo(() => {
+    let products: Product[] = [];
     
-    loadProducts();
-  }, []);
+    if (productsRes?.success && Array.isArray(productsRes.data)) {
+      products = productsRes.data;
+    } else if (productsRes?.data?.data && Array.isArray(productsRes.data.data)) {
+      products = productsRes.data.data;
+    } else if (productsRes?.data && Array.isArray(productsRes.data)) {
+      products = productsRes.data;
+    } else if (Array.isArray(productsRes)) {
+      products = productsRes;
+    }
+
+    // Filter active products
+    return products.filter((p: any) => p.isActive !== false);
+  }, [productsRes]);
 
   // Totals
   const subtotal = useMemo(
@@ -203,9 +191,8 @@ const POSInterface: React.FC = () => {
     [cart]
   );
 
-  // Tax is already included in the selling price per user requirement.
-  // Tax = Subtotal * 0.18 (for display/reporting)
-  // Total = Subtotal - Discount
+  // TAX INCLUSIVE: Total is just Subtotal - Discount. 
+  // The tax amount (21.60) is shown as a breakdown but is NOT added to the price.
   const total = Math.max(0, subtotal - discountAmount);
 
   // Change calculation logic (frontend only)
@@ -431,6 +418,8 @@ const POSInterface: React.FC = () => {
       return;
     }
 
+    if (isSubmitting) return;
+
     setIsSubmitting(true);
     setError(null);
 
@@ -469,6 +458,7 @@ const POSInterface: React.FC = () => {
         quantity: numericQuantity,
         totalPrice: totalPrice,
         price: numericPrice, // REQUIRED: Backend validates this field name
+        taxPercentage: item.taxPercentage || 0,
       };
     });
 
@@ -536,6 +526,42 @@ const POSInterface: React.FC = () => {
           // Trigger direct print by updating state
           console.log('🖨️ [POSInterface] Preparing direct print...');
           setLastSaleForReceipt(saleData);
+          // 1. OPTIMISTIC UPDATE: Update local products cache immediately for instant UI feedback
+          try {
+            const queryKey = ['pos-products'];
+            queryClient.setQueryData(queryKey, (oldData: any) => {
+              if (!oldData) return oldData;
+              
+              // Handle different API response structures
+              const products = oldData.data?.data || oldData.data || oldData;
+              if (!Array.isArray(products)) return oldData;
+              
+              const updatedProducts = products.map((p: any) => {
+                const cartItem = cart.find(item => item.id === p.id);
+                if (cartItem) {
+                  const currentQty = p.inventoryStock?.totalQuantity || 0;
+                  return {
+                    ...p,
+                    inventoryStock: {
+                      ...p.inventoryStock,
+                      totalQuantity: Math.max(0, currentQty - cartItem.quantity)
+                    }
+                  };
+                }
+                return p;
+              });
+              
+              // Re-wrap in original structure
+              if (oldData.data?.data) return { ...oldData, data: { ...oldData.data, data: updatedProducts } };
+              if (oldData.data) return { ...oldData, data: updatedProducts };
+              return updatedProducts;
+            });
+          } catch (cacheErr) {
+            console.error('⚠️ [POSInterface] Optimistic cache update failed:', cacheErr);
+          }
+
+          // 2. BACKGROUND REFRESH: Trigger real refetch to ensure data integrity
+          refetchProducts();
           
           // DO NOT navigate - stay on POS Terminal
           console.log('✅ [POSInterface] Sale completed, staying on terminal.');
@@ -570,6 +596,43 @@ const POSInterface: React.FC = () => {
         await offlineStorage.saveSale(offlineSale);
         console.log('✅ [OfflineStorage] Sale saved locally:', tempId);
 
+        // 1. OPTIMISTIC UPDATE: Update local products cache immediately for instant UI feedback
+        try {
+          const queryKey = ['pos-products'];
+          queryClient.setQueryData(queryKey, (oldData: any) => {
+            if (!oldData) return oldData;
+            
+            // Handle different API response structures
+            const products = oldData.data?.data || oldData.data || oldData;
+            if (!Array.isArray(products)) return oldData;
+            
+            const updatedProducts = products.map((p: any) => {
+              const cartItem = cart.find(item => item.id === p.id);
+              if (cartItem) {
+                const currentQty = p.inventoryStock?.totalQuantity || 0;
+                return {
+                  ...p,
+                  inventoryStock: {
+                    ...p.inventoryStock,
+                    totalQuantity: Math.max(0, currentQty - cartItem.quantity)
+                  }
+                };
+              }
+              return p;
+            });
+            
+            // Re-wrap in original structure
+            if (oldData.data?.data) return { ...oldData, data: { ...oldData.data, data: updatedProducts } };
+            if (oldData.data) return { ...oldData, data: updatedProducts };
+            return updatedProducts;
+          });
+        } catch (cacheErr) {
+          console.error('⚠️ [POSInterface] Optimistic cache update failed:', cacheErr);
+        }
+
+        // 2. BACKGROUND REFRESH: Trigger real refetch to ensure data integrity
+        refetchProducts();
+
         // Clear cart
         setCart([]);
         setDiscountValue(0);
@@ -590,6 +653,7 @@ const POSInterface: React.FC = () => {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             subtotal: item.totalPrice,
+            taxPercentage: item.taxPercentage || 0,
           })),
         });
 
@@ -598,36 +662,16 @@ const POSInterface: React.FC = () => {
       }
     } catch (err: any) {
       console.error('❌ [POSInterface] Sale error:', err);
-      console.error('❌ [POSInterface] Error details:', {
-        message: err.message,
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-      });
-      
-      // Log the full backend response for debugging
-      console.log('🔍 [POSInterface] Backend response:', JSON.stringify(err.response?.data, null, 2));
       
       // Extract error message from backend response
       let msg = 'Failed to complete sale';
       if (err.response?.data) {
         const backendData = err.response.data;
-        console.log('📝 [POSInterface] Backend data type:', typeof backendData);
-        console.log('📝 [POSInterface] Backend data keys:', Object.keys(backendData));
-        
-        // Try multiple possible error message fields
-        msg = backendData.message 
-           || backendData.error 
-           || backendData.msg
-           || backendData.errorMessage
-           || (typeof backendData === 'string' ? backendData : null)
-           || msg;
+        msg = backendData.message || backendData.error || msg;
       }
       
-      console.log('💬 [POSInterface] Displaying error message:', msg);
-      
-      // Display the error to user
       setError(msg);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -669,7 +713,10 @@ const POSInterface: React.FC = () => {
       });
     }
 
-    return result;
+    // PERFORMANCE OPTIMIZATION: Limit rendered products to 100
+    // This prevents browser lockup while still allowing the user to find 
+    // any product via the search/filters.
+    return result.slice(0, 100);
   }, [allProducts, productSearch, productCategory, productStockFilter]);
 
   // Get unique categories

@@ -131,8 +131,8 @@ function lineItemGst(item: {
 }, subtotal: number): number {
   const stored = toFiniteNumber(item.tax);
   if (stored !== null) return stored;
+  
   const pct = toFiniteNumber(item.product?.taxPercentage ?? item.taxPercentage);
-  // Straight 18% calculation as per backend
   if (pct !== null && pct > 0) return subtotal * (pct / 100);
   return 0;
 }
@@ -778,24 +778,26 @@ const ReceiptPage: React.FC = () => {
               if (useServerTotals) {
                 totalSubtotal = serverSub;
                 totalGST = serverTax;
-                grandTotal = serverGrand;
+                // TAX INCLUSIVE: Total must be (Subtotal - Discount)
+                grandTotal = totalSubtotal - totalDiscount;
               } else {
                 items.forEach((item: any) => {
                   const unitPrice = Number(item.price || item.unitPrice || 0);
                   const quantity = Number(item.quantity || 1);
                   const subtotal = unitPrice * quantity;
-                  const gst = lineItemGst(item, subtotal);
                   totalSubtotal += subtotal;
-                  totalGST += gst;
+                  totalGST += lineItemGst(item, subtotal);
                 });
-                const discountPercentage =
-                  totalSubtotal > 0 ? totalDiscount / totalSubtotal : 0;
+                
+                const discountPercentage = totalSubtotal > 0 ? (totalDiscount / totalSubtotal) : 0;
+                
                 items.forEach((item: any) => {
                   const unitPrice = Number(item.price || item.unitPrice || 0);
                   const quantity = Number(item.quantity || 1);
                   const subtotal = unitPrice * quantity;
-                  const gst = lineItemGst(item, subtotal);
                   const itemDiscount = subtotal * discountPercentage;
+                  
+                  // TAX INCLUSIVE: Total is exactly Subtotal - Discount
                   grandTotal += subtotal - itemDiscount;
                 });
               }

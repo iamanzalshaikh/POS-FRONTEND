@@ -91,6 +91,9 @@ export interface FinanceSummaryData {
   grossMarginPercent: number | null;
   netProfit: number;
   taxLiability: number;
+  totalStockProcurement: number;
+  totalStockPaid: number;
+  outstandingPayables: number;
   revenueChange: number;
   expensesChange: number;
   profitChange: number;

@@ -170,7 +170,7 @@ const SalesHistoryPage: React.FC = () => {
                     isLoading={loading}
                     onRefresh={loadSales}
                     manualPagination={false}
-                    hidePagination={true}
+                    hidePagination={false}
                     placeholder="Search ledger..."
                     headerActions={
                         <div className="flex flex-wrap items-center gap-4">
