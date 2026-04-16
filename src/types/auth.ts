@@ -8,6 +8,7 @@ export type Store = {
   email?: string;
   city?: string;
   state?: string;
+  logoUrl?: string;
 };
 
 export type AssignedTerminal = {
@@ -19,9 +20,14 @@ export type User = {
   id: string;
   email: string;
   name?: string;
+  firstName?: string;
+  lastName?: string;
   role: UserRole;
   phone?: string;
   isActive: boolean;
+  profilePictureUrl?: string;
+  displayId?: string;
+  storeId?: string;
   store?: Store | null;
   lastLoginAt?: string | null;
   createdAt: string;

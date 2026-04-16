@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getAuditLogs } from '@/api/reports.api';
 import { X, Search, Filter, History, Box, Activity } from 'lucide-react';
 import ActivityLogsTable from '@/components/shared/ActivityLogsTable';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 const AuditLogsPage: React.FC = () => {
     // 1. Filter & Pagination State
@@ -13,33 +15,23 @@ const AuditLogsPage: React.FC = () => {
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
 
-    const [logsRes, setLogsRes] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isRefetching, setIsRefetching] = useState(false);
-
-    const fetchLogs = async () => {
-        setIsRefetching(true);
-        try {
-            const res = await getAuditLogs({
-                page,
-                limit,
-                entity: entity || undefined,
-                action: action || undefined,
-                startDate: startDate || undefined,
-                endDate: endDate || undefined
-            });
-            setLogsRes(res);
-        } catch (error) {
-            console.error("Failed to fetch audit logs:", error);
-        } finally {
-            setIsLoading(false);
-            setIsRefetching(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchLogs();
-    }, [page, entity, action, startDate, endDate]);
+    // Query
+    const { 
+        data: logsRes, 
+        isLoading, 
+        refetch 
+    } = useQuery({
+        queryKey: ['audit-logs', page, entity, action, startDate, endDate],
+        queryFn: () => getAuditLogs({
+            page,
+            limit,
+            entity: entity || undefined,
+            action: action || undefined,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined
+        }),
+        staleTime: 1000 * 60 * 5,
+    });
 
     const logs = logsRes?.data?.logs || [];
     const totalPages = logsRes?.data?.pagination?.totalPages || 1;
@@ -134,7 +126,7 @@ const AuditLogsPage: React.FC = () => {
                 <ActivityLogsTable
                     data={logs}
                     isLoading={isLoading}
-                    onRefresh={fetchLogs}
+                    onRefresh={() => refetch()}
                     pagination={{
                         page: page,
                         total: totalPages,

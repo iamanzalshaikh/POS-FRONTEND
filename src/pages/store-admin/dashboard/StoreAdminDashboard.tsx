@@ -1,28 +1,25 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   AlertCircle, 
   DollarSign, 
-  TrendingUp, 
-  ArrowUpRight, 
-  ArrowDownRight, 
   ShoppingCart, 
   PackageOpen, 
   Undo2, 
   BadgePercent 
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import DashboardGrid from './components/DashboardGrid';
 import MonthlyActivityChart from '@/components/global-components/monthly-activity-chart';
-import StatsCards from '@/components/global-components/StatsCards';
 import { Button } from '@/components/ui/button';
 
 import CategoryPieChart from './components/CategoryPieChart';
 import ActiveDevicesPanel from './components/ActiveDevicesPanel';
 import TopProductsTable from './components/TopProductsTable';
 import MetricCard from '@/components/global-components/MetricCard';
-import { Skeleton } from '@/components/ui/skeleton';
+import { DashboardSkeleton } from '@/components/ui/skeletons/DashboardSkeleton';
 
 import { cn } from '@/lib/utils';
-import { formatCurrency, toLocalYMD } from '@/utils/format';
+import { toLocalYMD } from '@/utils/format';
 import { getDashboardSummary, getInventory } from '@/api/dashboard.api';
 import * as deviceApi from '@/api/devices.api';
 
@@ -37,18 +34,6 @@ interface DashboardView {
 
 export default function StoreAdminDashboard() {
   const [dateRange, setDateRange] = useState('7D'); // 7D, 30D, Today
-
-  const [dashRes, setDashRes] = useState<any>(null);
-  const [dashLoading, setDashLoading] = useState(true);
-  const [dashError, setDashError] = useState<any>(null);
-
-  const [devicesRes, setDevicesRes] = useState<any>(null);
-  const [devicesLoading, setDevicesLoading] = useState(true);
-  const [devicesError, setDevicesError] = useState<any>(null);
-
-  const [invRes, setInvRes] = useState<any>(null);
-  const [invLoading, setInvLoading] = useState(true);
-  const [invError, setInvError] = useState<any>(null);
 
   const calculateDateRange = (range: string) => {
     const end = new Date();
@@ -68,57 +53,38 @@ export default function StoreAdminDashboard() {
     };
   };
 
-  const loadDashboardData = async () => {
-    const { startDate, endDate } = calculateDateRange(dateRange);
-    
-    // Summary
-    setDashLoading(true);
-    setDashError(null);
-    try {
-      const res = await getDashboardSummary({ startDate, endDate });
-      setDashRes(res);
-    } catch (err) {
-      setDashError(err);
-    } finally {
-      setDashLoading(false);
-    }
+  const { startDate, endDate } = calculateDateRange(dateRange);
 
-    // Devices (only if not loaded or periodic) - for now just reload
-    setDevicesLoading(true);
-    setDevicesError(null);
-    try {
-      const res = await deviceApi.fetchDevices();
-      setDevicesRes(res);
-    } catch (err) {
-      setDevicesError(err);
-    } finally {
-      setDevicesLoading(false);
-    }
+  // Queries using TanStack Query
+  const { 
+    data: dashRes, 
+    isLoading: dashLoading, 
+    error: dashError 
+  } = useQuery({
+    queryKey: ['dashboard-summary', dateRange],
+    queryFn: () => getDashboardSummary({ startDate, endDate }),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
 
-    // Inventory
-    setInvLoading(true);
-    setInvError(null);
-    try {
-      const res = await getInventory();
-      setInvRes(res);
-    } catch (err) {
-      setInvError(err);
-    } finally {
-      setInvLoading(false);
-    }
-  };
+  const { 
+    data: devicesRes, 
+    isLoading: devicesLoading,
+    error: devicesError
+  } = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => deviceApi.fetchDevices(),
+    staleTime: 1000 * 60 * 5,
+  });
 
-  useEffect(() => {
-    loadDashboardData();
-    
-    // Automatic Refresh Logic
-    // Keeps the dashboard and device status fresh (every 2 minutes)
-    const refreshInterval = setInterval(() => {
-      loadDashboardData();
-    }, 120000); // 2 minutes
-
-    return () => clearInterval(refreshInterval);
-  }, [dateRange]);
+  const { 
+    data: invRes, 
+    isLoading: invLoading,
+    error: invError
+  } = useQuery({
+    queryKey: ['inventory'],
+    queryFn: () => getInventory(),
+    staleTime: 1000 * 60 * 5,
+  });
 
   const loading = dashLoading || devicesLoading || invLoading;
   const isConnectionError = [dashError, devicesError, invError].some((e: any) => e && !e.response);
@@ -126,8 +92,8 @@ export default function StoreAdminDashboard() {
     ? (isConnectionError ? 'System connection failed. Is the backend running?' : 'Failed to synchronize analytics.') 
     : null;
 
-  const raw = (dashRes as any)?.data ?? null;
-  const deviceData = (devicesRes as any)?.data ?? [];
+  const raw = dashRes?.data ?? null;
+  const deviceData = devicesRes?.data ?? [];
 
   const data: DashboardView | null = useMemo(() => {
     if (!raw) return null;
@@ -138,8 +104,9 @@ export default function StoreAdminDashboard() {
     const revByDate = charts.revenueByDate ?? [];
     const payBreakdown = charts.paymentBreakdown ?? [];
     const topProductsRaw = raw.topProducts ?? [];
-    const invItemsRaw = (invRes as any)?.data ?? [];
+    const invItemsRaw = invRes?.data ?? [];
     const invItems = Array.isArray(invItemsRaw) ? invItemsRaw : (invItemsRaw.data ?? []);
+    
     const stockMap = invItems.reduce((acc: any, item: any) => {
       acc[item.productId] = {
         quantity: item.totalQuantity,
@@ -181,11 +148,6 @@ export default function StoreAdminDashboard() {
         const invInfo = stockMap[productId];
         const currentStock = invInfo?.quantity ?? 0;
         const reorder = invInfo?.reorderLevel ?? 10;
-
-        // Calculate stock health percentage for UI progress bar
-        // 100% means currentStock >= reorder * 2 (Healthy)
-        // 50% means currentStock == reorder
-        // Below 50% means approaching reorder level
         const stockLevel = Math.min(100, Math.round((currentStock / (reorder * 2 || 20)) * 100));
 
         return {
@@ -202,54 +164,19 @@ export default function StoreAdminDashboard() {
 
   if (loading && !data) {
     return (
-      <div className="animate-in fade-in duration-500">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <div className="space-y-2">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-3 w-40" />
-          </div>
-          <div className="p-1.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex gap-2">
-             <Skeleton className="h-8 w-16 rounded-xl" />
-             <Skeleton className="h-8 w-16 rounded-xl" />
-             <Skeleton className="h-8 w-16 rounded-xl" />
-          </div>
-        </div>
-
-        <DashboardGrid>
-          <div className="xl:col-span-12">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-2">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-32 rounded-[32px]" />
-              ))}
-            </div>
-          </div>
-
-          <div className="xl:col-span-8">
-            <Skeleton className="h-[360px] rounded-[32px]" />
-          </div>
-
-          <div className="xl:col-span-4">
-            <Skeleton className="h-[360px] rounded-[32px]" />
-          </div>
-
-          <div className="xl:col-span-8">
-            <Skeleton className="h-[400px] rounded-[32px]" />
-          </div>
-          <div className="xl:col-span-4">
-            <Skeleton className="h-[400px] rounded-[32px]" />
-          </div>
-        </DashboardGrid>
+      <div className="p-6">
+        <DashboardSkeleton />
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error && !data) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
         <div className="text-center p-12 bg-white dark:bg-slate-900 rounded-[40px] shadow-xl max-w-md border border-slate-100 dark:border-slate-800">
           <AlertCircle className="w-16 h-16 text-rose-500 mx-auto mb-6" />
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">System Error</h2>
-          <p className="text-slate-500 dark:text-slate-400 font-medium mb-8">{error || 'Failed to establish connection to POS core.'}</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 font-black tracking-tight text-xs uppercase">{error || 'Failed to establish connection to POS core.'}</p>
           <Button 
             onClick={() => window.location.reload()} 
             className="w-full h-14 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all transition-transform"
@@ -293,42 +220,37 @@ export default function StoreAdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-2">
             <MetricCard
               title="Revenue"
-              value={data.metrics?.[0]?.value ?? 0}
+              value={data?.metrics?.[0]?.value ?? 0}
               isCurrency={true}
-              change={12.5}
               isPositive={true}
               icon={DollarSign}
               colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
             />
             <MetricCard
               title="Transactions"
-              value={data.metrics?.[1]?.value ?? 0}
-              change={5.1}
+              value={data?.metrics?.[1]?.value ?? 0}
               isPositive={true}
               icon={ShoppingCart}
               colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
             />
             <MetricCard
               title="Low Stock"
-              value={data.metrics?.[2]?.value ?? 0}
-              change={0}
+              value={data?.metrics?.[2]?.value ?? 0}
               isPositive={true}
               icon={PackageOpen}
               colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
             />
             <MetricCard
               title="Refunds"
-              value={data.metrics?.[3]?.value ?? 0}
-              change={2.1}
+              value={data?.metrics?.[3]?.value ?? 0}
               isPositive={false}
               icon={Undo2}
               colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
             />
             <MetricCard
               title="Discounts"
-              value={data.metrics?.[4]?.value ?? 0}
+              value={data?.metrics?.[4]?.value ?? 0}
               isCurrency={true}
-              change={3.2}
               isPositive={true}
               icon={BadgePercent}
               colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"

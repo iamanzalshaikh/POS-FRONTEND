@@ -1,6 +1,8 @@
 import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
+import { useQueryClient } from '@tanstack/react-query';
+import { getDashboardSummary, getProducts, getStoreInfo } from './api/dashboard.api';
 
 // UI Components
 import { ThemeProvider } from '@/components/theme-provider';
@@ -31,13 +33,14 @@ const InventoryManagement = lazy(() => import('@/pages/store-admin/inventory/Inv
 const StockLevelsPage = lazy(() => import('@/pages/store-admin/inventory/StockLevelsPage'));
 const SettingsPage = lazy(() => import('@/pages/store-admin/settings/SettingsPage'));
 const StockAdjustmentPage = lazy(() => import('@/pages/store-admin/inventory/StockAdjustmentPage'));
-import ReportsPage from './pages/store-admin/reports/ReportsPage';
-import AuditLogsPage from './pages/store-admin/audit-logs/AuditLogsPage';
+const ReportsPage = lazy(() => import('./pages/store-admin/reports/ReportsPage'));
+const AuditLogsPage = lazy(() => import('./pages/store-admin/audit-logs/AuditLogsPage'));
 const StaffDetailPage = lazy(() => import('@/pages/store-admin/staff-management/StaffDetailPage'));
 const SuppliersPage = lazy(() => import('@/pages/store-admin/purchasing/SuppliersPage'));
 const SupplierPurchasesListPage = lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchasesListPage'));
 const NewSupplierPurchasePage = lazy(() => import('@/pages/store-admin/purchasing/NewSupplierPurchasePage'));
 const SupplierPurchaseDetailPage = lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchaseDetailPage'));
+const ProfilePage = lazy(() => import('@/pages/shared/ProfilePage'));
 
 // Super Admin Revised Panel
 const SuperAdminLayout = lazy(() => import('@/components/layout/SuperAdminLayout'));
@@ -50,10 +53,70 @@ const StoreDetailsPage = lazy(() => import('@/pages/super-admin/StoreDetailsPage
 
 const App: React.FC = () => {
   const { hydrate, isLoading, isAuthenticated, user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     hydrate();
   }, [hydrate]);
+
+  // Global Prefetching Strategy for all roles
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const role = user.role;
+      console.log(`⚡ [PREFETCH] Prefetching ${role} critical data...`);
+      
+      // Store Admin Prefetching
+      if (role === 'STORE_ADMIN') {
+        const storeId = user.storeId || user.store?.id;
+        if (storeId) {
+          queryClient.prefetchQuery({
+            queryKey: ['store-info', storeId],
+            queryFn: () => getStoreInfo(storeId),
+            staleTime: 1000 * 60 * 10
+          });
+        }
+        queryClient.prefetchQuery({
+          queryKey: ['dashboard-summary'],
+          queryFn: () => getDashboardSummary(),
+          staleTime: 1000 * 60 * 5
+        });
+        queryClient.prefetchQuery({
+          queryKey: ['products'],
+          queryFn: () => getProducts(),
+          staleTime: 1000 * 60 * 5
+        });
+      }
+
+      // Accountant Prefetching
+      if (role === 'ACCOUNTANT') {
+        // Month-to-date summary
+        const today = new Date();
+        const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        const end = today.toISOString().split('T')[0];
+        
+        queryClient.prefetchQuery({
+          queryKey: ['finance-summary', start, end],
+          queryFn: () => import('@/api/finance.api').then(m => m.getFinanceSummary({ startDate: start, endDate: end })),
+          staleTime: 1000 * 60 * 5
+        });
+
+        queryClient.prefetchQuery({
+          queryKey: ['recent-transactions', 'all', 1, '', ''],
+          queryFn: () => import('@/api/finance.api').then(m => m.getRecentTransactions()),
+          staleTime: 1000 * 60 * 5
+        });
+      }
+
+      // Cashier Prefetching
+      if (role === 'CASHIER') {
+        queryClient.prefetchQuery({
+          queryKey: ['products'],
+          queryFn: () => getProducts(),
+          staleTime: 1000 * 60 * 5
+        });
+      }
+    }
+  }, [isAuthenticated, user, queryClient]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -107,11 +170,12 @@ const App: React.FC = () => {
                   <Route path="/store-admin/purchasing/purchases" element={<SupplierPurchasesListPage />} />
                   <Route path="/store-admin/purchasing/purchases/new" element={<NewSupplierPurchasePage />} />
                   <Route path="/store-admin/purchasing/purchases/:id" element={<SupplierPurchaseDetailPage />} />
+                  <Route path="/store-admin/profile" element={<ProfilePage />} />
 
                   <Route path="/store-admin" element={<Navigate to="/store-admin/dashboard" replace />} />
                 </Route>
               </Route>
-
+              
               <Route element={<ProtectedRoute allowedRoles={['CASHIER', 'STORE_ADMIN', 'SUPER_ADMIN']} />}>
                 <Route path="/cashier/*" element={<CashierDashboard />} />
               </Route>
@@ -133,6 +197,7 @@ const App: React.FC = () => {
                 <Route path="/super-admin/stores/:id/users" element={<StoreDetailsPage />} />
                 <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />
                 <Route path="/super-admin/settings" element={<SuperAdminSettings />} />
+                <Route path="/super-admin/profile" element={<ProfilePage />} />
                 <Route path="/super-admin" element={<Navigate to="/super-admin/dashboard" replace />} />
               </Route>
 

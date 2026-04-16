@@ -16,6 +16,7 @@ import {
     X
 } from 'lucide-react';
 import { useSidebar } from '@/components/ui/sidebar';
+import { useAuthStore } from '@/store/useAuthStore';
 
 interface MenuItem {
     name: string;
@@ -33,6 +34,7 @@ interface MainSidebarProps {
 
 export default function MainSidebar({ menuItems, roleName, brandIcon: BrandIcon = Columns2 }: MainSidebarProps) {
     const { collapsed, isMobileOpen, closeMobile } = useSidebar();
+    const { user } = useAuthStore();
     const [openSubmenu, setOpenSubmenu] = React.useState<string | null>("Inventory"); // Default to open Inventory if it exists
 
     return (
@@ -59,12 +61,18 @@ export default function MainSidebar({ menuItems, roleName, brandIcon: BrandIcon 
                 {/* Brand */}
                 <div className={`p-6 border-b border-white/10 transition-all duration-300 ${collapsed ? 'px-4' : 'px-6'}`}>
                     <div className="flex items-center gap-3">
-                        <div className="min-w-10 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                            <BrandIcon size={24} className="text-white" />
+                        <div className="min-w-10 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 overflow-hidden">
+                            {user?.store?.logoUrl ? (
+                                <img src={user.store.logoUrl} alt="Store Logo" className="w-full h-full object-cover" />
+                            ) : (
+                                <BrandIcon size={24} className="text-white" />
+                            )}
                         </div>
                         {!collapsed && (
                             <div className="overflow-hidden whitespace-nowrap transition-all duration-300">
-                                <h1 className="font-bold text-xl text-white tracking-tight leading-none uppercase">Hybrid <span className="text-indigo-400">POS</span></h1>
+                                <h1 className="font-bold text-xl text-white tracking-tight leading-none uppercase">
+                                    {user?.store?.name?.split(' ')[0] || "Hybrid"} <span className="text-indigo-400">{user?.store?.name?.split(' ')[1] || "POS"}</span>
+                                </h1>
                                 <p className="text-[10px] font-medium text-indigo-300/60 mt-1 uppercase tracking-widest">{roleName}</p>
                             </div>
                         )}

@@ -1,14 +1,24 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, Shield, AlertCircle } from 'lucide-react';
+import { Users, UserPlus, Shield, AlertCircle, Eye, Edit2, MoreVertical } from 'lucide-react';
 import { usersApi } from '../../service/api';
-import { StatsCard } from '../../components/ui/StatsCard';
 import { DataTable } from '@/components/global-components/data-table';
+import PageHeader from '@/components/global-components/PageHeader';
+import MetricCard from '@/components/global-components/MetricCard';
+import { useToast } from '@/hooks/use-toast';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from '@/components/ui/button';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const UserManagement: React.FC = () => {
   const navigate = useNavigate();
 
+  const { toast } = useToast();
   const [usersRes, setUsersRes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,7 +54,7 @@ const UserManagement: React.FC = () => {
     },
     {
       accessorKey: 'name',
-      header: 'Admin Name',
+      header: 'Admin',
       cell: ({ row }) => (
         <div className="flex flex-col text-left">
           <span className="font-bold text-slate-900 dark:text-white leading-tight">{row.original.name}</span>
@@ -54,7 +64,7 @@ const UserManagement: React.FC = () => {
     },
     {
       accessorKey: 'storeId',
-      header: 'Store Node',
+      header: 'Store',
       cell: ({ getValue }) => {
         const val = getValue() as string;
         return (
@@ -68,7 +78,7 @@ const UserManagement: React.FC = () => {
     },
     {
       accessorKey: 'role',
-      header: 'Clearance',
+      header: 'Role',
       cell: ({ getValue }) => (
         <span className="text-sm text-slate-500 font-medium">
           {(getValue() as string).replace('_', ' ')}
@@ -93,18 +103,20 @@ const UserManagement: React.FC = () => {
       id: 'actions',
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-3 px-2">
+        <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => navigate(`/super-admin/admins/edit/${row.original.id}`)}
-            className="text-slate-300 hover:text-slate-600 transition-colors"
+            className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-all"
+            title="View Details"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            <Eye size={16} />
           </button>
           <button
             onClick={() => navigate(`/super-admin/admins/edit/${row.original.id}`)}
-            className="text-slate-300 hover:text-slate-600 transition-colors"
+            className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-all"
+            title="Edit Admin"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+            <Edit2 size={16} />
           </button>
         </div>
       ),
@@ -113,44 +125,37 @@ const UserManagement: React.FC = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <Users className="w-8 h-8 text-indigo-500" />
-            Network Administrators
-          </h1>
-          <p className="text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">
-            Manage global platform access and administrative permissions
-          </p>
-        </div>
-        <button
-          onClick={() => navigate('/super-admin/admins/create')}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-2xl text-[11px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
-        >
-          <UserPlus size={16} />
-          Provision Admin
-        </button>
-      </div>
+      <PageHeader
+        title="Administrators"
+        description="Manage system users and their permissions"
+        icon={Users}
+        primaryAction={{
+            label: "Create Admin",
+            onClick: () => navigate('/super-admin/admins/create'),
+            icon: UserPlus
+        }}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatsCard
-          title="Total Stakeholders"
+        <MetricCard
+          title="Total Admins"
           value={totalAdmins}
           icon={Users}
-          trend={{ value: "+12%", label: "from last month", isPositive: true }}
+          colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
         />
-        <StatsCard
-          title="Active Sessions"
+        <MetricCard
+          title="Active Now"
           value={activeAdmins}
           icon={Shield}
-          description="Normal throughput"
+          subtitle="Users currently online"
+          colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
-        <StatsCard
-          title="Store Operators"
+        <MetricCard
+          title="Store Admins"
           value={storeAdmins}
           icon={AlertCircle}
-          description="Verified nodes"
+          subtitle="Admins linked to stores"
+          colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
         />
       </div>
 
@@ -158,8 +163,8 @@ const UserManagement: React.FC = () => {
       <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
         <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/30">
           <div>
-            <h3 className="text-xl font-bold text-slate-900 tracking-tight">Administrative Directory</h3>
-            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Global platform user registry</p>
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight">User List</h3>
+            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">Directory of all admin users</p>
           </div>
         </div>
 

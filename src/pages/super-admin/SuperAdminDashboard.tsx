@@ -12,6 +12,9 @@ import { storesApi } from '../../service/api';
 import { startOfMonth, subMonths, format, parseISO } from 'date-fns';
 import { type ChartConfig } from "@/components/ui/chart";
 import { formatPKR, formatNumberShort, formatCurrencyShort } from '@/utils/format';
+import PageHeader from '@/components/global-components/PageHeader';
+import MetricCard from '@/components/global-components/MetricCard';
+import { LayoutDashboard, Globe, Zap, Users2, Database } from 'lucide-react';
 
 const subscriptionConfig = {
     basic: {
@@ -150,7 +153,7 @@ const SuperAdminDashboard: React.FC = () => {
     const tableColumns = [
         {
             accessorKey: "name",
-            header: "Node Identity",
+            header: "Store Name",
             cell: ({ row }: any) => (
                 <div className="flex flex-col">
                     <span className="font-bold text-slate-900 dark:text-white leading-tight">{row.original.name}</span>
@@ -160,12 +163,12 @@ const SuperAdminDashboard: React.FC = () => {
         },
         {
             accessorKey: "ownerName",
-            header: "Governance",
-            cell: ({ row }: any) => <span className="text-sm text-slate-500 font-medium">{row.original.ownerName || 'Unassigned'}</span>
+            header: "Owner",
+            cell: ({ row }: any) => <span className="text-sm text-slate-500 font-medium">{row.original.ownerName || 'None'}</span>
         },
         {
             accessorKey: "category",
-            header: "Sector",
+            header: "Category",
             cell: ({ row }: any) => (
                 <span className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold text-[10px] rounded-lg px-3 py-1">
                     {(row.original.category || 'GEN').toUpperCase()}
@@ -191,7 +194,7 @@ const SuperAdminDashboard: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50 animate-pulse">
                 <div className="w-16 h-16 border-4 border-indigo-50 border-t-indigo-600 rounded-full animate-spin"></div>
-                <p className="mt-6 text-slate-400 font-black text-[10px] uppercase tracking-[4px]">Synchronizing Neural Network...</p>
+                <p className="mt-6 text-slate-400 font-black text-[10px] uppercase tracking-[4px]">Fetching Dashboard Data...</p>
             </div>
         );
     }
@@ -200,13 +203,13 @@ const SuperAdminDashboard: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-rose-50 rounded-[3rem] border border-rose-100 text-rose-600 text-center space-y-4">
                 <AlertTriangle size={48} />
-                <h3 className="text-xl font-black uppercase tracking-tight">Telemetry Retrieval Offline</h3>
-                <p className="text-sm font-bold opacity-70">Failed to establish connection with global data centers.</p>
+                <h3 className="text-xl font-black uppercase tracking-tight">System Offline</h3>
+                <p className="text-sm font-bold opacity-70">Failed to establish connection with server.</p>
                 <button
                     onClick={() => handleRefetch()}
                     className="px-8 py-3 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[3px] hover:bg-rose-700 transition-all active:scale-95"
                 >
-                    Retry Protocol
+                    Retry Loading
                 </button>
             </div>
         );
@@ -214,31 +217,47 @@ const SuperAdminDashboard: React.FC = () => {
 
     return (
         <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Infrastructure Overview</h1>
-                    <p className="text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">Global SaaS Network Status & Performance</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => handleRefetch()}
-                        disabled={isOverviewRefetching}
-                        className="group flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-2xl text-[11px] font-bold uppercase tracking-widest hover:border-indigo-200 hover:bg-slate-50 transition-all shadow-sm disabled:opacity-50"
-                    >
-                        <RefreshCcw size={14} className={`${isOverviewRefetching ? 'animate-spin' : 'group-hover:rotate-180'} transition-transform`} />
-                        Refetch Data
-                    </button>
-                </div>
-            </div>
+            <PageHeader
+                title="Dashboard"
+                description="System Status & Overview"
+                icon={LayoutDashboard}
+                secondaryAction={{
+                    label: "Refresh Data",
+                    onClick: handleRefetch,
+                    icon: RefreshCcw
+                }}
+            />
 
             {/* Main Metrics */}
-            <div className="w-full">
-                <DashboardStats 
-                    totalStores={formatNumberShort(statsRaw.totalStores || 0)}
-                    totalRevenue={formatCurrencyShort(statsRaw.totalRevenue || 0)}
-                    activeStores={formatNumberShort(activeStoresCount)}
-                    totalDevices={formatNumberShort(statsRaw.activeDevices || 0)} 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <MetricCard 
+                    title="Total Stores"
+                    value={statsRaw.totalStores || 0}
+                    icon={Database}
+                    colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400"
+                    subtitle="Branches registered globally"
+                />
+                <MetricCard 
+                    title="Global Sales"
+                    value={statsRaw.totalRevenue || 0}
+                    icon={Zap}
+                    isCurrency={true}
+                    colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    subtitle="Platform revenue aggregate"
+                />
+                <MetricCard 
+                    title="Active Branches"
+                    value={activeStoresCount}
+                    icon={Globe}
+                    colorClass="bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-400"
+                    subtitle="Currently online outlets"
+                />
+                <MetricCard 
+                    title="System Units"
+                    value={statsRaw.activeDevices || 0}
+                    icon={Users2}
+                    colorClass="bg-violet-50 text-violet-600 dark:bg-violet-950/40 dark:text-violet-400"
+                    subtitle="Active terminals & hardware"
                 />
             </div>
 
@@ -247,15 +266,15 @@ const SuperAdminDashboard: React.FC = () => {
                 <MonthlyActivityChart
                     data={monthlyGrowthData}
                     isLoading={isStoresLoading}
-                    title="Network Growth"
-                    subtitle="New store nodes provisioned (Last 12mo)"
+                    title="Store Growth"
+                    subtitle="New branches added monthly"
                     height={300}
                     className="h-full"
                 />
 
                 <ChartBarStacked
-                    title="Subscription Distribution"
-                    subtitle="Active plans by tier (Last 6mo)"
+                    title="Plan Distribution"
+                    subtitle="Active subscriptions by tier"
                     data={subscriptionData}
                     config={subscriptionConfig}
                     height={300}
@@ -312,8 +331,8 @@ const SuperAdminDashboard: React.FC = () => {
             <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm overflow-hidden transition-all hover:shadow-md">
                 <div className="p-8 border-b border-slate-100 flex justify-between items-center">
                     <div>
-                        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Infrastructure Nodes Registry</h2>
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time status of recently provisioned network branches</p>
+                        <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Recent Stores</h2>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">List of recently created store branches</p>
                     </div>
                 </div>
                 <div className="p-4">

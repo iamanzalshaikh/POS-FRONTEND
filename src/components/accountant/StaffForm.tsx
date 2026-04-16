@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, CheckCircle2, AlertCircle, User, Phone, Mail, Calendar, MapPin, DollarSign, Briefcase, Heart } from 'lucide-react';
+import EnhancedCalendar from '../global-components/Calendar/EnhancedCalendar';
 
 // ============================================================================
 // TYPES
@@ -312,10 +313,10 @@ const StaffForm: React.FC<StaffFormProps> = ({
             </div>
             <div>
               <h2 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">
-                {initialData ? 'Update Staff Member' : 'Register New Staff'}
+                {initialData ? 'Edit Staff Member' : 'Add New Staff'}
               </h2>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70">
-                Authorized Personnel Entry System
+                Staff registration form
               </p>
             </div>
           </div>
@@ -335,7 +336,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <div className="h-1 w-1 bg-blue-600 rounded-full" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Personal Disclosure</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Personal Info</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <TextField label="First Name" value={formData.firstName} onChange={updateFirstName} required error={errors.firstName} placeholder="Enter first name" />
@@ -348,13 +349,13 @@ const StaffForm: React.FC<StaffFormProps> = ({
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <div className="h-1 w-1 bg-blue-600 rounded-full" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Contact Registry</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Contact Details</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <TextField label="CNIC Identifier" value={formData.cnic} onChange={handleCnicChange} required error={errors.cnic} placeholder="00000-0000000-0" maxLength={15} icon={User} />
+                <TextField label="CNIC Number" value={formData.cnic} onChange={handleCnicChange} required error={errors.cnic} placeholder="00000-0000000-0" maxLength={15} icon={User} />
                 <TextField label="Mobile Number" type="tel" value={formData.mobile} onChange={updateMobile} required error={errors.mobile} placeholder="03XX-XXXXXXX" icon={Phone} />
-                <TextField label="Electronic Mail" type="email" value={formData.email} onChange={updateEmail} error={errors.email} placeholder="email@example.com" icon={Mail} />
-                <TextField label="Residential Address" value={formData.address} onChange={updateAddress} error={errors.address} placeholder="Enter physical address" icon={MapPin} />
+                <TextField label="Email Address" type="email" value={formData.email} onChange={updateEmail} error={errors.email} placeholder="email@example.com" icon={Mail} />
+                <TextField label="Home Address" value={formData.address} onChange={updateAddress} error={errors.address} placeholder="Enter your address" icon={MapPin} />
               </div>
             </div>
 
@@ -362,14 +363,30 @@ const StaffForm: React.FC<StaffFormProps> = ({
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <div className="h-1 w-1 bg-blue-600 rounded-full" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Employment Parameters</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Job Details</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <SelectField label="Official Role" value={formData.role} onChange={updateRole} options={ROLES} required error={errors.role} icon={Briefcase} />
-                <TextField label="Base Remuneration (PKR)" type="number" value={formData.basicSalary} onChange={updateBasicSalary} required error={errors.basicSalary} placeholder="0.00" icon={DollarSign} />
-                <SelectField label="Contract Term" value={formData.joiningType} onChange={updateJoiningType} options={JOINING_TYPES} icon={Briefcase} />
-                <TextField label="Onboarding Date" type="date" value={formData.joinDate} onChange={updateJoinDate} required error={errors.joinDate} icon={Calendar} />
-                <SelectField label="Network Status" value={formData.status} onChange={updateStatus} options={STATUSES} icon={CheckCircle2} />
+                <SelectField label="Role" value={formData.role} onChange={updateRole} options={ROLES} required error={errors.role} icon={Briefcase} />
+                <TextField label="Salary Amount (PKR)" type="number" value={formData.basicSalary} onChange={updateBasicSalary} required error={errors.basicSalary} placeholder="0.00" icon={DollarSign} />
+                <SelectField label="Job Type" value={formData.joiningType} onChange={updateJoiningType} options={JOINING_TYPES} icon={Briefcase} />
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#64748b] ml-1">
+                    Joining Date <span className="text-rose-500">*</span>
+                  </label>
+                  <EnhancedCalendar
+                    value={formData.joinDate}
+                    onChange={updateJoinDate}
+                    required
+                    className="w-full"
+                    inputClassName="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all cursor-pointer hover:border-blue-500/50"
+                  />
+                  {errors.joinDate && (
+                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 ml-1 flex items-center gap-1 animate-in slide-in-from-left-2">
+                       <AlertCircle size={10} /> {errors.joinDate}
+                    </p>
+                  )}
+                </div>
+                <SelectField label="Status" value={formData.status} onChange={updateStatus} options={STATUSES} icon={CheckCircle2} />
               </div>
             </div>
 
@@ -377,11 +394,27 @@ const StaffForm: React.FC<StaffFormProps> = ({
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <div className="h-1 w-1 bg-blue-600 rounded-full" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Demographic Data</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Other Info</span>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <SelectField label="Marital Status" value={formData.maritalStatus} onChange={updateMaritalStatus} options={MARITAL_STATUSES} icon={Heart} />
-                <TextField label="Date of Birth" type="date" value={formData.dob} onChange={updateDob} required error={errors.dob} icon={Calendar} />
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#64748b] ml-1">
+                    Date of Birth <span className="text-rose-500">*</span>
+                  </label>
+                  <EnhancedCalendar
+                    value={formData.dob}
+                    onChange={updateDob}
+                    required
+                    className="w-full"
+                    inputClassName="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all cursor-pointer hover:border-blue-500/50"
+                  />
+                  {errors.dob && (
+                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-600 dark:text-rose-400 ml-1 flex items-center gap-1 animate-in slide-in-from-left-2">
+                       <AlertCircle size={10} /> {errors.dob}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </form>
@@ -396,7 +429,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
               disabled={isSubmitting}
               className="flex-1 py-4 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
             >
-              Discard Changes
+              Cancel
             </button>
             <button
               onClick={handleSubmit}
@@ -406,12 +439,12 @@ const StaffForm: React.FC<StaffFormProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  <span>Processing...</span>
+                  <span>Saving...</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 size={16} />
-                  <span>{initialData ? 'Update Record' : 'Authorize Entry'}</span>
+                  <span>{initialData ? 'Save Changes' : 'Add Staff'}</span>
                 </>
               )}
             </button>

@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Package,
@@ -13,11 +14,12 @@ import {
   getRecentTransactions,
   type RecentFinanceTransaction,
 } from '../../api/finance.api';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatAmount } from '@/utils/format';
 import { getSaleGrandTotal } from '@/utils/saleAmounts';
 import { DataTable } from '../../components/global-components/data-table-2';
 import MetricCard from '../../components/global-components/MetricCard';
 import type { ColumnDef } from '@tanstack/react-table';
+import { TableSkeleton } from '@/components/ui/skeletons/TableSkeleton';
 
 type StreamFilter = 'all' | 'sale' | 'refund' | 'inventory';
 
@@ -35,116 +37,81 @@ interface TransactionRow {
 
 const AllTransactions: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<StreamFilter>('all');
   const [page, setPage] = useState(1);
-  const [recentItems, setRecentItems] = useState<RecentFinanceTransaction[]>([]);
-  const [recentMeta, setRecentMeta] = useState({ total: 0, totalPages: 0, limit: 10 });
-  const [inventoryRows, setInventoryRows] = useState<
-    Array<{
-      id: string;
-      description: string;
-      amountLabel: string;
-      dateLabel: string;
-    }>
-  >([]);
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  const loadRecent = useCallback(async () => {
-    const res = await getRecentTransactions({
+  // Queries
+  const { 
+    data: recentRes, 
+    isLoading: recentLoading,
+    refetch: refetchRecent 
+  } = useQuery({
+    queryKey: ['recent-transactions', filterType, page, dateFrom, dateTo],
+    queryFn: () => getRecentTransactions({
       type: filterType === 'inventory' ? 'all' : filterType,
       page,
       limit: 1000,
       ...(dateFrom && dateTo ? { startDate: dateFrom, endDate: dateTo } : {}),
+    }),
+    enabled: filterType !== 'inventory',
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { 
+    data: invRes, 
+    isLoading: invLoading, 
+    refetch: refetchInv 
+  } = useQuery({
+    queryKey: ['inventory-logs-ledger'],
+    queryFn: () => getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' }),
+    enabled: filterType === 'inventory',
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const loading = recentLoading || invLoading;
+
+  const recentItems = recentRes?.success ? recentRes.data.items || [] : [];
+  const inventoryLogs = useMemo(() => {
+    if (!invRes?.success || !invRes.data) return [];
+    const logs = Array.isArray(invRes.data)
+      ? invRes.data
+      : (invRes.data as { logs?: any[] }).logs || [];
+    return logs;
+  }, [invRes]);
+
+  const saleCount = useMemo(() => recentItems.filter((r: any) => r.transactionType === 'SALE').length, [recentItems]);
+  const refundCount = useMemo(() => recentItems.filter((r: any) => r.transactionType === 'REFUND').length, [recentItems]);
+  const invAdjustmentCount = inventoryLogs.length;
+
+  const filteredRecentItems = useMemo(() => {
+    return recentItems.filter((item: any) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        item.invoiceNumber.toLowerCase().includes(q) ||
+        item.cashier?.name?.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q)
+      );
     });
-    if (res.success && res.data) {
-      setRecentItems(res.data.items || []);
-      const p = res.data.pagination;
-      setRecentMeta({
-        total: p?.total ?? 0,
-        totalPages: p?.totalPages ?? 0,
-        limit: p?.limit ?? 10,
-      });
-    } else {
-      setRecentItems([]);
-      setRecentMeta({ total: 0, totalPages: 0, limit: 10 });
-    }
-  }, [filterType, page, dateFrom, dateTo]);
+  }, [recentItems, searchQuery]);
 
-  const loadInventory = useCallback(async () => {
-    const res = await getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' });
-    if (!res.success || !res.data) {
-      setInventoryRows([]);
-      return;
-    }
-    const logs = Array.isArray(res.data)
-      ? res.data
-      : (res.data as { logs?: unknown[] }).logs || [];
-    type LogRow = {
-      id: string;
-      changeType?: string;
-      quantityChange?: number | string;
-      createdAt: string;
-      product?: { name?: string };
-    };
-    setInventoryRows(
-      (logs as LogRow[]).map((log) => ({
-        id: log.id,
-        description: `${log.changeType ?? 'ADJUSTMENT'} — ${log.product?.name || 'Inventory'}`,
-        amountLabel: String(Math.abs(Number(log.quantityChange) || 0)),
-        dateLabel: new Date(log.createdAt).toLocaleString(),
-      }))
-    );
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        if (filterType === 'inventory') {
-          await loadInventory();
-          if (!cancelled) setRecentItems([]);
-        } else {
-          await loadRecent();
-          if (!cancelled) setInventoryRows([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [filterType, page, loadRecent, loadInventory]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [filterType, dateFrom, dateTo]);
-
-  const saleCount = recentItems.filter((r) => r.transactionType === 'SALE').length;
-  const refundCount = recentItems.filter((r) => r.transactionType === 'REFUND').length;
-
-  // Frontend search filter
-  const filteredRecentItems = recentItems.filter((item) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      item.invoiceNumber.toLowerCase().includes(q) ||
-      item.cashier?.name?.toLowerCase().includes(q) ||
-      item.id.toLowerCase().includes(q)
-    );
-  });
-
-  const filteredInventoryRows = inventoryRows.filter((row) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return row.description.toLowerCase().includes(q) || row.dateLabel.toLowerCase().includes(q);
-  });
+  const inventoryRows = useMemo(() => {
+    return inventoryLogs.map((log: any) => ({
+      id: log.id,
+      description: `${log.changeType ?? 'ADJUSTMENT'} — ${log.product?.name || 'Inventory'}`,
+      amountLabel: String(Math.abs(Number(log.quantityChange) || 0)),
+      dateLabel: new Date(log.createdAt).toLocaleString(),
+    })).filter(row => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return row.description.toLowerCase().includes(q) || row.dateLabel.toLowerCase().includes(q);
+    });
+  }, [inventoryLogs, searchQuery]);
 
   const transactionColumns: ColumnDef<TransactionRow>[] = [
     {
@@ -191,7 +158,7 @@ const AllTransactions: React.FC = () => {
       header: "Tax",
       cell: ({ row }) => (
         <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
-          {row.original.totalTax !== 0 ? formatCurrency(row.original.totalTax) : '—'}
+          {row.original.totalTax !== 0 ? formatAmount(row.original.totalTax) : '—'}
         </div>
       ),
     },
@@ -223,7 +190,7 @@ const AllTransactions: React.FC = () => {
       header: "Total",
       cell: ({ row }) => (
         <div className="text-right text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
-          {formatCurrency(row.original.total)}
+          {formatAmount(row.original.total)}
         </div>
       ),
     },
@@ -281,7 +248,7 @@ const AllTransactions: React.FC = () => {
 
   const tableData =
     filterType === 'inventory'
-      ? filteredInventoryRows.map((row) => ({
+      ? inventoryRows.map((row) => ({
           id: row.id,
           description: row.description,
           amountLabel: row.amountLabel,
@@ -343,7 +310,7 @@ const AllTransactions: React.FC = () => {
         />
         <MetricCard
           title="Inventory Adjustments"
-          value={inventoryRows.length.toString()}
+          value={invAdjustmentCount.toString()}
           icon={Package}
           colorClass="bg-slate-50 text-slate-600 dark:bg-slate-800/50 dark:text-slate-400"
         />
@@ -351,79 +318,93 @@ const AllTransactions: React.FC = () => {
 
       {/* DataTable */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
-        <DataTable
-          columns={(filterType === 'inventory' ? inventoryColumns : transactionColumns) as any}
-          data={tableData as any}
-          isLoading={loading}
-          onRefresh={() => {
-            if (filterType === 'inventory') {
-              loadInventory();
-            } else {
-              loadRecent();
-            }
-          }}
-          placeholder="Search transactions..."
-          hidePagination={true}
-          manualPagination={false}
-          headerActions={
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Type Filter */}
-              <select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as StreamFilter)}
-                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[180px]"
-              >
-                <option value="all">Sales & Refunds (All)</option>
-                <option value="sale">Sales Only</option>
-                <option value="refund">Refunds Only</option>
-                <option value="inventory">Inventory Adjustments</option>
-              </select>
-
-              {/* Search */}
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Search invoice, cashier..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-10 pl-11 pr-4 w-[220px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
-                />
-              </div>
-
-              {/* Date From */}
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
-              />
-
-              {/* Date To */}
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
-              />
-
-              {/* Clear */}
-              {(searchQuery || dateFrom || dateTo) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery('');
-                    setDateFrom('');
-                    setDateTo('');
+        {(recentLoading || invLoading) && tableData.length === 0 ? (
+          <TableSkeleton columns={filterType === 'inventory' ? 2 : 9} rows={10} />
+        ) : (
+          <DataTable
+            columns={(filterType === 'inventory' ? inventoryColumns : transactionColumns) as any}
+            data={tableData as any}
+            isLoading={recentLoading || invLoading}
+            onRefresh={() => {
+              if (filterType === 'inventory') {
+                refetchInv();
+              } else {
+                refetchRecent();
+              }
+            }}
+            placeholder="Search transactions..."
+            hidePagination={true}
+            manualPagination={false}
+            headerActions={
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Type Filter */}
+                <select
+                  value={filterType}
+                  onChange={(e) => {
+                    setFilterType(e.target.value as StreamFilter);
+                    setPage(1);
                   }}
-                  className="h-10 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 transition-all"
+                  className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[180px]"
                 >
-                  Clear
-                </button>
-              )}
-            </div>
-          }
-        />
+                  <option value="all">Sales & Refunds (All)</option>
+                  <option value="sale">Sales Only</option>
+                  <option value="refund">Refunds Only</option>
+                  <option value="inventory">Inventory Adjustments</option>
+                </select>
+
+                {/* Search */}
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Search invoice, cashier..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-10 pl-11 pr-4 w-[220px] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                  />
+                </div>
+
+                {/* Date From */}
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setPage(1);
+                  }}
+                  className="h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+                />
+
+                {/* Date To */}
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setPage(1);
+                  }}
+                  className="h-10 px-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+                />
+
+                {/* Clear */}
+                {(searchQuery || dateFrom || dateTo) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      setDateFrom('');
+                      setDateTo('');
+                      setPage(1);
+                    }}
+                    className="h-10 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50 rounded-xl text-[10px] font-black uppercase tracking-widest text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 transition-all"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            }
+          />
+        )}
       </div>
     </div>
   );

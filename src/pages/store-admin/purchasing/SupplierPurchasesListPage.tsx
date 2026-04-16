@@ -15,7 +15,7 @@ import {
 } from "@/api/suppliers.api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePurchasingBasePath } from "@/hooks/usePurchasingBasePath";
-import { formatCurrencyShort } from "@/utils/format";
+import { formatCurrencyShort, formatAmountShort } from "@/utils/format";
 import MetricCard from '@/components/global-components/MetricCard';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -106,7 +106,7 @@ export default function SupplierPurchasesListPage() {
             accessorKey: "totalAmount",
             cell: ({ row }) => (
                 <div className="font-bold text-sm text-slate-900 dark:text-white tracking-tight">
-                    {formatCurrencyShort(num(row.original.totalAmount))}
+                    {formatAmountShort(num(row.original.totalAmount))}
                 </div>
             )
         },
@@ -127,7 +127,7 @@ export default function SupplierPurchasesListPage() {
                         </span>
                         {!isPaid && (
                             <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">
-                                {formatCurrencyShort(num(row.original.paidAmount))} paid
+                                {formatAmountShort(num(row.original.paidAmount))} paid
                             </span>
                         )}
                     </div>
@@ -144,7 +144,7 @@ export default function SupplierPurchasesListPage() {
                         "font-black text-sm tracking-tight text-center",
                         bal > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
                     )}>
-                        {bal > 0 ? formatCurrencyShort(bal) : '—'}
+                        {bal > 0 ? formatAmountShort(bal) : '—'}
                     </div>
                 );
             }

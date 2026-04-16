@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 import MainSidebar from './MainSidebar';
 import PageLoader from '../ui/PageLoader';
-import { LayoutDashboard, Store, ClipboardList, Settings, Shield } from "lucide-react";
+import { LayoutDashboard, Store, ClipboardList, Settings, Shield, User } from "lucide-react";
 import { useSidebar } from '@/components/ui/sidebar';
 import TopNavbar from '@/components/store-admin/TopNavbar';
 
@@ -11,7 +11,12 @@ const superAdminMenu = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/super-admin/dashboard" },
     { name: "Stores", icon: Store, path: "/super-admin/stores" },
     { name: "Audit Logs", icon: ClipboardList, path: "/super-admin/audit-logs" },
-    { name: "Settings", icon: Settings, path: "/super-admin/settings" }
+    { 
+        name: "Settings", 
+        icon: Settings, 
+        path: "/super-admin/settings",
+       
+    }
 ];
 
 const SuperAdminLayout: React.FC = () => {

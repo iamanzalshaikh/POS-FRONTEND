@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, DollarSign, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import EnhancedCalendar from '../global-components/Calendar/EnhancedCalendar';
 import { createPortal } from 'react-dom';
 import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES } from '../../utils/expense-utils';
@@ -226,12 +227,12 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 <label className="text-[10px] font-black uppercase tracking-widest text-[#64748b] ml-1">
                   Transaction Date <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="date"
+                <EnhancedCalendar
                   value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  onChange={(val) => setFormData({ ...formData, date: val })}
                   required
-                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                  className="w-full"
+                  inputClassName="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all cursor-pointer hover:border-blue-500/50"
                 />
               </div>
             </div>

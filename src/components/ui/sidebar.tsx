@@ -12,12 +12,21 @@ interface SidebarContextValue {
 
 const SidebarContext = createContext<SidebarContextValue | null>(null)
 
-export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface SidebarProviderProps {
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+export const SidebarProvider: React.FC<SidebarProviderProps> = ({ children, defaultOpen = true }) => {
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
-      return localStorage.getItem('superadmin_sidebar_collapsed') === 'true'
+      const storedValue = localStorage.getItem('superadmin_sidebar_collapsed');
+      if (storedValue !== null) {
+        return storedValue === 'true';
+      }
+      return !defaultOpen;
     } catch (e) {
-      return false
+      return !defaultOpen;
     }
   })
   const [isMobileOpen, setIsMobileOpen] = useState(false)

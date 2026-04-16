@@ -12,6 +12,7 @@ import {
   Truck,
   ClipboardList,
   ListOrdered,
+  User,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { getFinanceSummary, getSalesReport } from '../../api/finance.api';
@@ -27,12 +28,14 @@ import ExportData from './ExportData';
 import MonthlyCloseReport from './MonthlyCloseReport';
 import AllTransactions from './AllTransactions';
 import TransactionReceipt from './TransactionReceipt';
+import StaffSalaryReceipt from './StaffSalaryReceipt';
 import StaffManagementPage from './StaffManagementPage';
 import PayrollManagementPage from './PayrollManagementPage';
 import SuppliersPage from '@/pages/store-admin/purchasing/SuppliersPage';
 import SupplierPurchasesListPage from '@/pages/store-admin/purchasing/SupplierPurchasesListPage';
 import NewSupplierPurchasePage from '@/pages/store-admin/purchasing/NewSupplierPurchasePage';
-import SupplierPurchaseDetailPage from '@/pages/store-admin/purchasing/SupplierPurchaseDetailPage';
+const SupplierPurchaseDetailPage = React.lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchaseDetailPage'));
+const ProfilePage = React.lazy(() => import('@/pages/shared/ProfilePage'));
 
 /** Today = single day. Week = Monday–today (this week). Month = 1st of month–today. */
 function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string; endDate: string } {
@@ -53,52 +56,6 @@ function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string
 }
 
 const AccountantDashboard: React.FC = () => {
-  const [periodPreset, setPeriodPreset] = useState<AccountantPeriodPreset>('month');
-  const [summary, setSummary] = useState<FinanceSummaryData | null>(null);
-  const [dailyRevenue, setDailyRevenue] = useState<Array<{ label: string; revenue: number }>>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchDashboardData = useCallback(async () => {
-    const { startDate, endDate } = getPeriodForPreset(periodPreset);
-    try {
-      setLoading(true);
-      const [summaryRes, salesRes] = await Promise.all([
-        getFinanceSummary({ startDate, endDate }),
-        getSalesReport({ startDate, endDate }),
-      ]);
-
-      if (summaryRes.success && 'data' in summaryRes && summaryRes.data) {
-        setSummary(summaryRes.data);
-      } else {
-        setSummary(null);
-      }
-
-      if (salesRes.success && 'data' in salesRes && salesRes.data?.data?.length) {
-        setDailyRevenue(
-          salesRes.data.data.map((r) => ({
-            label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
-            }),
-            revenue: r.revenue,
-          }))
-        );
-      } else {
-        setDailyRevenue([]);
-      }
-    } catch (error) {
-      console.error('[AccountantDashboard] Failed to fetch dashboard data:', error);
-      setSummary(null);
-      setDailyRevenue([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [periodPreset]);
-
-  useEffect(() => {
-    void fetchDashboardData();
-  }, [fetchDashboardData]);
-
   const accountantMenu = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/accountant' },
     {
@@ -136,13 +93,7 @@ const AccountantDashboard: React.FC = () => {
           index
           element={
             <div className="animate-fade-in space-y-8">
-              <AccountantDashboardHome
-                summary={summary}
-                dailyRevenue={dailyRevenue}
-                loading={loading}
-                periodPreset={periodPreset}
-                onPeriodPresetChange={setPeriodPreset}
-              />
+              <AccountantDashboardHome />
 
               <div className="space-y-8">
                 <ExpenseTracker />
@@ -156,6 +107,7 @@ const AccountantDashboard: React.FC = () => {
         <Route path="payroll" element={<PayrollManagementPage />} />
         <Route path="transactions" element={<AllTransactions />} />
         <Route path="transaction/:transactionId" element={<TransactionReceipt />} />
+        <Route path="payroll/receipt/:payrollId" element={<StaffSalaryReceipt />} />
         <Route path="purchasing/suppliers" element={<SuppliersPage />} />
         <Route path="purchasing/purchases/new" element={<NewSupplierPurchasePage />} />
         <Route path="purchasing/purchases/:id" element={<SupplierPurchaseDetailPage />} />
@@ -164,6 +116,7 @@ const AccountantDashboard: React.FC = () => {
         <Route path="pl" element={<ProfitLossReport />} />
         <Route path="monthly-close" element={<MonthlyCloseReport />} />
         <Route path="export" element={<ExportData />} />
+        <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/accountant" replace />} />
       </Routes>
     </DashboardLayout>

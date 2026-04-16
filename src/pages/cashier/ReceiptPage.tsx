@@ -589,9 +589,15 @@ const ReceiptPage: React.FC = () => {
           {/* Store Info Header - For Print */}
           <div className="mb-4 pb-4 border-b-2 border-slate-300 print:block">
             <div className="flex flex-col items-center text-center">
-              {/* Logo Placeholder */}
-              <div className="mb-3 w-12 h-12 flex items-center justify-center bg-slate-900 rounded-full print:border print:border-black">
-                <Building2 size={24} className="text-white print:text-black" />
+              {/* Logo */}
+              <div className="mb-3 w-16 h-16 flex items-center justify-center bg-transparent rounded-2xl overflow-hidden print:border print:border-slate-200">
+                {user?.store?.logoUrl ? (
+                  <img src={user.store.logoUrl} alt="Store Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <div className="w-full h-full bg-slate-900 flex items-center justify-center text-white">
+                    <Building2 size={32} />
+                  </div>
+                )}
               </div>
 
               {user?.store ? (

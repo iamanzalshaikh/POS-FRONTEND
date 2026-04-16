@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ShoppingCart, Scan, Package, RotateCcw, Clock, History } from 'lucide-react';
+import { ShoppingCart, Scan, Package, RotateCcw, Clock, History, User } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import DeviceAccessGate from '../../components/cashier/DeviceAccessGate';
 import POSInterface from './POSInterface';
@@ -8,7 +8,7 @@ import DeviceSelection from './DeviceSelection';
 import ReceiptPage from './ReceiptPage';
 import ShiftSummaryPage from './ShiftSummaryPage';
 import InventoryCheckPage from './InventoryCheckPage';
-import CashierProfilePage from './CashierProfilePage';
+const ProfilePage = React.lazy(() => import('@/pages/shared/ProfilePage'));
 import ProductsListPage from './ProductsListPage';
 import ReturnRefundPage from './ReturnRefundPage';
 import OfflineSalesPage from './OfflineSalesPage';
@@ -74,7 +74,7 @@ const CashierDashboard: React.FC = () => {
           <Route path="/receipt/offline/:saleId" element={<ReceiptPage />} />
           <Route path="/shift-summary" element={<ShiftSummaryPage />} />
           <Route path="/inventory" element={<InventoryCheckPage />} />
-          <Route path="/profile" element={<CashierProfilePage />} />
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/returns" element={<ReturnRefundPage />} />
           <Route
             path="/scan"

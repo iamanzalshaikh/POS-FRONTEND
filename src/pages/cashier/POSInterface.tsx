@@ -23,12 +23,13 @@ import { fetchProducts, getProductByBarcode } from '../../api/products.api';
 import { createSale } from '../../api/sales.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
-import { formatCurrency } from '../../utils/expense-utils';
+import { formatCurrency, formatAmount } from '../../utils/expense-utils';
 import { offlineStorage } from '../../services/offline-storage.service';
 import type { OfflineSale } from '../../services/offline-storage.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import ProductsFilters from '../../components/cashier/ProductsFilters';
 import ProductsTable from '../../components/cashier/ProductsTable';
+import ThermalReceipt from '../../components/cashier/ThermalReceipt';
 
 type CartItem = {
   id: string;
@@ -120,6 +121,7 @@ const POSInterface: React.FC = () => {
   const [productStockFilter, setProductStockFilter] = useState('ALL');
   const [now, setNow] = useState<Date>(new Date());
   const [receivedAmount, setReceivedAmount] = useState<string>('');
+  const [lastSaleForReceipt, setLastSaleForReceipt] = useState<any | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000 * 30);
@@ -387,6 +389,22 @@ const POSInterface: React.FC = () => {
     }
   }, [holdOrders]);
 
+  // Handle direct printing when a sale is completed
+  useEffect(() => {
+    if (lastSaleForReceipt) {
+      console.log('🖨️ [POSInterface] Triggering direct print for:', lastSaleForReceipt.id);
+      
+      // Delay to ensure the DOM is updated with the new sale data
+      const printTimer = setTimeout(() => {
+        window.print();
+        // Clear the receipt data after print dialog opens so it can be re-triggered
+        setLastSaleForReceipt(null);
+      }, 500);
+
+      return () => clearTimeout(printTimer);
+    }
+  }, [lastSaleForReceipt]);
+
   const handleCompleteSale = async () => {
     console.log('🔴 [POSInterface] handleCompleteSale called');
     console.log('🔵 [POSInterface] canCompleteSale:', canCompleteSale);
@@ -515,11 +533,12 @@ const POSInterface: React.FC = () => {
           setReceivedAmount('');
           setNotes('');
           
-          // Navigate to receipt page with autoPrint flag
-          console.log('🧭 [POSInterface] Navigating to receipt page with autoPrint: true');
-          navigate(`/cashier/receipt/${saleData.id}`, {
-            state: { sale: saleData, status: 'COMPLETED', autoPrint: true },
-          });
+          // Trigger direct print by updating state
+          console.log('🖨️ [POSInterface] Preparing direct print...');
+          setLastSaleForReceipt(saleData);
+          
+          // DO NOT navigate - stay on POS Terminal
+          console.log('✅ [POSInterface] Sale completed, staying on terminal.');
         } else {
           console.error('❌ [POSInterface] Sale response missing data:', res);
           setError(res?.message || 'Unable to complete sale');
@@ -561,36 +580,21 @@ const POSInterface: React.FC = () => {
         // Store sale in sessionStorage for instant access
         sessionStorage.setItem(`offline-sale-${tempId}`, JSON.stringify(offlineSale));
 
-        // Navigate to receipt page with offline sale data for auto-print
-        navigate(`/cashier/receipt/offline/${tempId}`, {
-          state: {
-            sale: {
-              id: tempId,
-              tempId,
-              invoiceNumber,
-              deviceId,
-              paymentMethod,
-              discountAmount: numericDiscountAmount,
-              notes: notes || undefined,
-              receivedAmount: paymentMethod === 'CASH' ? receivedAmountNum : undefined,
-              changeAmount: paymentMethod === 'CASH' ? changeAmount : undefined,
-              saleItems: payload.items.map((item: any) => ({
-                productName: item.productName,
-                quantity: item.quantity,
-                price: item.price,
-                unitPrice: item.unitPrice,
-                subtotal: item.totalPrice,
-              })),
-              subtotal,
-              totalTax: tax,
-              totalAmount: total,
-              createdAt: new Date().toISOString(),
-              syncStatus: 'PENDING',
-            },
-            status: 'PENDING_SYNC',
-            autoPrint: true,
-          },
+        // Trigger direct print by updating state
+        console.log('🖨️ [POSInterface] Preparing direct print for offline sale...');
+        setLastSaleForReceipt({
+          ...offlineSale,
+          id: tempId,
+          saleItems: offlineSale.items.map((item: any) => ({
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            subtotal: item.totalPrice,
+          })),
         });
+
+        // DO NOT navigate - stay on POS Terminal
+        console.log('✅ [POSInterface] Offline sale completed, staying on terminal.');
       }
     } catch (err: any) {
       console.error('❌ [POSInterface] Sale error:', err);
@@ -915,7 +919,7 @@ const POSInterface: React.FC = () => {
                             </p>
                           </td>
                           <td className="px-2 py-3 align-top text-center font-black text-[11px] text-slate-600 dark:text-slate-400 tabular-nums">
-                            {formatCurrency(item.price)}
+                            {formatAmount(item.price)}
                           </td>
                           <td className="px-2 py-3 align-top text-center">
                             <div className="flex flex-col items-center gap-1">
@@ -945,7 +949,7 @@ const POSInterface: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-2 py-3 align-top text-right font-black text-[12px] text-blue-600 dark:text-blue-400 tabular-nums">
-                            {formatCurrency(item.price * item.quantity)}
+                            {formatAmount(item.price * item.quantity)}
                           </td>
                           <td className="px-3 py-3 align-top text-right">
                             <button
@@ -1241,6 +1245,9 @@ const POSInterface: React.FC = () => {
             </aside>
         </div>
       </div>
+      
+      {/* Hidden Receipt for direct thermal printing */}
+      <ThermalReceipt sale={lastSaleForReceipt} />
     </div>
 );
 };

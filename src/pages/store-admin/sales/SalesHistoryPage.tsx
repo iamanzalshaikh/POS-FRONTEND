@@ -1,22 +1,23 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Download, Plus, Search, Filter, Calendar, CreditCard, CheckCircle2, XCircle, TrendingUp, AlertCircle } from "lucide-react";
-import MetricCard from '@/components/global-components/MetricCard';
+import React, { useState, useMemo } from 'react';
+import { Download, Search, AlertCircle } from "lucide-react";
+import { useQuery } from '@tanstack/react-query';
+import MonthlyActivityChart from "@/components/global-components/monthly-activity-chart";
+import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
-import { formatCurrency, toLocalYMD } from "@/utils/format";
-import MonthlyActivityChart from "@/components/global-components/monthly-activity-chart";
-import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
+import { formatCurrency, formatAmount, toLocalYMD } from "@/utils/format";
+import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
 
 import { getDashboardSummary } from "@/api/dashboard.api";
-import { getSalesTransactions, cancelSale, refundSale } from "@/api/sales.api";
+import { getSalesTransactions, cancelSale } from "@/api/sales.api";
 import { getSaleGrandTotal } from "@/utils/saleAmounts";
 
 const SalesHistoryPage = () => {
     // Filters state
     const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState("All Status");
-    const [paymentMethod, setPaymentMethod] = useState("All Methods");
+    const [statusFilter] = useState("All Status");
+    const [paymentMethod] = useState("All Methods");
     const [dateRange, setDateRange] = useState({
         start: toLocalYMD(new Date(new Date().setDate(new Date().getDate() - 30))),
         end: toLocalYMD(new Date())
@@ -24,12 +25,7 @@ const SalesHistoryPage = () => {
 
     // Pagination State
     const [page, setPage] = useState(1);
-    const [limit] = useState(5);
-
-    const [salesDataRes, setSalesDataRes] = useState<any>(null);
-    const [salesLoading, setSalesLoading] = useState(true);
-    const [dashboardDataRes, setDashboardDataRes] = useState<any>(null);
-    const [summaryLoading, setSummaryLoading] = useState(true);
+    const [limit] = useState(10);
 
     const params: any = {
         startDate: dateRange.start,
@@ -42,44 +38,28 @@ const SalesHistoryPage = () => {
     if (statusFilter !== 'All Status') params.paymentStatus = statusFilter;
     if (paymentMethod !== 'All Methods') params.paymentMethod = paymentMethod;
 
-    const loadSales = async () => {
-        setSalesLoading(true);
-        try {
-            const data = await getSalesTransactions(params);
-            setSalesDataRes(data);
-        } catch (error) {
-            console.error("Failed to fetch sales history:", error);
-        } finally {
-            setSalesLoading(false);
-        }
-    };
+    // Queries
+    const { 
+        data: salesDataRes, 
+        isLoading: salesLoading, 
+        refetch: refetchSales 
+    } = useQuery({
+        queryKey: ['sales-transactions', page, search, statusFilter, paymentMethod, dateRange],
+        queryFn: () => getSalesTransactions(params),
+        staleTime: 1000 * 60 * 5,
+    });
 
-    const loadSummary = async () => {
-        setSummaryLoading(true);
-        try {
-            const data = await getDashboardSummary({
-                startDate: dateRange.start,
-                endDate: dateRange.end
-            });
-            setDashboardDataRes(data);
-        } catch (error) {
-            console.error("Failed to fetch dashboard summary:", error);
-        } finally {
-            setSummaryLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadSales();
-    }, [search, statusFilter, paymentMethod, dateRange, page, limit]);
-
-    useEffect(() => {
-        setPage(1); // Reset to first page on filter change
-    }, [search, statusFilter, paymentMethod, dateRange]);
-
-    useEffect(() => {
-        loadSummary();
-    }, [dateRange]);
+    const { 
+        data: dashboardDataRes, 
+        isLoading: summaryLoading 
+    } = useQuery({
+        queryKey: ['dashboard-summary-sales', dateRange],
+        queryFn: () => getDashboardSummary({
+            startDate: dateRange.start,
+            endDate: dateRange.end
+        }),
+        staleTime: 1000 * 60 * 10,
+    });
 
     const rawResponseData = salesDataRes?.data;
     const transactions = Array.isArray(rawResponseData) ? rawResponseData : (rawResponseData?.data || []);
@@ -88,18 +68,20 @@ const SalesHistoryPage = () => {
     const reportData = dashboardDataRes?.data || dashboardDataRes;
 
     // Calculate metrics locally from transaction ledger
-    const summary = {
-        revenue: transactions
-            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
-            .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0),
-        salesCount: transactions
-            .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
-            .length,
-        discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discount || 0), 0),
-        refunds: transactions
-            .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded' || t.isReversal)
-            .reduce((sum: number, t: any) => sum + Math.abs(getSaleGrandTotal(t)), 0)
-    };
+    const summary = useMemo(() => {
+        return {
+            revenue: transactions
+                .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
+                .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0),
+            salesCount: transactions
+                .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
+                .length,
+            discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discount || 0), 0),
+            refunds: transactions
+                .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded' || t.isReversal)
+                .reduce((sum: number, t: any) => sum + Math.abs(getSaleGrandTotal(t)), 0)
+        };
+    }, [transactions]);
 
     // Generate full timeline for the chart (fills missing dates with 0)
     const chartsData = useMemo(() => {
@@ -182,10 +164,10 @@ const SalesHistoryPage = () => {
                 return (
                 <div className="text-right">
                     <span className="text-[12px] font-black uppercase tracking-widest tabular-nums text-slate-900 dark:text-white block">
-                        {formatCurrency(grand)}
+                        {formatAmount(grand)}
                     </span>
                     {Math.abs(tax) > 0 && (
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">GST {formatCurrency(tax)}</span>
+                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">GST {formatAmount(tax)}</span>
                     )}
                 </div>
                 );
@@ -231,7 +213,7 @@ const SalesHistoryPage = () => {
                     <button 
                         onClick={() => {
                             if (window.confirm("Cancel this sale?")) {
-                                cancelSale(row.original.id, "Cancelled by admin").then(() => loadSales());
+                                cancelSale(row.original.id, "Cancelled by admin").then(() => refetchSales());
                             }
                         }}
                         className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90 border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50 shadow-sm"
@@ -281,80 +263,84 @@ const SalesHistoryPage = () => {
 
             {/* Detailed Ledger Area */}
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
-                <DataTable 
-                    columns={columns} 
-                    data={transactions}
-                    isLoading={loading}
-                    onRefresh={loadSales}
-                    manualPagination={true}
-                    hidePagination={false}
-                    pageIndex={page}
-                    pageSize={limit}
-                    pageCount={Math.ceil(total / limit)}
-                    totalItems={total}
-                    onPageChange={(newPageIndex) => setPage(newPageIndex)}
-                    placeholder="Search ledger..."
-                    headerActions={
-                        <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
-                            <div className="relative group w-full lg:w-auto">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Search invoice, client..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-full lg:w-[240px]"
-                                />
-                            </div>
-                            
-                            <div className="flex flex-wrap items-center gap-3">
-                                <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
-                                    {[
-                                        { label: 'Today', range: 0 },
-                                        { label: 'Weekly', range: 7 },
-                                        { label: 'Monthly', range: 30 }
-                                    ].map((r) => {
-                                        const start = toLocalYMD(new Date(new Date().setDate(new Date().getDate() - r.range)));
-                                        const end = toLocalYMD(new Date());
-                                        const isActive = dateRange.start === start && dateRange.end === end;
-                                        return (
-                                            <button
-                                                key={r.label}
-                                                onClick={() => setDateRange({ start, end })}
-                                                className={cn(
-                                                    "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                                                    isActive
-                                                        ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
-                                                        : "text-slate-400 hover:text-blue-600 dark:hover:text-slate-200"
-                                                )}
-                                            >
-                                                {r.label}
-                                            </button>
-                                        );
-                                    })}
+                {salesLoading && transactions.length === 0 ? (
+                    <TableSkeleton columns={9} rows={limit} />
+                ) : (
+                    <DataTable 
+                        columns={columns} 
+                        data={transactions}
+                        isLoading={salesLoading}
+                        onRefresh={() => refetchSales()}
+                        manualPagination={true}
+                        hidePagination={false}
+                        pageIndex={page}
+                        pageSize={limit}
+                        pageCount={Math.ceil(total / limit)}
+                        totalItems={total}
+                        onPageChange={(newPageIndex) => setPage(newPageIndex)}
+                        placeholder="Search ledger..."
+                        headerActions={
+                            <div className="flex flex-col lg:flex-row lg:items-center gap-4 w-full">
+                                <div className="relative group w-full lg:w-auto">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search invoice, client..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-full lg:w-[240px]"
+                                    />
                                 </div>
                                 
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <input
-                                        type="date"
-                                        value={dateRange.start}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-                                        className="h-10 px-4 flex-1 sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
-                                    />
-                                    <span className="text-slate-300 dark:text-slate-700 font-black">—</span>
-                                    <input
-                                        type="date"
-                                        value={dateRange.end}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-                                        className="h-10 px-4 flex-1 sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
-                                    />
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar">
+                                        {[
+                                            { label: 'Today', range: 0 },
+                                            { label: 'Weekly', range: 7 },
+                                            { label: 'Monthly', range: 30 }
+                                        ].map((r) => {
+                                            const start = toLocalYMD(new Date(new Date().setDate(new Date().getDate() - r.range)));
+                                            const end = toLocalYMD(new Date());
+                                            const isActive = dateRange.start === start && dateRange.end === end;
+                                            return (
+                                                <button
+                                                    key={r.label}
+                                                    onClick={() => setDateRange({ start, end })}
+                                                    className={cn(
+                                                        "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                                                        isActive
+                                                            ? "bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm"
+                                                            : "text-slate-400 hover:text-blue-600 dark:hover:text-slate-200"
+                                                    )}
+                                                >
+                                                    {r.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                                        <input
+                                            type="date"
+                                            value={dateRange.start}
+                                            onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                            className="h-10 px-4 flex-1 sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+                                        />
+                                        <span className="text-slate-300 dark:text-slate-700 font-black">—</span>
+                                        <input
+                                            type="date"
+                                            value={dateRange.end}
+                                            onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                            className="h-10 px-4 flex-1 sm:w-auto bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all font-mono"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    }
-                />
-
+                        }
+                    />
+                )}
             </div>
+
         </div>
     );
 };
