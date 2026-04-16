@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Search, ChevronLeft, ChevronRight, ArrowUpRight, XCircle, RotateCcw, Calculator, Package, ArrowUpDown } from 'lucide-react';
 import { getInventoryLogs, getSalesTransactions } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
@@ -25,8 +26,7 @@ type SortDirection = 'asc' | 'desc';
 
 const ExpenseTracker: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // UI State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -35,123 +35,94 @@ const ExpenseTracker: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
+  // 1. Fetch Sales
+  const { data: salesRes, isLoading: salesLoading } = useQuery({
+    queryKey: ['recent-sales'],
+    queryFn: () => getSalesTransactions({ limit: 200 }),
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
 
-  const fetchTransactions = async () => {
-    try {
-      setLoading(true);
+  // 2. Fetch Inventory
+  const { data: inventoryRes, isLoading: inventoryLoading } = useQuery({
+    queryKey: ['recent-inventory-logs'],
+    queryFn: () => getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' }),
+    staleTime: 1000 * 60 * 5,
+  });
 
-      const [inventoryLogsResponse, salesResponse, expensesResponse] = await Promise.all([
-        getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' }),
-        getSalesTransactions({ limit: 200 }),
-        getExpenses()
-      ]);
+  // 3. Fetch Expenses
+  const { data: expensesRes, isLoading: expensesLoading } = useQuery({
+    queryKey: ['recent-expenses'],
+    queryFn: () => getExpenses(),
+    staleTime: 1000 * 60 * 5,
+  });
 
-      const transactionList: Transaction[] = [];
+  const loading = salesLoading || inventoryLoading || expensesLoading;
 
-      // Process sales transactions
-      if (salesResponse.success && salesResponse.data) {
-        const sales = Array.isArray(salesResponse.data)
-          ? salesResponse.data
-          : (salesResponse.data as any);
+  // 4. Transform & Merge Data
+  const transactions = useMemo(() => {
+    const transactionList: Transaction[] = [];
 
-        sales.forEach((sale: any) => {
-          const dateRaw = new Date(sale.createdAt);
-          const grand = getSaleGrandTotal(sale);
-          const taxAmt = getSaleTaxTotal(sale);
-          if (sale.isCancelled) {
-            transactionList.push({
-              id: sale.id,
-              invoiceNumber: sale.invoiceNumber,
-              description: `Invoice #${sale.invoiceNumber}`,
-              amount: grand,
-              tax: taxAmt,
-              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              dateRaw,
-              type: 'Cancellation',
-              status: 'completed',
-              paymentMethod: sale.paymentMethod
-            });
-          } else if (sale.paymentStatus === 'REFUNDED' || sale.paymentStatus === 'REFUND') {
-            transactionList.push({
-              id: sale.id,
-              invoiceNumber: sale.invoiceNumber,
-              description: `Invoice #${sale.invoiceNumber}`,
-              amount: grand,
-              tax: taxAmt,
-              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              dateRaw,
-              type: 'Refund',
-              status: 'completed',
-              paymentMethod: sale.paymentMethod
-            });
-          } else {
-            transactionList.push({
-              id: sale.id,
-              invoiceNumber: sale.invoiceNumber,
-              description: `Invoice #${sale.invoiceNumber}`,
-              amount: grand,
-              tax: taxAmt,
-              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              dateRaw,
-              type: 'Sale',
-              status: 'completed',
-              paymentMethod: sale.paymentMethod
-            });
-          }
+    // Process sales
+    if (salesRes?.success && salesRes.data) {
+      const sales = Array.isArray(salesRes.data) ? salesRes.data : [];
+      sales.forEach((sale: any) => {
+        const dateRaw = new Date(sale.createdAt);
+        const grand = getSaleGrandTotal(sale);
+        const taxAmt = getSaleTaxTotal(sale);
+        
+        transactionList.push({
+          id: sale.id,
+          invoiceNumber: sale.invoiceNumber,
+          description: `Invoice #${sale.invoiceNumber}`,
+          amount: grand,
+          tax: taxAmt,
+          date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          dateRaw,
+          type: sale.isCancelled ? 'Cancellation' : (sale.paymentStatus === 'REFUNDED' || sale.paymentStatus === 'REFUND' ? 'Refund' : 'Sale'),
+          status: 'completed',
+          paymentMethod: sale.paymentMethod
         });
-      }
-
-      // Process inventory logs
-      if (inventoryLogsResponse.success && inventoryLogsResponse.data) {
-        const logs = Array.isArray(inventoryLogsResponse.data)
-          ? inventoryLogsResponse.data
-          : (inventoryLogsResponse.data as any).logs || [];
-
-        logs.forEach((log: any) => {
-          const dateRaw = new Date(log.createdAt);
-          transactionList.push({
-            id: log.id,
-            description: `${log.changeType} - ${log.product?.name || 'Inventory Adjustment'}`,
-            amount: Math.abs(Number(log.quantityChange)) * 10,
-            date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            dateRaw,
-            type: 'Inventory',
-            status: 'processed'
-          });
-        });
-      }
-
-      // Process business expenses
-      if (expensesResponse.success && expensesResponse.data) {
-        const businessExpenses = expensesResponse.data as ExpenseType[];
-
-        businessExpenses
-          .filter(expense => expense.category !== 'SALARIES')
-          .forEach(expense => {
-            const dateRaw = new Date(expense.date);
-            transactionList.push({
-              id: expense.id,
-              description: `${expense.category} - ${expense.description}`,
-              amount: expense.amount,
-              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              dateRaw,
-              type: 'Business Expense',
-              status: 'processed'
-            });
-          });
-      }
-
-      transactionList.sort((a, b) => b.dateRaw.getTime() - a.dateRaw.getTime());
-      setTransactions(transactionList);
-    } catch (err: any) {
-      console.error('Failed to fetch transactions:', err);
-    } finally {
-      setLoading(false);
+      });
     }
-  };
+
+    // Process inventory
+    if (inventoryRes?.success && inventoryRes.data) {
+      const logs = Array.isArray(inventoryRes.data) ? inventoryRes.data : (inventoryRes.data as any).logs || [];
+      logs.forEach((log: any) => {
+        const dateRaw = new Date(log.createdAt);
+        transactionList.push({
+          id: log.id,
+          description: `${log.changeType} - ${log.product?.name || 'Inventory Adjustment'}`,
+          amount: Math.abs(Number(log.quantityChange)) * 10,
+          date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          dateRaw,
+          type: 'Inventory',
+          status: 'processed'
+        });
+      });
+    }
+
+    // Process expenses
+    if (expensesRes?.success && expensesRes.data) {
+      const businessExpenses = (expensesRes.data as ExpenseType[])
+        .filter(expense => expense.category !== 'SALARIES');
+      
+      businessExpenses.forEach(expense => {
+        const dateRaw = new Date(expense.date);
+        transactionList.push({
+          id: expense.id,
+          description: `${expense.category} - ${expense.description}`,
+          amount: expense.amount,
+          date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          dateRaw,
+          type: 'Business Expense',
+          status: 'processed'
+        });
+      });
+    }
+
+    return transactionList.sort((a, b) => b.dateRaw.getTime() - a.dateRaw.getTime());
+  }, [salesRes, inventoryRes, expensesRes]);
 
   const filteredAndSorted = useMemo(() => {
     let result = [...transactions];

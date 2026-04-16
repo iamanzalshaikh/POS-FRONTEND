@@ -40,7 +40,6 @@ type ProductRow = {
     sellingPrice: string;
     gstPercentage: string;
     lineDiscount: string;
-    initialStock: string;
     alertAt: string;
 };
 
@@ -77,8 +76,8 @@ export default function NewSupplierPurchasePage() {
       }
     });
 
-    void fetchProducts({ isActive: true }).then((body: any) => {
-      const raw = body?.data || (Array.isArray(body) ? body : []);
+    void fetchProducts({ isActive: true, limit: 1000 }).then((body: any) => {
+      const raw = body?.data?.data || body?.data || (Array.isArray(body) ? body : []);
       setProducts(raw);
     });
   }, []);
@@ -105,7 +104,6 @@ export default function NewSupplierPurchasePage() {
         sellingPrice: p.sellingPrice ? String(p.sellingPrice) : "0",
         gstPercentage: "18",
         lineDiscount: "0",
-        initialStock: "1",
         alertAt: String(p.reorderLevel ?? 10),
       },
     ]);
@@ -138,7 +136,7 @@ export default function NewSupplierPurchasePage() {
         sellingPrice: parseFloat(l.sellingPrice),
         gstPercentage: parseFloat(l.gstPercentage),
         lineDiscount: parseFloat(l.lineDiscount),
-        initialStock: parseInt(l.initialStock, 10),
+        initialStock: parseInt(l.quantity, 10),
         alertAt: parseInt(l.alertAt, 10),
       }));
     
@@ -355,10 +353,9 @@ export default function NewSupplierPurchasePage() {
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">Qty</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Buy</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Sell</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">GST</th>
+                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">GST (18%)</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Disc</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Initial</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Alert</th>
+                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Reorder Level</th>
                       <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 w-[4%]"></th>
                     </tr>
                   </thead>
@@ -412,10 +409,10 @@ export default function NewSupplierPurchasePage() {
                         </td>
                         <td className="py-3 px-1">
                           <Input 
-                            type="number" 
-                            value={line.gstPercentage} 
-                            onChange={(e) => updateLine(line.key, { gstPercentage: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
+                            value={(parseFloat(line.sellingPrice || "0") * 0.18).toFixed(2)} 
+                            readOnly
+                            disabled
+                            className="h-9 w-full font-bold text-xs bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-70" 
                           />
                         </td>
                         <td className="py-3 px-1">
@@ -423,14 +420,6 @@ export default function NewSupplierPurchasePage() {
                             type="number" 
                             value={line.lineDiscount} 
                             onChange={(e) => updateLine(line.key, { lineDiscount: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            type="number" 
-                            value={line.initialStock} 
-                            onChange={(e) => updateLine(line.key, { initialStock: e.target.value })} 
                             className="h-9 w-full font-bold text-xs" 
                           />
                         </td>

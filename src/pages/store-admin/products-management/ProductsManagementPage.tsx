@@ -63,7 +63,7 @@ export default function ProductsManagementPage() {
     const loading = productsLoading || inventoryLoading;
 
     const products = useMemo(() => {
-        const productsRaw = productsRes?.data || (Array.isArray(productsRes) ? productsRes : [])
+        const productsRaw = productsRes?.data?.data || productsRes?.data || (Array.isArray(productsRes) ? productsRes : [])
         const invResData = inventoryRes?.data
         const inventoryRaw = Array.isArray(invResData) ? invResData : (invResData?.data || [])
 
@@ -139,6 +139,15 @@ export default function ProductsManagementPage() {
             cell: ({ row }) => (
                 <div className="text-center text-[#1e293b] dark:text-slate-300 text-[11px] font-black uppercase tracking-widest tabular-nums">
                     {formatAmountShort(row.getValue("sellingPrice"))}
+                </div>
+            )
+        },
+        {
+            header: "Latest",
+            accessorKey: "latestSellingPrice",
+            cell: ({ row }) => (
+                <div className="text-center text-emerald-600 text-[11px] font-black uppercase tracking-widest tabular-nums animate-pulse">
+                    {formatAmountShort(row.original.latestSellingPrice || row.original.sellingPrice)}
                 </div>
             )
         },

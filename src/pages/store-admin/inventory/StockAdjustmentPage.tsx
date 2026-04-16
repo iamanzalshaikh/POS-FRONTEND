@@ -45,7 +45,7 @@ const StockAdjustmentPage = () => {
         loadData();
     };
 
-    const products = (productsRes as any)?.data || (Array.isArray(productsRes) ? productsRes : []);
+    const products = (productsRes as any)?.data?.data || (productsRes as any)?.data || (Array.isArray(productsRes) ? productsRes : []);
     const logs = (logsRes as any)?.data?.data || (Array.isArray(logsRes?.data) ? logsRes.data : []);
     const auditLogs = (auditLogsRes as any)?.data?.logs || (Array.isArray(auditLogsRes?.logs) ? auditLogsRes.logs : []);
 

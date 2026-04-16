@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { reportsApi } from '../../service/api';
-import { useStoreStore } from '../../store/useStoreStore';
-import { X, ShieldCheck, History } from 'lucide-react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { reportsApi, storesApi } from '../../service/api';
+import { X, ShieldCheck } from 'lucide-react';
 import ActivityLogsTable from '@/components/shared/ActivityLogsTable';
 import PageHeader from '@/components/global-components/PageHeader';
 
@@ -12,47 +12,40 @@ const SuperAdminAuditLogs: React.FC = () => {
     const [entity, setEntity] = useState('');
     const [action, setAction] = useState('');
     const [storeId, setStoreId] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
     
     // 2. Constants for Filters
     const entities = ['USER', 'STORE', 'PRODUCT', 'DEVICE', 'SALE', 'CATEGORY', 'STOCK'];
     const actions = ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT'];
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
 
-    const { stores, fetchStores } = useStoreStore();
+    // 3. Fetch Stores for Filter Dropdown
+    const { data: storesRes } = useQuery({
+        queryKey: ['stores-simple'],
+        queryFn: () => storesApi.getAll(),
+        staleTime: 1000 * 60 * 10, // 10 minutes (rarely changes)
+    });
+    const stores = storesRes?.data?.data || [];
 
-    useEffect(() => {
-        fetchStores();
-    }, [fetchStores]);
-
-    const [logsRes, setLogsRes] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isRefetching, setIsRefetching] = useState(false);
-
-    const fetchLogs = async () => {
-        setIsRefetching(true);
-        try {
-            const res = await reportsApi.getAuditLogs({
-                page,
-                limit,
-                entity: entity || undefined,
-                action: action || undefined,
-                storeId: storeId || undefined,
-                startDate: startDate || undefined,
-                endDate: endDate || undefined
-            });
-            setLogsRes(res);
-        } catch (error) {
-            console.error("Failed to fetch audit logs:", error);
-        } finally {
-            setIsLoading(false);
-            setIsRefetching(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchLogs();
-    }, [page, entity, action, storeId, startDate, endDate]);
+    // 4. Fetch Audit Logs
+    const { 
+        data: logsRes, 
+        isLoading, 
+        isRefetching, 
+        refetch: fetchLogs 
+    } = useQuery({
+        queryKey: ['audit-logs', { page, limit, entity, action, storeId, startDate, endDate }],
+        queryFn: () => reportsApi.getAuditLogs({
+            page,
+            limit,
+            entity: entity || undefined,
+            action: action || undefined,
+            storeId: storeId || undefined,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined
+        }),
+        placeholderData: (previousData) => previousData, // Keep UI stable while fetching
+    });
 
     const logs = logsRes?.data?.data?.logs || logsRes?.data?.logs || [];
     const pagination = logsRes?.data?.data?.pagination || logsRes?.data?.pagination || { totalPages: 1 };

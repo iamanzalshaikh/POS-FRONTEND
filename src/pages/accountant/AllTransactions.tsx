@@ -84,8 +84,9 @@ const AllTransactions: React.FC = () => {
     return logs;
   }, [invRes]);
 
-  const saleCount = useMemo(() => recentItems.filter((r: any) => r.transactionType === 'SALE').length, [recentItems]);
-  const refundCount = useMemo(() => recentItems.filter((r: any) => r.transactionType === 'REFUND').length, [recentItems]);
+  const totalResultCount = recentRes?.success ? recentRes.data.pagination.total : 0;
+  const saleCount = filterType === 'sale' ? totalResultCount : filterType === 'all' ? recentItems.filter((r: any) => r.transactionType === 'SALE').length : 0;
+  const refundCount = filterType === 'refund' ? totalResultCount : filterType === 'all' ? recentItems.filter((r: any) => r.transactionType === 'REFUND').length : 0;
   const invAdjustmentCount = inventoryLogs.length;
 
   const filteredRecentItems = useMemo(() => {
@@ -333,7 +334,7 @@ const AllTransactions: React.FC = () => {
               }
             }}
             placeholder="Search transactions..."
-            hidePagination={true}
+            hidePagination={false}
             manualPagination={false}
             headerActions={
               <div className="flex flex-wrap items-center gap-3">

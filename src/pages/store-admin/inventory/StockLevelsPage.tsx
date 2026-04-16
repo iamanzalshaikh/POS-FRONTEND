@@ -26,9 +26,14 @@ const StockLevelsPage = () => {
         setProductsLoading(true);
         setInventoryLoading(true);
         try {
+            const params: any = { page, limit: pageSize };
+            if (activeFilter === 'Low') params.lowStock = 'true';
+            if (activeFilter === 'Out') params.outOfStock = 'true';
+            if (activeFilter === 'OK') params.healthy = 'true';
+
             const [products, inventoryRes] = await Promise.all([
                 fetchProducts(),
-                fetchFullInventory({ page, limit: pageSize })
+                fetchFullInventory(params)
             ]);
             setProductsDataRes(products);
             setInventoryDataRes(inventoryRes);
@@ -42,14 +47,19 @@ const StockLevelsPage = () => {
     };
 
     useEffect(() => {
+        setPage(1); // Reset to first page when filter changes
+        loadData();
+    }, [activeFilter]);
+
+    useEffect(() => {
         loadData();
     }, [page]);
 
     const loading = productsLoading || inventoryLoading;
 
     // Process data
-    const productsData = (productsDataRes as any)?.data || (Array.isArray(productsDataRes) ? productsDataRes : []);
-    const inventoryData = (inventoryDataRes as any)?.data?.data || (Array.isArray(inventoryDataRes?.data) ? inventoryDataRes.data : []);
+    const productsData = (productsDataRes as any)?.data?.data || (productsDataRes as any)?.data || (Array.isArray(productsDataRes) ? productsDataRes : []);
+    const inventoryData = (inventoryDataRes as any)?.data?.data || (inventoryDataRes as any)?.data || (Array.isArray(inventoryDataRes?.data) ? inventoryDataRes.data : []);
 
     const inventory = inventoryData.map((inv: any) => {
         const item = inv.product || {};
@@ -64,19 +74,22 @@ const StockLevelsPage = () => {
     });
 
     const stats = {
-        totalItems: (inventoryDataRes as any)?.data?.total || inventory.length,
-        lowStockItems: (inventoryDataRes as any)?.data?.total || 0, // Placeholder or fetch separately if needed
-        outOfStockItems: 0 // Placeholder
+        totalItems: inventory.length,
+        lowStockItems: inventory.filter((item: any) => item.currentStock > 0 && item.currentStock <= item.reorderLevel).length,
+        outOfStockItems: inventory.filter((item: any) => item.currentStock === 0).length
     };
 
     const columns: ColumnDef<any>[] = [
         {
             header: "ID",
-            cell: ({ row }) => (
-                <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
-                    {String(row.index + 1).padStart(2, '0')}
-                </div>
-            )
+            cell: ({ row }) => {
+                const globalIndex = (page - 1) * pageSize + row.index + 1;
+                return (
+                    <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
+                        {String(globalIndex).padStart(2, '0')}
+                    </div>
+                );
+            }
         },
         {
             header: "Product",

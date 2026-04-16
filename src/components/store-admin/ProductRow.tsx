@@ -63,6 +63,10 @@ export default function ProductRow({ product, index }: any) {
             <td className="px-6 py-6 text-indigo-600 text-[11px] font-black uppercase tracking-widest tabular-nums">
                 {formatCurrency(Number(product.sellingPrice))}
             </td>
+            
+            <td className="px-6 py-6 text-emerald-600 text-[11px] font-black uppercase tracking-widest tabular-nums font-black animate-pulse">
+                {formatCurrency(Number(product.latestSellingPrice || product.sellingPrice))}
+            </td>
 
             <td className="px-6 py-6 text-center">
                 <ProductStockBadge stock={product.stock ?? 0} reorderLevel={product.reorderLevel} />

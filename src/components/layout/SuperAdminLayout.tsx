@@ -37,7 +37,7 @@ const SuperAdminLayout: React.FC = () => {
 
     // Protect route: Must be authenticated and have SUPER_ADMIN role
     if (!isAuthenticated) {
-        return <Navigate to="/super-admin/login" state={{ from: location }} replace />;
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
     if (user?.role !== 'SUPER_ADMIN') {

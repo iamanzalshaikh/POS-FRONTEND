@@ -59,64 +59,28 @@ const App: React.FC = () => {
     hydrate();
   }, [hydrate]);
 
-  // Global Prefetching Strategy for all roles
+  // Global Prefetching Strategy - Simplified to avoid massive concurrent overhead
   useEffect(() => {
     if (isAuthenticated && user) {
       const role = user.role;
-      console.log(`⚡ [PREFETCH] Prefetching ${role} critical data...`);
+      const storeId = user.storeId || user.store?.id;
       
-      // Store Admin Prefetching
-      if (role === 'STORE_ADMIN') {
-        const storeId = user.storeId || user.store?.id;
-        if (storeId) {
-          queryClient.prefetchQuery({
-            queryKey: ['store-info', storeId],
-            queryFn: () => getStoreInfo(storeId),
-            staleTime: 1000 * 60 * 10
-          });
-        }
+      console.log(`⚡ [PREFETCH] Initializing critical sync for ${role}...`);
+      
+      // Store Admin critical metadata (lightweight)
+      if (role === 'STORE_ADMIN' && storeId) {
         queryClient.prefetchQuery({
-          queryKey: ['dashboard-summary'],
-          queryFn: () => getDashboardSummary(),
-          staleTime: 1000 * 60 * 5
-        });
-        queryClient.prefetchQuery({
-          queryKey: ['products'],
-          queryFn: () => getProducts(),
-          staleTime: 1000 * 60 * 5
+          queryKey: ['store-info', storeId],
+          queryFn: () => getStoreInfo(storeId),
+          staleTime: 1000 * 60 * 10
         });
       }
 
-      // Accountant Prefetching
-      if (role === 'ACCOUNTANT') {
-        // Month-to-date summary
-        const today = new Date();
-        const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-        const end = today.toISOString().split('T')[0];
-        
-        queryClient.prefetchQuery({
-          queryKey: ['finance-summary', start, end],
-          queryFn: () => import('@/api/finance.api').then(m => m.getFinanceSummary({ startDate: start, endDate: end })),
-          staleTime: 1000 * 60 * 5
-        });
-
-        queryClient.prefetchQuery({
-          queryKey: ['recent-transactions', 'all', 1, '', ''],
-          queryFn: () => import('@/api/finance.api').then(m => m.getRecentTransactions()),
-          staleTime: 1000 * 60 * 5
-        });
-      }
-
-      // Cashier Prefetching
-      if (role === 'CASHIER') {
-        queryClient.prefetchQuery({
-          queryKey: ['products'],
-          queryFn: () => getProducts(),
-          staleTime: 1000 * 60 * 5
-        });
-      }
+      // We remove the global getProducts prefetch here because it's massive.
+      // It will be handled lazily by the respective Management/POS pages
+      // using their own local useQuery staleTime.
     }
-  }, [isAuthenticated, user, queryClient]);
+  }, [isAuthenticated, user?.id, queryClient]);
 
   if (isLoading) {
     return <PageLoader />;
@@ -188,7 +152,6 @@ const App: React.FC = () => {
               <Route path="/admin/*" element={<Navigate to="/super-admin/dashboard" replace />} />
 
               {/* New Super Admin Panel (Production SaaS) */}
-              <Route path="/super-admin/login" element={<SuperAdminLoginPage />} />
               <Route element={<SuperAdminLayout />}>
                 <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
                 <Route path="/super-admin/stores" element={<StoresListPage />} />
