@@ -63,7 +63,9 @@ export const EXPENSE_CATEGORIES = [
  * Calculate total expenses from all records
  */
 export const getTotalExpenses = (expenses: Expense[]): number => {
-  return expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  return expenses
+    .filter(expense => expense.category !== 'SALARIES')
+    .reduce((sum, expense) => sum + expense.amount, 0);
 };
 
 /**
@@ -75,6 +77,7 @@ export const getTodayExpenses = (expenses: Expense[]): number => {
   
   return expenses
     .filter(expense => {
+      if (expense.category === 'SALARIES') return false;
       const expenseDate = new Date(expense.date);
       expenseDate.setHours(0, 0, 0, 0);
       return expenseDate.getTime() === today.getTime();
@@ -92,6 +95,7 @@ export const getMonthlyExpenses = (expenses: Expense[]): number => {
   
   return expenses
     .filter(expense => {
+      if (expense.category === 'SALARIES') return false;
       const expenseDate = new Date(expense.date);
       return expenseDate.getMonth() === currentMonth && 
              expenseDate.getFullYear() === currentYear;
@@ -244,16 +248,15 @@ export const applyFilters = (
 /**
  * Format amount as currency (PKR - Pakistani Rupees)
  */
-export const formatCurrency = (amount: number): string => {
+export const formatAmount = (amount: number): string => {
   return new Intl.NumberFormat('en-PK', {
-    style: 'currency',
-    currency: 'PKR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-    .format(amount)
-    .replace('PKR', 'Rs')
-    .trim();
+  }).format(amount);
+};
+
+export const formatCurrency = (amount: number): string => {
+  return `Rs ${formatAmount(amount)}`;
 };
 
 /**

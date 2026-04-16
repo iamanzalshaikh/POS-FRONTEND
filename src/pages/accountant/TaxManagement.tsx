@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { FileText, Download, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
 import { getSalesReport } from '../../api/finance.api';
 import MetricCard from '../../components/global-components/MetricCard';
+import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
+import { TrendingUp } from 'lucide-react';
 
 interface TaxItem {
   id: string;
@@ -182,6 +184,17 @@ const TaxManagement: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <PageHeader
+        title="Tax Management"
+        description="Monitor and manage business tax liabilities"
+        icon={FileText}
+        primaryAction={{
+          label: "Export Tax Report",
+          icon: Download,
+          onClick: handleExportReport
+        }}
+      />
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard

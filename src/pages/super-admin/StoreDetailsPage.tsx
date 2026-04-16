@@ -20,11 +20,14 @@ import {
     CheckCircle2,
     XCircle,
     Activity,
-    Package
+    Package,
+    ShieldCheck,
+    MapPin
 } from 'lucide-react';
-import { showToast } from '../../utils/admin-toast';
+import { useToast } from '@/hooks/use-toast';
 import { formatNumberShort } from '@/utils/format';
 import Pagination from '../../components/shared/admin/Pagination';
+import { cn } from '@/lib/utils';
 
 const storeUpdateSchema = yup.object().shape({
     name: yup.string().required('Store name is required'),
@@ -49,10 +52,11 @@ const addUserSchema = yup.object().shape({
 const StoreDetailsPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { toast } = useToast();
     const { currentStore, fetchStoreById, updateStore, isLoading: isStoreLoading } = useStoreStore();
     const { users, fetchUsers, createUser, toggleUserStatus } = useUserStore();
 
-    const [activeTab, setActiveTab] = useState<'details' | 'users' | 'devices'>('details');
+    const [activeTab, setActiveTab] = useState<'details' | 'users'>('details');
     const [userPage, setUserPage] = useState(1);
     const itemsPerPage = 5;
 
@@ -99,13 +103,30 @@ const StoreDetailsPage: React.FC = () => {
 
     const onUpdateStore = async (data: any) => {
         const success = await updateStore(id!, data);
-        if (success) showToast('Store Node Updated');
-        else showToast('Update Execution Failed', 'error');
+        if (success) {
+            toast({
+                title: "Update Successful",
+                description: 'Store Metadata Updated',
+                variant: 'success'
+            });
+        } else {
+            toast({
+                title: "Update Failed",
+                description: 'Update Execution Failed',
+                variant: 'destructive'
+            });
+        }
     };
 
     const onToggleStoreActive = async (val: boolean) => {
         const success = await updateStore(id!, { isActive: val });
-        if (success) showToast(`Store ${val ? 'Activated' : 'Restricted'}`);
+        if (success) {
+            toast({
+                title: "Status Updated",
+                description: `Store ${val ? 'Activated' : 'Suspended'}`,
+                variant: 'success'
+            });
+        }
     };
 
     const onAddAdmin = async (data: any) => {
@@ -115,260 +136,233 @@ const StoreDetailsPage: React.FC = () => {
             storeId: id
         });
         if (success) {
-            showToast('Store Administrator Added');
+            toast({
+                title: "User Added",
+                description: 'Administrator provisioned successfully',
+                variant: 'success'
+            });
             resetUser();
             fetchUsers(id);
         } else {
-            showToast('Node Deployment Failed', 'error');
+            toast({
+                title: "Action Failed",
+                description: 'Failed to create user',
+                variant: 'destructive'
+            });
         }
     };
 
     const handleToggleUser = async (userId: string, current: boolean) => {
         const success = await toggleUserStatus(userId, !current);
-        if (success) showToast('User Access Protocol Updated');
+        if (success) {
+            toast({
+                title: "Access Updated",
+                description: 'User access status changed',
+                variant: 'success'
+            });
+        }
     };
 
     if (isStoreLoading && !currentStore) {
         return (
-            <div className="flex flex-col items-center justify-center h-96">
-                <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+            <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+                <div className="w-12 h-12 border-4 border-indigo-50 border-t-indigo-600 rounded-full animate-spin shadow-inner"></div>
+                <p className="text-[10px] font-black uppercase tracking-[3px] text-slate-400">Loading Node Data</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-            {/* Header with Navigation */}
-            <div className="flex items-center gap-5">
-                <button
-                    onClick={() => navigate('/super-admin/stores')}
-                    className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 rounded-xl transition-all shadow-sm active:scale-95"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">{currentStore?.name}</h1>
-                    <p className="text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">Management & Configuration Interface</p>
-                </div>
-            </div>
-
-            {/* Status & Quick Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="md:col-span-3 bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm flex flex-wrap items-center gap-8">
-                    <div className="flex items-center gap-4 px-6 border-r border-slate-100">
-                        <div className={`p-2 rounded-lg ${currentStore?.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                            <Activity size={18} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Network Status</p>
-                            <span className={`text-xs font-bold uppercase tracking-widest ${currentStore?.isActive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                {currentStore?.isActive ? 'Online' : 'Offline'}
+        <div className="max-w-7xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+            
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex items-center gap-6">
+                    <button
+                        onClick={() => navigate('/super-admin/stores')}
+                        className="group p-4 bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 rounded-2xl transition-all shadow-sm active:scale-95"
+                    >
+                        <ArrowLeft size={22} className="group-hover:-translate-x-1 transition-transform" />
+                    </button>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-4xl font-black text-slate-900 tracking-tighter">{currentStore?.name}</h1>
+                            <span className={cn(
+                                "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border",
+                                currentStore?.isActive ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-rose-50 text-rose-600 border-rose-100"
+                            )}>
+                                {currentStore?.isActive ? 'Active Node' : 'Suspended'}
                             </span>
                         </div>
-                    </div>
-                    <div className="flex items-center gap-4 px-6 border-r border-slate-100">
-                        <div className="p-2 bg-slate-50 text-slate-400 rounded-lg">
-                            <Users size={18} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Administrators</p>
-                            <span className="text-xs font-bold text-slate-700">{formatNumberShort(currentStore?._count?.users || 0)} Registered</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4 px-6 border-r border-slate-100">
-                        <div className="p-2 bg-slate-50 text-slate-400 rounded-lg">
-                            <Package size={18} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Inventory Items</p>
-                            <span className="text-xs font-bold text-slate-700">{formatNumberShort(currentStore?._count?.products || 0)} Products</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4 px-6">
-                        <div className="p-2 bg-slate-50 text-slate-400 rounded-lg">
-                            <Monitor size={18} />
-                        </div>
-                        <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Device Uplinks</p>
-                            <span className="text-xs font-bold text-slate-700">{formatNumberShort(currentStore?._count?.devices || 0)} Registered</span>
-                        </div>
+                        <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[11px] flex items-center gap-2">
+                            <MapPin size={12} className="text-indigo-500" /> {currentStore?.city}, {currentStore?.state} • Unit ID: {id?.slice(-6).toUpperCase()}
+                        </p>
                     </div>
                 </div>
-                <div className="bg-white p-6 rounded-[2rem] border border-slate-200/60 shadow-sm flex items-center justify-center">
+
+                <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
                     <ToggleSwitch
-                        label="Store Active"
+                        label="System Status"
                         checked={currentStore?.isActive || false}
                         onChange={onToggleStoreActive}
                     />
                 </div>
             </div>
 
-            {/* Tabs Navigation */}
-            <div className="flex gap-2 p-1.5 bg-slate-100/50 rounded-2xl border border-slate-200/60 w-fit">
-                <button
-                    onClick={() => setActiveTab('details')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${activeTab === 'details' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                        }`}
-                >
-                    <Settings size={14} /> Store Details
-                </button>
-                <button
-                    onClick={() => setActiveTab('users')}
-                    className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${activeTab === 'users' ? 'bg-white text-indigo-600 shadow-sm border border-slate-100' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-                        }`}
-                >
-                    <Users size={14} /> Administrators
-                </button>
+            {/* Metrics Dashboard */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                    { label: 'Uptime Status', val: currentStore?.isActive ? 'Healthy' : 'Off-Line', icon: Activity, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+                    { label: 'Staff Nodes', val: `${currentStore?._count?.users || 0} Admins`, icon: Users, color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                    { label: 'Inventory', val: `${currentStore?._count?.products || 0} SKUs`, icon: Package, color: 'text-amber-500', bg: 'bg-amber-50' },
+                    { label: 'Terminals', val: `${currentStore?._count?.devices || 0} Units`, icon: Monitor, color: 'text-blue-500', bg: 'bg-blue-50' },
+                ].map((stat, i) => (
+                    <div key={i} className="bg-white p-6 rounded-[2.5rem] border border-slate-200/60 shadow-sm hover:shadow-md transition-shadow group">
+                        <div className={cn("w-12 h-12 rounded-2xl mb-4 flex items-center justify-center transition-transform group-hover:scale-110", stat.bg, stat.color)}>
+                            <stat.icon size={24} />
+                        </div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
+                        <p className="text-xl font-black text-slate-900 tracking-tight">{stat.val}</p>
+                    </div>
+                ))}
             </div>
 
-            {/* Tabbed Content */}
-            <div className="pt-2">
-                {activeTab === 'details' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-in fade-in slide-in-from-left-4">
-                        <FormWrapper title="Store Configuration" subtitle="Update core store metadata and location settings">
-                            <form onSubmit={handleSubmitStore(onUpdateStore)} className="space-y-6">
-                                <InputField
-                                    label="Official Store Name"
-                                    registration={regStore('name')}
-                                    error={storeErrors.name?.message}
-                                />
-                                <InputField
-                                    label="Street Address"
-                                    registration={regStore('address')}
-                                    error={storeErrors.address?.message}
-                                />
-                                <div className="grid grid-cols-3 gap-6">
-                                    <InputField
-                                        label="City"
-                                        registration={regStore('city')}
-                                        error={storeErrors.city?.message}
-                                    />
-                                    <InputField
-                                        label="State / Province"
-                                        registration={regStore('state')}
-                                        error={storeErrors.state?.message}
-                                    />
-                                    <InputField
-                                        label="Zip Code"
-                                        registration={regStore('zipCode')}
-                                        error={storeErrors.zipCode?.message}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <InputField
-                                        label="Contact phone"
-                                        registration={regStore('phone')}
-                                        error={storeErrors.phone?.message}
-                                    />
-                                    <InputField
-                                        label="Store Email (Public)"
-                                        registration={regStore('email')}
-                                        error={storeErrors.email?.message}
-                                    />
-                                </div>
-                                <div className="pt-4">
-                                    <SubmitButton isLoading={isStoreSubmitting} icon={<Save size={18} />}>
-                                        Save Changes
-                                    </SubmitButton>
-                                </div>
-                            </form>
-                        </FormWrapper>
-                    </div>
-                )}
+            {/* Tabs & Content */}
+            <div className="space-y-6">
+                <div className="inline-flex p-1.5 bg-slate-200/50 rounded-[1.5rem] border border-slate-200/60 backdrop-blur-sm">
+                    {[
+                        { id: 'details', label: 'Configuration', icon: Settings },
+                        { id: 'users', label: 'Access Control', icon: ShieldCheck },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={cn(
+                                "flex items-center gap-2 px-8 py-3 rounded-[1.2rem] text-[11px] font-black uppercase tracking-widest transition-all",
+                                activeTab === tab.id 
+                                    ? "bg-white text-indigo-600 shadow-md border border-slate-100 scale-105" 
+                                    : "text-slate-500 hover:text-slate-800"
+                            )}
+                        >
+                            <tab.icon size={14} /> {tab.label}
+                        </button>
+                    ))}
+                </div>
 
-                {activeTab === 'users' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 animate-in fade-in slide-in-from-right-4">
-                        {/* Administrator List */}
-                        <div className="lg:col-span-2">
-                            <div className="bg-white rounded-[2rem] border border-slate-200/60 shadow-sm overflow-hidden">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                            <th className="px-8 py-5">Administrator</th>
-                                            <th className="px-8 py-5 text-center">Status</th>
-                                            <th className="px-8 py-5 text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {users.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={3} className="px-8 py-12 text-center text-slate-400 text-sm font-medium">No administrators found.</td>
-                                            </tr>
-                                        ) : users.slice((userPage - 1) * itemsPerPage, userPage * itemsPerPage).map(u => (
-                                            <tr key={u.id} className="group hover:bg-[#2563EB]/5 transition-all text-sm">
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center font-bold text-indigo-600 text-[11px] shadow-sm">
-                                                            {u.name[0].toUpperCase()}
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-bold text-slate-900 leading-none mb-1.5">{u.name}</h4>
-                                                            <p className="text-[11px] font-medium text-slate-400">{u.email}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 text-center">
-                                                    <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${u.isActive ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
-                                                        }`}>
-                                                        {u.isActive ? 'Active' : 'Suspended'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-8 py-5 text-right">
-                                                    <button
-                                                        onClick={() => handleToggleUser(u.id, u.isActive)}
-                                                        className={`p-2 rounded-xl transition-all shadow-sm border ${u.isActive
-                                                            ? 'text-rose-500 bg-rose-50 border-rose-100 hover:bg-rose-100'
-                                                            : 'text-emerald-500 bg-emerald-50 border-emerald-100 hover:bg-emerald-100'
-                                                            }`}
-                                                        title={u.isActive ? "Deactivate User" : "Activate User"}
-                                                    >
-                                                        {u.isActive ? <XCircle size={18} /> : <CheckCircle2 size={18} />}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                                <Pagination
-                                    currentPage={userPage}
-                                    totalPages={Math.ceil(users.length / itemsPerPage)}
-                                    onPageChange={setUserPage}
-                                />
-                            </div>
-                        </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    {activeTab === 'details' ? (
+                        <div className="lg:col-span-12 animate-in slide-in-from-left-8 duration-500">
+                            <FormWrapper title="Store Configuration" subtitle="Primary Store Metadata" maxWidth="max-w-4xl">
+                                <form onSubmit={handleSubmitStore(onUpdateStore)} className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+                                    <div className="space-y-6">
+                                        <InputField 
+                                            label="Official Name" 
+                                            registration={regStore('name')} 
+                                            error={storeErrors.name?.message} 
+                                        />
+                                        <InputField 
+                                            label="Physical Address" 
+                                            registration={regStore('address')} 
+                                            error={storeErrors.address?.message} 
+                                        />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <InputField 
+                                                label="City" 
+                                                registration={regStore('city')} 
+                                                error={(storeErrors as any).city?.message}
+                                            />
+                                            <InputField 
+                                                label="State" 
+                                                registration={regStore('state')} 
+                                                error={(storeErrors as any).state?.message}
+                                            />
+                                        </div>
+                                    </div>
 
-                        {/* Add Admin Form */}
-                        <div>
-                            <FormWrapper title="Add Administrator" subtitle="Provision new administrative access">
-                                <form onSubmit={handleSubmitUser(onAddAdmin)} className="space-y-6">
-                                    <InputField
-                                        label="Full Name"
-                                        registration={regUser('name')}
-                                        error={userErrors.name?.message}
-                                    />
-                                    <InputField
-                                        label="Corporate Email"
-                                        registration={regUser('email')}
-                                        error={userErrors.email?.message}
-                                    />
-                                    <PasswordInput
-                                        label="New Password"
-                                        registration={regUser('password')}
-                                        error={userErrors.password?.message}
-                                    />
-                                    <div className="pt-4">
-                                        <SubmitButton
-                                            isLoading={isUserSubmitting}
-                                            icon={<UserPlus size={18} />}
-                                        >
-                                            Create Admin
-                                        </SubmitButton>
+                                    <div className="space-y-6">
+                                        <InputField 
+                                            label="Zip Code" 
+                                            registration={regStore('zipCode')} 
+                                            error={(storeErrors as any).zipCode?.message}
+                                        />
+                                        <InputField 
+                                            label="Hotline / Phone" 
+                                            registration={regStore('phone')} 
+                                            error={(storeErrors as any).phone?.message}
+                                        />
+                                        <InputField 
+                                            label="Public Email" 
+                                            registration={regStore('email')} 
+                                            error={(storeErrors as any).email?.message}
+                                        />
+                                        
+                                        <div className="pt-2">
+                                            <SubmitButton isLoading={isStoreSubmitting} icon={<Save size={18} />}>
+                                                Update Node Configuration
+                                            </SubmitButton>
+                                        </div>
                                     </div>
                                 </form>
                             </FormWrapper>
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <>
+                            <div className="lg:col-span-8 space-y-6 animate-in slide-in-from-right-8 duration-500">
+                                <div className="bg-white rounded-[2.5rem] border border-slate-200/60 shadow-sm overflow-hidden">
+                                    <div className="px-8 py-6 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center">
+                                        <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-500">Authorized Personnel</h3>
+                                        <span className="text-[10px] font-bold bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-md">{users.length} Users</span>
+                                    </div>
+                                    <table className="w-full text-left">
+                                        <tbody className="divide-y divide-slate-50">
+                                            {users.slice((userPage - 1) * itemsPerPage, userPage * itemsPerPage).map(u => (
+                                                <tr key={u.id} className="group hover:bg-slate-50/80 transition-all">
+                                                    <td className="px-8 py-6">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 rounded-[1rem] bg-indigo-600 text-white flex items-center justify-center font-black text-sm shadow-lg shadow-indigo-200">
+                                                                {u.name[0].toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="font-black text-slate-900 leading-none mb-1.5 uppercase tracking-tight">{u.name}</h4>
+                                                                <p className="text-[11px] font-bold text-slate-400">{u.email}</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-6 text-right">
+                                                        <button
+                                                            onClick={() => handleToggleUser(u.id, u.isActive)}
+                                                            className={cn(
+                                                                "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all active:scale-90",
+                                                                u.isActive ? "bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-600 hover:text-white" : "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white"
+                                                            )}
+                                                        >
+                                                            {u.isActive ? "Deactivate" : "Activate"}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    <div className="p-6 border-t border-slate-50">
+                                        <Pagination currentPage={userPage} totalPages={Math.ceil(users.length / itemsPerPage)} onPageChange={setUserPage} />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="lg:col-span-4 animate-in fade-in slide-in-from-bottom-8 duration-500 delay-150">
+                                <FormWrapper title="User Provisioning" subtitle="Deploy New Administrator">
+                                    <form onSubmit={handleSubmitUser(onAddAdmin)} className="space-y-6">
+                                        <InputField label="Full Name" registration={regUser('name')} error={userErrors.name?.message} />
+                                        <InputField label="Corporate Email" registration={regUser('email')} error={userErrors.email?.message} />
+                                        <PasswordInput label="Access Key" registration={regUser('password')} error={userErrors.password?.message} />
+                                        <div className="pt-4">
+                                            <SubmitButton isLoading={isUserSubmitting} icon={<UserPlus size={18} />}>Deploy Admin</SubmitButton>
+                                        </div>
+                                    </form>
+                                </FormWrapper>
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

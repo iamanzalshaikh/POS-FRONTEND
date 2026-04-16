@@ -8,15 +8,18 @@
  * @param amount - The numeric value to format
  * @returns Formatted string (e.g., "₨ 1,234.56")
  */
-export const formatCurrency = (amount: number | string): string => {
+export const formatAmount = (amount: number | string): string => {
     const value = typeof amount === 'string' ? parseFloat(amount.toString().replace(/[^0-9.-]+/g, '')) : amount;
-    
-    if (isNaN(value)) return 'Rs 0.00';
+    if (isNaN(value)) return '0.00';
 
-    return `Rs ${value.toLocaleString('en-PK', {
+    return value.toLocaleString('en-PK', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
-    })}`;
+    });
+};
+
+export const formatCurrency = (amount: number | string): string => {
+    return `Rs ${formatAmount(amount)}`;
 };
 
 export const formatPKR = (amount: number | string): string => {
@@ -72,16 +75,20 @@ export const formatNumberShort = (num: number | string): string => {
     return value.toString();
 };
 
+export const formatAmountShort = (amount: number | string): string => {
+    const value = typeof amount === 'string' ? parseFloat(amount.toString().replace(/[^0-9.-]+/g, '')) : amount;
+    if (isNaN(value)) return "0";
+    if (value < 1000) return formatAmount(value).replace('.00', '');
+    return formatNumberShort(value);
+};
+
 /**
  * Formats a currency value with short-form suffixes
  * @param amount - The numeric value
  * @returns Formatted string (e.g., "₨ 1.5K")
  */
 export const formatCurrencyShort = (amount: number | string): string => {
-    const value = typeof amount === 'string' ? parseFloat(amount.toString().replace(/[^0-9.-]+/g, '')) : amount;
-    if (isNaN(value)) return "Rs 0";
-    if (value < 1000) return formatCurrency(value).replace('.00', '');
-    return `Rs ${formatNumberShort(value)}`;
+    return `Rs ${formatAmountShort(amount)}`;
 };
 
 /**

@@ -97,7 +97,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                   </td>
                   <td className="py-5 px-6 text-center">
                     <span className="text-sm font-black text-[#1e293b] dark:text-slate-200 tabular-nums">
-                      ₨ {price.toLocaleString()}
+                      {price.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </td>
                   <td className="py-5 px-6 text-center text-center">

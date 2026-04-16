@@ -16,6 +16,7 @@ interface PageHeaderProps {
         icon?: any;
     };
     className?: string;
+    children?: React.ReactNode;
 }
 
 const PageHeader: React.FC<PageHeaderProps> = ({
@@ -24,7 +25,8 @@ const PageHeader: React.FC<PageHeaderProps> = ({
     icon: Icon,
     primaryAction,
     secondaryAction,
-    className
+    className,
+    children
 }) => {
     return (
         <div className={cn("flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10", className)}>
@@ -41,6 +43,8 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             </div>
             
             <div className="flex items-center gap-3">
+                {children}
+
                 {secondaryAction && (
                     <button
                         onClick={secondaryAction.onClick}

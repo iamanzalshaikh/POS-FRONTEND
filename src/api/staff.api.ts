@@ -4,16 +4,27 @@ import api from '../service/api';
 // TYPES
 // ============================================================================
 
+export type StaffStatus = 'ACTIVE' | 'INACTIVE';
+
 export interface StaffMember {
   id: string;
   displayId?: string;
   storeId: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   phone?: string | null;
-  role: string;
-  monthlySalary: number | string;
+  email?: string | null;
+  cnic?: string | null;
+  fatherHusbandName?: string | null;
+  dateOfBirth?: string | null;
   joiningDate: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  role: string;
+  roleTitle?: string | null;
+  baseSalary: number | string;
+  monthlySalary: number | string;
+  status: StaffStatus;
+  address?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,12 +50,19 @@ export interface StaffPaginatedResponse {
 }
 
 export interface CreateStaffData {
-  name: string;
-  role: string;
-  monthlySalary: number;
-  joiningDate: string;
+  firstName: string;
+  lastName?: string;
   phone?: string;
-  status?: 'ACTIVE' | 'INACTIVE';
+  email?: string;
+  cnic?: string;
+  fatherHusbandName?: string;
+  dateOfBirth?: string;
+  joiningDate?: string;
+  role: string;
+  roleTitle?: string;
+  baseSalary: number;
+  status?: StaffStatus;
+  address?: string;
 }
 
 export interface UpdateStaffData extends Partial<CreateStaffData> {}
@@ -62,15 +80,24 @@ export interface PayrollRecord {
   staffId: string;
   year: number;
   month: number;
-  salary: number;
+  baseSalary: number;
+  bonus: number;
+  deductions: number;
+  netSalary: number;
   amountPaid: number;
   status: PayrollStatus;
   paymentDate: string | null;
+  paymentMethod?: string;
+  referenceNumber?: string | null;
+  receiptNumber?: string | null;
   notes: string | null;
+  expenseId?: string | null;
+  processedById?: string | null;
   createdAt: string;
   updatedAt: string;
   staff?: {
     id: string;
+    displayId?: string;
     name: string;
     role: string;
     phone?: string | null;
@@ -95,10 +122,10 @@ export interface CreatePayrollData {
   staffId: string;
   month: number;
   year: number;
-  salary?: number;
-  amountPaid?: number;
-  status?: PayrollStatus;
-  paymentDate?: string;
+  bonus?: number;
+  deductions?: number;
+  paymentMethod?: string;
+  referenceNumber?: string;
   notes?: string;
 }
 
@@ -117,11 +144,6 @@ export interface PayrollHistoryResponse {
       name: string;
       role: string;
     };
-    filters: {
-      year: number | null;
-      month: number | null;
-    };
-    totalPaid: number;
     records: PayrollRecord[];
   };
   message?: string;
@@ -137,21 +159,35 @@ export interface PayrollHistoryResponse {
 export const getStaff = async (params?: {
   search?: string;
   status?: string;
+  role?: string;
   page?: number;
   limit?: number;
 }): Promise<StaffPaginatedResponse> => {
   const response = await api.get<any>('/staff', { params });
 
-  // Handle paginated response
   if (response.data?.data?.items) {
-    const normalized = response.data.data.items.map((item: StaffMember) => ({
+    const normalized = response.data.data.items.map((item: any) => ({
       ...item,
+      baseSalary: Number(item.baseSalary),
       monthlySalary: Number(item.monthlySalary),
     }));
     return {
       success: true,
       data: {
         ...response.data.data,
+        items: normalized,
+      },
+    };
+  } else if (response.data?.items) {
+    const normalized = response.data.items.map((item: any) => ({
+      ...item,
+      baseSalary: Number(item.baseSalary),
+      monthlySalary: Number(item.monthlySalary),
+    }));
+    return {
+      success: true,
+      data: {
+        ...response.data,
         items: normalized,
       },
     };
@@ -211,14 +247,14 @@ export const updateStaff = async (
 };
 
 /**
- * Delete a staff member
+ * Delete a staff member (Soft delete)
  */
 export const deleteStaff = async (id: string): Promise<StaffApiResponse> => {
   const response = await api.delete<any>(`/staff/${id}`);
   return {
     success: true,
     data: [],
-    message: response.data?.message || 'Staff member deleted successfully',
+    message: response.data?.message || 'Staff member deactivated successfully',
   };
 };
 
@@ -251,30 +287,60 @@ export const getPayroll = async (params?: {
 }): Promise<PayrollPaginatedResponse> => {
   const response = await api.get<any>('/staff/payroll', { params });
 
-  if (response.data?.data?.items) {
-    const normalized = response.data.data.items.map((item: PayrollRecord) => ({
-      ...item,
-      salary: Number(item.salary),
-      amountPaid: Number(item.amountPaid),
-    }));
-    return {
-      success: true,
-      data: {
-        ...response.data.data,
-        items: normalized,
-      },
-    };
+  const root = response.data?.data || response.data;
+  let items: any[] = [];
+  let pagination = { total: 0, page: 1, limit: 30, totalPages: 1 };
+
+  if (Array.isArray(root)) {
+    items = root;
+    pagination.total = root.length;
+  } else if (root && Array.isArray(root.items)) {
+    items = root.items;
+    pagination = root.pagination || pagination;
   }
 
+  const normalized = items.map((item: any) => ({
+    ...item,
+    baseSalary: Number(item.baseSalary || 0),
+    bonus: Number(item.bonus || 0),
+    deductions: Number(item.deductions || 0),
+    netSalary: Number(item.netSalary || 0),
+    amountPaid: Number(item.amountPaid || 0),
+  }));
+
   return {
-    success: false,
-    data: { items: [], pagination: { total: 0, page: 1, limit: 30, totalPages: 0 } },
-    message: response.data?.message || 'Failed to fetch payroll records',
+    success: true,
+    data: {
+      items: normalized,
+      pagination,
+    },
   };
 };
 
 /**
- * Create a payroll record for a staff member
+ * Get a single payroll record by ID
+ */
+export const getPayrollById = async (payrollId: string): Promise<{
+  success: boolean;
+  data: PayrollRecord;
+}> => {
+  const response = await api.get<any>(`/staff/payroll/${payrollId}`);
+  const record = response.data?.data || response.data;
+  return {
+    success: true,
+    data: {
+      ...record,
+      baseSalary: Number(record.baseSalary),
+      bonus: Number(record.bonus || 0),
+      deductions: Number(record.deductions || 0),
+      netSalary: Number(record.netSalary),
+      amountPaid: Number(record.amountPaid),
+    },
+  };
+};
+
+/**
+ * Create a payroll record for a staff member (Process Salary)
  */
 export const createPayroll = async (data: CreatePayrollData): Promise<{
   success: boolean;
@@ -287,15 +353,16 @@ export const createPayroll = async (data: CreatePayrollData): Promise<{
     success: true,
     data: {
       ...record,
-      salary: Number(record.salary),
+      baseSalary: Number(record.baseSalary),
+      netSalary: Number(record.netSalary),
       amountPaid: Number(record.amountPaid),
     },
-    message: response.data?.message || 'Payroll record created successfully',
+    message: response.data?.message || 'Salary payment processed successfully',
   };
 };
 
 /**
- * Update a payroll record (partial payments, status, notes)
+ * Update a payroll record
  */
 export const updatePayroll = async (
   payrollId: string,
@@ -311,7 +378,8 @@ export const updatePayroll = async (
     success: true,
     data: {
       ...record,
-      salary: Number(record.salary),
+      baseSalary: Number(record.baseSalary),
+      netSalary: Number(record.netSalary),
       amountPaid: Number(record.amountPaid),
     },
     message: response.data?.message || 'Payroll record updated successfully',
@@ -326,123 +394,20 @@ export const getStaffPayrollHistory = async (
   params?: { year?: number; month?: number }
 ): Promise<PayrollHistoryResponse> => {
   const response = await api.get<any>(`/staff/${staffId}/payroll-history`, { params });
-  const data = response.data?.data || response.data;
+  const root = response.data?.data || response.data;
+  const records = root?.records || root || [];
+
   return {
     success: true,
     data: {
-      ...data,
-      totalPaid: Number(data.totalPaid),
-      records: (data.records || []).map((r: PayrollRecord) => ({
+      staff: root?.staff || { id: staffId, name: 'Staff Member', role: '' },
+      records: records.map((r: any) => ({
         ...r,
-        salary: Number(r.salary),
+        baseSalary: Number(r.baseSalary),
+        netSalary: Number(r.netSalary),
         amountPaid: Number(r.amountPaid),
       })),
     },
     message: response.data?.message || 'Payroll history retrieved successfully',
   };
 };
-
-// ============================================================================
-// ALIAS EXPORTS (for store-admin StaffManagementPage compatibility)
-// ============================================================================
-
-/** Alias for getStaff — used by store-admin staff management */
-export const fetchStaffMembers = async (params?: {
-  search?: string;
-  status?: string;
-  page?: number;
-  limit?: number;
-}): Promise<StaffPaginatedResponse> => {
-  // Store-admin manages system users (login accounts), not HR staff
-  const response = await api.get<any>('/users', { params });
-
-  const data = response.data?.data || response.data;
-  let items: StaffMember[] = [];
-  let pagination = { total: 0, page: 1, limit: 20, totalPages: 0 };
-
-  if (data?.items) {
-    items = data.items.map((u: any) => ({
-      id: u.id,
-      storeId: u.storeId,
-      name: u.name,
-      phone: u.phone || null,
-      role: u.role,
-      monthlySalary: 0,
-      joiningDate: u.createdAt || new Date().toISOString(),
-      status: u.isActive ? 'ACTIVE' : 'INACTIVE',
-      createdAt: u.createdAt,
-      updatedAt: u.updatedAt,
-    }));
-    pagination = data.pagination || pagination;
-  } else if (Array.isArray(data)) {
-    items = data.map((u: any) => ({
-      id: u.id,
-      storeId: u.storeId,
-      name: u.name,
-      phone: u.phone || null,
-      role: u.role,
-      monthlySalary: 0,
-      joiningDate: u.createdAt || new Date().toISOString(),
-      status: u.isActive ? 'ACTIVE' : 'INACTIVE',
-      createdAt: u.createdAt,
-      updatedAt: u.updatedAt,
-    }));
-    pagination = { total: items.length, page: 1, limit: items.length, totalPages: 1 };
-  }
-
-  return {
-    success: true,
-    data: { items, pagination },
-  };
-};
-
-/** Alias for createStaff — used by store-admin staff management */
-export const createStaffMember = async (data: any): Promise<StaffApiResponse> => {
-  // Store-admin creates system users (login accounts), not HR staff members
-  // Use /users endpoint instead of /staff
-  const response = await api.post<any>('/users', {
-    name: data.name,
-    email: data.email,
-    password: data.password,
-    role: data.role || 'CASHIER',
-    isActive: data.isActive !== undefined ? data.isActive : true,
-    assignedTerminalIds: data.assignedTerminalIds,
-  });
-  return {
-    success: true,
-    data: [response.data?.data || response.data],
-    message: response.data?.message || 'Staff member created successfully',
-  };
-};
-
-/** Alias for updateStaff — used by store-admin staff management */
-export const updateStaffMember = async (
-  id: string,
-  data: any
-): Promise<StaffApiResponse> => {
-  // Store-admin updates system users (login accounts)
-  const payload: Record<string, any> = {};
-  if (data.name !== undefined) payload.name = data.name;
-  if (data.role !== undefined) payload.role = data.role;
-  if (data.isActive !== undefined) payload.isActive = data.isActive;
-  if (data.password) payload.password = data.password;
-  if (data.assignedTerminalIds !== undefined) payload.assignedTerminalIds = data.assignedTerminalIds;
-
-  const response = await api.patch<any>(`/users/${id}`, payload);
-  return {
-    success: true,
-    data: [response.data?.data || response.data],
-    message: response.data?.message || 'Staff member updated successfully',
-  };
-};
-
-/** Alias for fetching a single system user by ID — used by StaffDetailPage */
-export const fetchStaffMemberById = async (id: string): Promise<any> => {
-  const response = await api.get<any>(`/users/${id}`);
-  return response;
-};
-
-/** Re-export for store-admin compatibility */
-export type CreateStaffInput = CreateStaffData;
-export type StaffRole = string;
-export type StaffStatus = 'ACTIVE' | 'INACTIVE';

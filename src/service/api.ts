@@ -36,13 +36,31 @@ api.interceptors.request.use((config) => {
     });
   }
   
+  // Request metadata for performance tracking
+  (config as any).metadata = { startTime: new Date() };
+
   return config;
 });
 
-// Response Interceptor for Token Refresh and Error Mapping
+// Response Interceptor for Performance Tracking, Token Refresh and Error Mapping
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const startTime = (response.config as any).metadata?.startTime;
+    if (startTime) {
+      const endTime = new Date();
+      const duration = endTime.getTime() - startTime.getTime();
+      console.log(`%c[API RESPONSE TIME] ${response.config.url} took ${duration.toFixed(2)}ms`, 'color: #6366f1; font-weight: bold;');
+    }
+    return response;
+  },
   async (error) => {
+    const startTime = error.config?.metadata?.startTime;
+    if (startTime) {
+      const endTime = new Date();
+      const duration = endTime.getTime() - startTime.getTime();
+      console.log(`%c[API RESPONSE TIME] ${error.config?.url} (FAILED) took ${duration.toFixed(2)}ms`, 'color: #ef4444; font-weight: bold;');
+    }
+
     // 1. Handle Network/Connection Errors specifically
     if (!error.response && error.code === 'ERR_NETWORK') {
       console.error('🌐 [API] Connection Refused! Is the backend running?');
@@ -159,6 +177,7 @@ export const reportsApi = {
     storeId?: string;
     userId?: string;
   }) => api.get('/reports/audit-logs', { params }),
+  getHealth: () => api.get('/reports/health'),
 };
 
 export default api;

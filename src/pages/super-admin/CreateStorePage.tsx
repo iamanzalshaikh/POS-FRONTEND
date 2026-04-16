@@ -9,7 +9,7 @@ import InputField from '../../components/shared/admin/InputField';
 import PasswordInput from '../../components/shared/admin/PasswordInput';
 import SubmitButton from '../../components/shared/admin/SubmitButton';
 import { Store, ArrowLeft, ShieldCheck } from 'lucide-react';
-import { showToast } from '../../utils/admin-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const createStoreSchema = yup.object().shape({
     // Store Details
@@ -36,6 +36,7 @@ const createStoreSchema = yup.object().shape({
 const CreateStorePage: React.FC = () => {
     const { createStore, error: storeError } = useStoreStore();
     const navigate = useNavigate();
+    const { toast } = useToast();
 
     const {
         register,
@@ -48,11 +49,18 @@ const CreateStorePage: React.FC = () => {
     const onSubmit = async (data: any) => {
         const success = await createStore(data);
         if (success) {
-            showToast('Store Provisioned Successfully');
+            toast({
+                title: "Provisioning Success",
+                description: 'Store Node Provisioned Successfully',
+                variant: 'success'
+            });
             navigate('/super-admin/stores');
         } else {
-            // The createStore action sets the error in the store state on failure
-            showToast(storeError || 'Failed to Provision Store', 'error');
+            toast({
+                title: "Provisioning Failed",
+                description: storeError || 'Failed to Provision Store',
+                variant: 'destructive'
+            });
         }
     };
 

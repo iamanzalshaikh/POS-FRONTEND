@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, Calendar, Filter } from 'lucide-react';
 import { getSalesReport, getInventoryReport, getSalesTransactions } from '../../api/finance.api';
 import MetricCard from '../../components/global-components/MetricCard';
+import PageHeader from '../../components/global-components/PageHeader';
 
 interface ExportOption {
   id: string;
@@ -99,27 +100,18 @@ const ExportData: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Export Header */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-bold flex items-center">
-              <Download size={24} className="mr-3 text-blue-400" />
-              Export Financial Data
-            </h2>
-            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-2">
-              Download reports in multiple formats
-            </p>
-          </div>
-          <button
-            onClick={handleExportAll}
-            className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
-          >
-            <Download size={16} />
-            <span>Export All</span>
-          </button>
-        </div>
+      <PageHeader
+        title="Export Financial Data"
+        description="Download reports in multiple formats"
+        icon={Download}
+        primaryAction={{
+          label: "Export All",
+          icon: Download,
+          onClick: handleExportAll
+        }}
+      />
 
+      <div className="bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm">
         {/* Date Range Filter */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
           <div>

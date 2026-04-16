@@ -11,37 +11,37 @@ import {
   AlertCircle,
   CheckCircle2,
   DollarSign,
+  MoreHorizontal
 } from 'lucide-react';
-import api from '../../api/api';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/global-components/dropdown-menu';
+import { 
+  getStaff, 
+  createStaff, 
+  updateStaff, 
+  deleteStaff, 
+  getStaffSummary,
+  type StaffMember,
+  type StaffStatus
+} from '../../api/staff.api';
 import StaffForm, { type StaffFormData } from '../../components/accountant/StaffForm';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
-
-// Types
-type StaffStatus = 'ACTIVE' | 'INACTIVE';
-
-interface StaffMember {
-  id: string;
-  name: string;
-  role: string;
-  monthlySalary: number;
-  status: StaffStatus;
-  joiningDate: string;
-  phone?: string;
-  displayId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { toast } from '@/lib/toast';
 
 // Valid staff roles
 const STAFF_ROLES = [
-  'CASHIER',
   'MANAGER',
   'SUPERVISOR',
-  'ACCOUNTANT',
+  'CASHIER',
   'SALES_ASSOCIATE',
+  'ACCOUNTANT',
   'INVENTORY_CLERK',
   'SECURITY',
   'CLEANER',
@@ -50,19 +50,20 @@ const STAFF_ROLES = [
 ];
 
 // Utility functions
-const formatCurrency = (amount: number): string => {
+const formatAmount = (amount: number | string): string => {
+  const num = typeof amount === 'string' ? parseFloat(amount) : amount;
   return new Intl.NumberFormat('en-PK', {
-    style: 'currency',
-    currency: 'PKR',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })
-    .format(amount)
-    .replace('PKR', 'Rs')
-    .trim();
+  }).format(num || 0);
+};
+
+const formatCurrency = (amount: number | string): string => {
+  return `Rs ${formatAmount(amount)}`;
 };
 
 const formatDate = (dateString: string): string => {
+  if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleDateString('en-PK', {
     year: 'numeric',
     month: 'short',
@@ -72,6 +73,7 @@ const formatDate = (dateString: string): string => {
 
 // Format role for display
 const formatRole = (role: string): string => {
+  if (!role) return 'N/A';
   return role.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
@@ -86,6 +88,13 @@ const StaffManagementPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | StaffStatus>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
+  // Summary state
+  const [summary, setSummary] = useState({
+    totalStaff: 0,
+    activeStaff: 0,
+    totalMonthlySalary: 0
+  });
+
   // Modal state
   const [showStaffForm, setShowStaffForm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -95,64 +104,70 @@ const StaffManagementPage: React.FC = () => {
   const [editingStaffData, setEditingStaffData] = useState<StaffFormData | null>(null);
 
   // Fetch staff
-  const fetchStaff = useCallback(async () => {
+  const fetchStaffData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/staff', {
-        params: { status: 'all' },
-      });
+      const [staffRes, summaryRes] = await Promise.all([
+        getStaff({ 
+          status: statusFilter === 'ALL' ? 'all' : statusFilter,
+          role: roleFilter === 'ALL' ? undefined : roleFilter,
+          search: searchQuery || undefined
+        }),
+        getStaffSummary()
+      ]);
       
-      let staffList: StaffMember[] = [];
-      if (response?.data?.items && Array.isArray(response.data.items)) {
-        staffList = response.data.items;
-      } else if (response?.data?.data?.items && Array.isArray(response.data.data.items)) {
-        staffList = response.data.data.items;
-      } else if (Array.isArray(response?.data?.data)) {
-        staffList = response.data.data;
-      } else if (Array.isArray(response?.data)) {
-        staffList = response.data;
+      if (staffRes.success) {
+        setStaff(staffRes.data.items);
       }
-
-      setStaff(staffList);
+      if (summaryRes.success) {
+        setSummary(summaryRes.data);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load staff');
-      setStaff([]);
+      setError(err.response?.data?.message || 'Failed to load staff metadata');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [statusFilter, roleFilter, searchQuery]);
 
   useEffect(() => {
-    fetchStaff();
-  }, [fetchStaff]);
+    fetchStaffData();
+  }, [fetchStaffData]);
 
   const handleSaveStaff = async (formData: StaffFormData) => {
     setIsSubmitting(true);
     try {
-      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
       const backendData = {
-        name: fullName,
-        role: formData.role,
-        monthlySalary: Number(formData.basicSalary),
-        joiningDate: formData.joinDate,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        fatherHusbandName: formData.fatherName,
+        cnic: formData.cnic,
+        email: formData.email || undefined,
         phone: formData.mobile,
+        role: formData.role,
+        roleTitle: formatRole(formData.role),
+        dateOfBirth: formData.dob,
+        joiningDate: formData.joinDate,
+        address: formData.address || undefined,
+        baseSalary: Number(formData.basicSalary),
         status: formData.status,
       };
 
       if (selectedStaff) {
-        await api.patch(`/staff/${selectedStaff.id}`, backendData);
+        await updateStaff(selectedStaff.id, backendData);
+        toast.success('Staff member updated successfully');
       } else {
-        await api.post('/staff', backendData);
+        await createStaff(backendData);
+        toast.success('New staff member registered successfully');
       }
       
       setShowStaffForm(false);
       setEditingStaffData(null);
       setSelectedStaff(null);
-      fetchStaff();
+      fetchStaffData();
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Failed to save staff member';
-      setError(message);
+      const message = err.response?.data?.message || 'Failed to sync staff record with registry';
+      toast.error(message);
       throw new Error(message);
     } finally {
       setIsSubmitting(false);
@@ -163,26 +178,17 @@ const StaffManagementPage: React.FC = () => {
     if (!selectedStaff) return;
     setIsDeleting(true);
     try {
-      await api.delete(`/staff/${selectedStaff.id}`);
+      await deleteStaff(selectedStaff.id);
+      toast.success('Staff member deactivated successfully');
       setShowDeleteModal(false);
       setSelectedStaff(null);
-      fetchStaff();
+      fetchStaffData();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to delete staff member');
+      toast.error(err.response?.data?.message || 'Termination sequence failed');
     } finally {
       setIsDeleting(false);
     }
   };
-
-  const filteredStaff = staff.filter((member) => {
-    const matchesSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || member.status === statusFilter;
-    const matchesRole = roleFilter === 'ALL' || member.role === roleFilter;
-    return matchesSearch && matchesStatus && matchesRole;
-  });
-
-  const totalMonthlySalary = staff.reduce((sum, member) => sum + Number(member.monthlySalary || 0), 0);
-  const activeCount = staff.filter((s) => s.status === 'ACTIVE').length;
 
   const columns: ColumnDef<StaffMember>[] = [
     {
@@ -197,18 +203,9 @@ const StaffManagementPage: React.FC = () => {
       header: "Staff Member",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
-          
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.name}</p>
           </div>
-        </div>
-      )
-    },
-    {
-      header: "Joined On",
-      cell: ({ row }) => (
-        <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums">
-          {formatDate(row.original.joiningDate)}
         </div>
       )
     },
@@ -223,10 +220,10 @@ const StaffManagementPage: React.FC = () => {
       )
     },
     {
-      header: "Monthly Salary",
+      header: "Base Salary",
       cell: ({ row }) => (
         <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
-          {formatCurrency(row.original.monthlySalary)}
+          {formatAmount(row.original.baseSalary || row.original.monthlySalary)}
         </div>
       )
     },
@@ -246,48 +243,65 @@ const StaffManagementPage: React.FC = () => {
       )
     },
     {
+      header: "Joined On",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums">
+          {formatDate(row.original.joiningDate)}
+        </div>
+      )
+    },
+    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex justify-center items-center gap-2">
-          <button
-            onClick={() => {
-              setSelectedStaff(row.original);
-              const nameParts = row.original.name.split(' ');
-              setEditingStaffData({
-                firstName: nameParts[0] || '',
-                lastName: nameParts.slice(1).join(' ') || '',
-                fatherName: '',
-                cnic: '',
-                email: '',
-                mobile: row.original.phone || '',
-                role: row.original.role,
-                maritalStatus: 'SINGLE',
-                dob: '',
-                joinDate: row.original.joiningDate.split('T')[0],
-                address: '',
-                basicSalary: String(row.original.monthlySalary),
-                joiningType: 'FULL_TIME',
-                status: row.original.status,
-              });
-              setShowStaffForm(true);
-            }}
-            className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
-            title="Edit"
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            onClick={() => {
-              setSelectedStaff(row.original);
-              setShowDeleteModal(true);
-            }}
-            className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50"
-            title="Delete"
-          >
-            <Trash2 size={16} />
-          </button>
+        <div className="flex justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl border border-slate-100 dark:border-slate-700 transition-all active:scale-95 shadow-sm">
+                <MoreHorizontal size={18} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 p-2 rounded-2xl border-slate-100 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900 z-[9999]">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedStaff(row.original);
+                  setEditingStaffData({
+                    firstName: row.original.firstName || row.original.name.split(' ')[0] || '',
+                    lastName: row.original.lastName || row.original.name.split(' ').slice(1).join(' ') || '',
+                    fatherName: row.original.fatherHusbandName || '',
+                    cnic: row.original.cnic || '',
+                    email: row.original.email || '',
+                    mobile: row.original.phone || '',
+                    role: row.original.role,
+                    maritalStatus: 'SINGLE',
+                    dob: row.original.dateOfBirth ? row.original.dateOfBirth.split('T')[0] : '',
+                    joinDate: row.original.joiningDate.split('T')[0],
+                    address: row.original.address || '',
+                    basicSalary: String(row.original.baseSalary || row.original.monthlySalary),
+                    joiningType: 'FULL_TIME',
+                    status: row.original.status,
+                  });
+                  setShowStaffForm(true);
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-default hover:bg-slate-50 dark:hover:bg-slate-800 group outline-none"
+              >
+                <Edit2 size={14} className="text-slate-400 group-hover:text-blue-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white">Modify Record</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedStaff(row.original);
+                  setShowDeleteModal(true);
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-default hover:bg-rose-50 dark:hover:bg-rose-950/30 group mt-1 outline-none"
+              >
+                <Trash2 size={14} className="text-slate-400 group-hover:text-rose-500" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:text-rose-600">Deactivate</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
+       
       )
     }
   ];
@@ -295,8 +309,8 @@ const StaffManagementPage: React.FC = () => {
   return (
     <div className="animate-fade-in space-y-8">
       <PageHeader
-        title="Staff Management"
-        description="Manage staff information, roles, and salaries"
+        title="Staff List"
+        description="Manage your employees, their roles, and basic salary details"
         primaryAction={{
           label: "Add Staff Member",
           icon: Plus,
@@ -321,31 +335,31 @@ const StaffManagementPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <MetricCard
           title="Total Staff"
-          value={String(staff.length)}
+          value={String(summary.totalStaff)}
           icon={Users}
           colorClass="bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
         />
         <MetricCard
           title="Active Staff"
-          value={String(activeCount)}
+          value={String(summary.activeStaff)}
           icon={CheckCircle2}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <MetricCard
-          title="Monthly Payroll"
-          value={formatCurrency(totalMonthlySalary)}
+          title="Monthly Salary Total"
+          value={formatCurrency(summary.totalMonthlySalary)}
           icon={DollarSign}
           colorClass="bg-slate-900 text-white dark:bg-slate-800 dark:text-white"
         />
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10 border border-slate-100 dark:border-slate-800">
         <DataTable
           columns={columns}
-          data={filteredStaff}
+          data={staff}
           isLoading={loading}
-          onRefresh={fetchStaff}
-          placeholder="Search staff members..."
+          onRefresh={fetchStaffData}
+          placeholder="Search staff..."
           hidePagination={false}
           headerActions={
             <div className="flex flex-wrap items-center gap-3">
@@ -353,7 +367,7 @@ const StaffManagementPage: React.FC = () => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                 <input
                   type="text"
-                  placeholder="Search by name..."
+                  placeholder="Search name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
@@ -365,8 +379,8 @@ const StaffManagementPage: React.FC = () => {
                 className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
               >
                 <option value="ALL">All Status</option>
-                <option value="ACTIVE">Active Only</option>
-                <option value="INACTIVE">Inactive Only</option>
+                <option value="ACTIVE">Active Staff</option>
+                <option value="INACTIVE">Inactive</option>
               </select>
               <select
                 value={roleFilter}
@@ -412,9 +426,9 @@ const StaffManagementPage: React.FC = () => {
               <div className="w-16 h-16 bg-rose-50 dark:bg-rose-950/30 rounded-2xl flex items-center justify-center mb-6 border border-rose-100 dark:border-rose-900/50">
                 <AlertCircle size={32} className="text-rose-600 dark:text-rose-500" />
               </div>
-              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Terminate Account</h3>
+              <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Deactivate Staff</h3>
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 opacity-70 mt-4 leading-relaxed">
-                You are about to purge <strong className="text-slate-900 dark:text-white">{selectedStaff.name}</strong> from the system registry. This operation is irreversible.
+                You are about to deactivate <strong className="text-slate-900 dark:text-white">{selectedStaff.name}</strong>. Their profile will be marked as INACTIVE.
               </p>
             </div>
             <div className="flex gap-3 mt-10">
@@ -426,7 +440,7 @@ const StaffManagementPage: React.FC = () => {
                 disabled={isDeleting}
                 className="flex-1 px-4 py-4 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-black uppercase tracking-widest text-[10px] rounded-2xl border-2 border-slate-100 dark:border-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50 active:scale-95"
               >
-                Abort
+                Cancel
               </button>
               <button
                 onClick={handleDeleteStaff}
@@ -434,7 +448,7 @@ const StaffManagementPage: React.FC = () => {
                 className="flex-[1.5] px-4 py-4 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-700 transition-all disabled:bg-slate-400 flex items-center justify-center gap-2 shadow-xl shadow-rose-500/20 active:scale-95 border-b-4 border-rose-800"
               >
                 {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
-                Confirm Purge
+                Confirm Inactive
               </button>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { toLocalYMD } from '../../utils/format';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
+import { MonthPicker } from '../../components/global-components/Calendar/MonthPicker';
 import type { ColumnDef } from '@tanstack/react-table';
 
 interface MonthlyCloseData {
@@ -178,7 +179,7 @@ const MonthlyCloseReport: React.FC = () => {
     return date.toLocaleString('default', { month: 'long', year: 'numeric' });
   };
 
-  if (loading) return <LoadingState />;
+  if (loading) return <MonthlyCloseSkeleton />;
   if (error) return <ErrorState message={error} />;
   if (!data) return null;
 
@@ -186,14 +187,23 @@ const MonthlyCloseReport: React.FC = () => {
   const grossProfit = data.profit.grossProfit;
   const netProfit = data.profit.netProfit;
 
-  const tableRows = [
+  interface MonthlyReportRow {
+    id: string;
+    item: string;
+    category: string;
+    amount: number;
+    percentage: number;
+    status: 'revenue' | 'cost' | 'expense';
+  }
+
+  const tableRows: MonthlyReportRow[] = [
     {
       id: 'revenue',
       item: 'Gross Revenue',
       category: 'Revenue',
       amount: data.sales.totalRevenue,
       percentage: 100,
-      status: 'revenue' as const
+      status: 'revenue'
     },
     {
       id: 'discount',
@@ -201,7 +211,7 @@ const MonthlyCloseReport: React.FC = () => {
       category: 'Adjustments',
       amount: data.sales.totalDiscount,
       percentage: (data.sales.totalDiscount / data.sales.totalRevenue) * 100,
-      status: 'cost' as const
+      status: 'cost'
     },
     {
       id: 'tax',
@@ -209,7 +219,7 @@ const MonthlyCloseReport: React.FC = () => {
       category: 'Adjustments',
       amount: data.sales.totalTax,
       percentage: (data.sales.totalTax / data.sales.totalRevenue) * 100,
-      status: 'revenue' as const
+      status: 'revenue'
     },
     {
       id: 'net-revenue',
@@ -217,7 +227,7 @@ const MonthlyCloseReport: React.FC = () => {
       category: 'Subtotal',
       amount: data.sales.netRevenue,
       percentage: (data.sales.netRevenue / data.sales.totalRevenue) * 100,
-      status: 'revenue' as const
+      status: 'revenue'
     },
     {
       id: 'expenses',
@@ -225,7 +235,7 @@ const MonthlyCloseReport: React.FC = () => {
       category: 'Operating',
       amount: data.expenses.total,
       percentage: (data.expenses.total / data.sales.totalRevenue) * 100,
-      status: 'expense' as const
+      status: 'expense'
     },
     {
       id: 'net-profit',
@@ -233,11 +243,11 @@ const MonthlyCloseReport: React.FC = () => {
       category: 'Bottom Line',
       amount: data.profit.netProfit,
       percentage: data.profit.netMargin,
-      status: (data.profit.netProfit >= 0 ? 'revenue' : 'cost') as const
+      status: data.profit.netProfit >= 0 ? 'revenue' : 'cost'
     }
   ];
 
-  const columns: ColumnDef<typeof tableRows[0]>[] = [
+  const columns: ColumnDef<MonthlyReportRow>[] = [
     {
       header: "Line Item",
       cell: ({ row }) => (
@@ -300,21 +310,15 @@ const MonthlyCloseReport: React.FC = () => {
             // Export functionality
           }
         }}
-      />
-
-      {/* Month Selector */}
-      <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-fit">
-        <Calendar size={18} className="text-slate-400" />
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-3 py-1 bg-transparent border-none text-sm font-black uppercase text-slate-900 dark:text-white outline-none cursor-pointer"
-        />
-        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-4">
-          {data.period.startDate} to {data.period.endDate}
-        </span>
-      </div>
+      >
+        <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl w-[260px]">
+          <MonthPicker
+            value={selectedMonth}
+            onChange={(val) => val && setSelectedMonth(val)}
+            className="border-none bg-transparent h-auto py-0 hover:bg-transparent shadow-none"
+          />
+        </div>
+      </PageHeader>
 
       {/* Summary Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -432,6 +436,31 @@ const MonthlyCloseReport: React.FC = () => {
     </div>
   );
 };
+
+const MonthlyCloseSkeleton = () => (
+  <div className="animate-pulse space-y-8">
+    <div className="flex justify-between items-center">
+      <div className="space-y-3">
+        <div className="h-8 w-64 bg-slate-200 dark:bg-slate-800 rounded-lg" />
+        <div className="h-4 w-96 bg-slate-100 dark:bg-slate-800/50 rounded-lg" />
+      </div>
+      <div className="h-12 w-48 bg-slate-100 dark:bg-slate-800 rounded-2xl" />
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[...Array(3)].map((_, i) => (
+        <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-[2.5rem]" />
+      ))}
+    </div>
+
+    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-[2.5rem] h-[400px]" />
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="h-48 bg-slate-100 dark:bg-slate-800 rounded-[2.5rem]" />
+      <div className="h-48 bg-slate-100 dark:bg-slate-800 rounded-[2.5rem]" />
+    </div>
+  </div>
+);
 
 const LoadingState = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">

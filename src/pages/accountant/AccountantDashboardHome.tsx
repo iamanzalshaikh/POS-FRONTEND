@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Calculator,
   DollarSign,
@@ -23,27 +24,64 @@ import {
   Cell
 } from 'recharts';
 import MetricCard from '@/components/global-components/MetricCard';
-import { formatCurrency } from '@/utils/format';
-import type { FinanceSummaryData } from '@/api/finance.api';
+import PageHeader from '@/components/global-components/PageHeader';
+import { formatCurrency, toLocalYMD } from '@/utils/format';
+import { getFinanceSummary, getSalesReport } from '@/api/finance.api';
 import { cn } from '@/lib/utils';
+import { DashboardSkeleton } from "@/components/ui/skeletons/DashboardSkeleton";
 
 export type AccountantPeriodPreset = 'today' | 'week' | 'month';
 
-export interface AccountantDashboardHomeProps {
-  summary: FinanceSummaryData | null;
-  dailyRevenue: Array<{ label: string; revenue: number }>;
-  loading: boolean;
-  periodPreset: AccountantPeriodPreset;
-  onPeriodPresetChange: (preset: AccountantPeriodPreset) => void;
+function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string; endDate: string } {
+  const today = new Date();
+  const endDate = toLocalYMD(today);
+  if (preset === 'today') {
+    return { startDate: endDate, endDate };
+  }
+  if (preset === 'week') {
+    const start = new Date(today);
+    const dow = start.getDay();
+    const daysFromMonday = dow === 0 ? 6 : dow - 1;
+    start.setDate(start.getDate() - daysFromMonday);
+    return { startDate: toLocalYMD(start), endDate };
+  }
+  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  return { startDate: toLocalYMD(start), endDate };
 }
 
-const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
-  summary,
-  dailyRevenue,
-  loading,
-  periodPreset,
-  onPeriodPresetChange,
-}) => {
+const AccountantDashboardHome: React.FC = () => {
+  const [periodPreset, setPeriodPreset] = useState<AccountantPeriodPreset>('month');
+  const { startDate, endDate } = getPeriodForPreset(periodPreset);
+
+  // Queries
+  const { data: summaryRes, isLoading: summaryLoading } = useQuery({
+      queryKey: ['finance-summary', startDate, endDate],
+      queryFn: () => getFinanceSummary({ startDate, endDate }),
+      staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: salesRes, isLoading: salesLoading } = useQuery({
+      queryKey: ['finance-sales-report', startDate, endDate],
+      queryFn: () => getSalesReport({ startDate, endDate }),
+      staleTime: 1000 * 60 * 5,
+  });
+
+  const summary = summaryRes?.success ? summaryRes.data : null;
+  const dailyRevenue = useMemo(() => {
+      if (salesRes?.success && salesRes.data?.data?.length) {
+          return salesRes.data.data.map((r: any) => ({
+              label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+              }),
+              revenue: r.revenue,
+          }));
+      }
+      return [];
+  }, [salesRes]);
+
+  const loading = summaryLoading || salesLoading;
+
   const pieRows = useMemo(() => {
     if (!summary) return [];
     return [
@@ -61,7 +99,7 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
   const presetBtn = (preset: AccountantPeriodPreset, label: string) => (
     <button
       type="button"
-      onClick={() => onPeriodPresetChange(preset)}
+      onClick={() => setPeriodPreset(preset)}
       className={cn(
         'relative px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 rounded-lg',
         periodPreset === preset
@@ -73,72 +111,42 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
     </button>
   );
 
-  if (loading) return <LoadingState />;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 animate-fade-in">
-      {/* Header Section */}
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase transition-all">
-            Dashboard
-          </h1>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-1">Financial Intelligence Unit</p>
-        </div>
+      <PageHeader
+        title="Dashboard"
+        description="Financial Intelligence Unit"
+        className="mb-10"
+      >
         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
           {presetBtn('today', 'Today')}
           {presetBtn('week', 'Weekly')}
           {presetBtn('month', 'Monthly')}
         </div>
-      </div>
+      </PageHeader>
 
-      {/* Main Stats Grid */}
+      {/* Main Stats Grid - Consolidated KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Gross Revenue"
+          title="Total Sales"
           value={formatCurrency(summary?.totalRevenue ?? 0)}
           icon={DollarSign}
-          change={summary?.revenueChange}
           isPositive={summary ? summary.revenueChange >= 0 : true}
-          colorClass="bg-blue-50 text-blue-600 border-blue-100"
+          colorClass="bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50"
         />
         <MetricCard
-          title="Direct COGS"
-          value={formatCurrency(summary?.cogs ?? 0)}
-          icon={Package}
-          colorClass="bg-slate-50 text-slate-700 border-slate-200"
+          title="Total Expense"
+          value={formatCurrency((summary?.totalExpenses ?? 0) - (summary?.salaries ?? 0))}
+          icon={Calculator}
+          colorClass="bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
         />
         <MetricCard
-          title="Gross Profit"
-          value={formatCurrency(summary?.grossProfit ?? 0)}
-          icon={Scale}
-          colorClass="bg-emerald-50 text-emerald-600 border-emerald-100"
-        />
-        <MetricCard
-          title="Gross Margin"
-          value={marginDisplay}
-          icon={Percent}
-          colorClass="bg-indigo-50 text-indigo-600 border-indigo-100"
-        />
-        <MetricCard
-          title="Operations"
-          value={formatCurrency(summary?.operatingExpenses ?? 0)}
-          icon={Landmark}
-          colorClass="bg-orange-50 text-orange-700 border-orange-100"
-        />
-        <MetricCard
-          title="Payroll Cost"
+          title="Staff Payroll"
           value={formatCurrency(summary?.salaries ?? 0)}
           icon={Wallet}
-          colorClass="bg-amber-50 text-amber-700 border-amber-100"
-        />
-        <MetricCard
-          title="Total Burden"
-          value={formatCurrency(summary?.totalExpenses ?? 0)}
-          icon={Calculator}
-          change={summary?.expensesChange}
-          isPositive={summary ? summary.expensesChange <= 0 : true}
-          colorClass="bg-rose-50 text-rose-600 border-rose-100"
+          colorClass="bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50"
         />
         <MetricCard
           title="Net Profit"
@@ -146,7 +154,7 @@ const AccountantDashboardHome: React.FC<AccountantDashboardHomeProps> = ({
           icon={TrendingUp}
           change={summary?.profitChange}
           isPositive={summary ? summary.profitChange >= 0 : true}
-          colorClass="bg-slate-900 text-white shadow-lg shadow-slate-200"
+          colorClass="bg-slate-900 text-white shadow-lg shadow-slate-200 dark:shadow-none"
         />
       </div>
 
@@ -284,20 +292,5 @@ const DonutTooltip = ({ active, payload }: any) => {
   }
   return null;
 };
-
-const LoadingState = () => (
-  <div className="max-w-[1600px] mx-auto p-10 space-y-10 animate-pulse">
-    <div className="h-24 bg-slate-100 dark:bg-slate-800 rounded-[2rem] w-full" />
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="h-40 bg-slate-100 dark:bg-slate-800 rounded-[2.5rem]" />
-      ))}
-    </div>
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-      <div className="xl:col-span-2 h-[450px] bg-slate-100 dark:bg-slate-800 rounded-[2.5rem]" />
-      <div className="h-[450px] bg-slate-100 dark:bg-slate-800 rounded-[2.5rem]" />
-    </div>
-  </div>
-);
 
 export default AccountantDashboardHome;

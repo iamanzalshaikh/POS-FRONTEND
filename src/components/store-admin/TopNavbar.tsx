@@ -28,10 +28,15 @@ export default function TopNavbar({
     const navigate = useNavigate();
 
     const handleProfileClick = () => {
-        if (user?.role === 'SUPER_ADMIN') {
-            navigate('/super-admin/settings');
-        } else if (user?.role === 'STORE_ADMIN') {
-            navigate('/store-admin/settings');
+        const role = user?.role;
+        if (!role) return;
+        
+        switch(role) {
+            case 'SUPER_ADMIN': navigate('/super-admin/profile'); break;
+            case 'STORE_ADMIN': navigate('/store-admin/profile'); break;
+            case 'CASHIER': navigate('/cashier/profile'); break;
+            case 'ACCOUNTANT': navigate('/accountant/profile'); break;
+            default: navigate('/login');
         }
     };
 
@@ -94,8 +99,8 @@ export default function TopNavbar({
                                     </p>
                                 </div>
                                 <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white dark:group-hover:bg-indigo-500 transition-all duration-300 overflow-hidden">
-                                    {(user as any)?.store?.logoUrl ? (
-                                        <img src={(user as any).store.logoUrl} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    {user?.profilePictureUrl ? (
+                                        <img src={user.profilePictureUrl} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                     ) : user?.name ? (
                                         <span className="font-black text-base tracking-widest">
                                             {user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}

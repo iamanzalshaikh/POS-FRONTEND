@@ -11,6 +11,7 @@ import type { Expense } from '../../utils/expense-utils';
 import {
   getExpenseSummary,
   formatCurrency,
+  formatAmount,
   getCategoryLabel,
   formatDate,
 } from '../../utils/expense-utils';
@@ -98,6 +99,9 @@ const ExpensesPage: React.FC = () => {
   };
 
   const filteredExpenses = expenses.filter(e => {
+    const isSalary = e.category === 'SALARIES';
+    if (isSalary) return false;
+
     const matchesSearch = e.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           e.category.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'ALL' || e.category === categoryFilter;
@@ -117,23 +121,13 @@ const ExpensesPage: React.FC = () => {
       header: "Expense Detail",
       cell: ({ row }) => (
         <div className="flex items-center justify-center gap-3">
-          <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700">
-            <DollarSign size={16} />
-          </div>
           <div className="text-left">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.description}</p>
           </div>
         </div>
       )
     },
-    {
-      header: "Date",
-      cell: ({ row }) => (
-        <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
-          {formatDate(row.original.date)}
-        </div>
-      )
-    },
+    
     {
       header: "Category",
       cell: ({ row }) => (
@@ -148,7 +142,15 @@ const ExpensesPage: React.FC = () => {
       header: "Amount",
       cell: ({ row }) => (
         <div className="text-center text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest tabular-nums">
-          {formatCurrency(row.original.amount)}
+          {formatAmount(row.original.amount)}
+        </div>
+      )
+    },
+    {
+      header: "Date",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+          {formatDate(row.original.date)}
         </div>
       )
     },

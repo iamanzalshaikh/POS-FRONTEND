@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useState, useMemo } from "react"
+import { useQuery } from '@tanstack/react-query';
 import ProductsHeader from "@/components/store-admin/ProductsHeader"
 import AddProductModal from "@/components/store-admin/AddProductModal"
 import MetricCard from "@/components/global-components/MetricCard";
@@ -7,8 +8,9 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { Plus, Trash, Box, Search, ShoppingCart, PackageOpen, AlertTriangle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatCurrencyShort, formatNumberShort } from "@/utils/format";
+import { formatCurrencyShort, formatAmountShort, formatNumberShort } from "@/utils/format";
 import AddStockModal from "@/components/store-admin/AddStockModal";
+import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
 
 import { fetchProducts } from "@/api/products.api";
 import { fetchFullInventory } from "@/api/inventory.api";
@@ -25,75 +27,44 @@ export default function ProductsManagementPage() {
     const [categoryId, setCategoryId] = useState('')
     const [isActiveFilter, setIsActiveFilter] = useState<string>('all')
 
-    const [categories, setCategories] = useState<any[]>([])
-
-    // Load categories (can be optimized with useQuery later if needed, but for now matching existing loadCategories pattern)
-    useEffect(() => {
-        const loadCategories = async () => {
-            try {
-                const res = await getCategories()
-                const cats = res.data?.data || (Array.isArray(res.data) ? res.data : [])
-                setCategories(cats)
-            } catch (error) {
-                console.error("Failed to load categories:", error)
-            }
-        }
-        void loadCategories()
-    }, [])
-
-    const [productsDataRes, setProductsDataRes] = useState<any>(null);
-    const [productsLoading, setProductsLoading] = useState(true);
-    const [inventoryDataRes, setInventoryDataRes] = useState<any>(null);
-    const [inventoryLoading, setInventoryLoading] = useState(true);
+    // Queries
+    const { data: catRes } = useQuery({
+        queryKey: ['categories'],
+        queryFn: () => getCategories(),
+        staleTime: 1000 * 60 * 10,
+    });
+    const categories = catRes?.data?.data || (Array.isArray(catRes?.data) ? catRes?.data : []);
 
     const queryParams: any = {}
     if (search) queryParams.search = search;
     if (categoryId && categoryId !== 'all') queryParams.categoryId = categoryId;
     if (isActiveFilter !== 'all') queryParams.isActive = isActiveFilter === 'true';
 
-    const loadProducts = async () => {
-        setProductsLoading(true);
-        try {
-            const data = await fetchProducts(queryParams);
-            setProductsDataRes(data);
-        } catch (error) {
-            console.error("Failed to fetch products:", error);
-        } finally {
-            setProductsLoading(false);
-        }
-    };
+    const { 
+        data: productsRes, 
+        isLoading: productsLoading, 
+        refetch: refetchProducts 
+    } = useQuery({
+        queryKey: ['products', search, categoryId, isActiveFilter],
+        queryFn: () => fetchProducts(queryParams),
+        staleTime: 1000 * 60 * 5,
+    });
 
-    const loadInventory = async () => {
-        setInventoryLoading(true);
-        try {
-            const data = await fetchFullInventory();
-            setInventoryDataRes(data);
-        } catch (error) {
-            console.error("Failed to fetch inventory:", error);
-        } finally {
-            setInventoryLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        loadProducts();
-    }, [search, categoryId, isActiveFilter]);
-
-    useEffect(() => {
-        loadInventory();
-    }, []);
-
-    const refetchProducts = () => {
-        loadProducts();
-        loadInventory();
-    };
+    const { 
+        data: inventoryRes, 
+        isLoading: inventoryLoading, 
+        refetch: refetchInventory 
+    } = useQuery({
+        queryKey: ['inventory-full'],
+        queryFn: () => fetchFullInventory(),
+        staleTime: 1000 * 60 * 5,
+    });
 
     const loading = productsLoading || inventoryLoading;
 
-    // Merge Logic
-    const getMergedProducts = () => {
-        const productsRaw = productsDataRes?.data || (Array.isArray(productsDataRes) ? productsDataRes : [])
-        const invResData = inventoryDataRes?.data
+    const products = useMemo(() => {
+        const productsRaw = productsRes?.data || (Array.isArray(productsRes) ? productsRes : [])
+        const invResData = inventoryRes?.data
         const inventoryRaw = Array.isArray(invResData) ? invResData : (invResData?.data || [])
 
         const inventoryMap = inventoryRaw.reduce((acc: any, inv: any) => {
@@ -105,9 +76,12 @@ export default function ProductsManagementPage() {
             ...p,
             stock: inventoryMap[p.id] || 0
         }))
-    }
+    }, [productsRes, inventoryRes]);
 
-    const products = getMergedProducts()
+    const handleRefresh = () => {
+        refetchProducts();
+        refetchInventory();
+    }
 
     const columns: ColumnDef<any>[] = [
         {
@@ -155,7 +129,7 @@ export default function ProductsManagementPage() {
             accessorKey: "purchasePrice",
             cell: ({ row }) => (
                 <div className="text-center text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {formatCurrencyShort(row.getValue("purchasePrice"))}
+                    {formatAmountShort(row.getValue("purchasePrice"))}
                 </div>
             )
         },
@@ -164,7 +138,7 @@ export default function ProductsManagementPage() {
             accessorKey: "sellingPrice",
             cell: ({ row }) => (
                 <div className="text-center text-[#1e293b] dark:text-slate-300 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {formatCurrencyShort(row.getValue("sellingPrice"))}
+                    {formatAmountShort(row.getValue("sellingPrice"))}
                 </div>
             )
         },
@@ -267,69 +241,73 @@ export default function ProductsManagementPage() {
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
-                <DataTable 
-                    columns={columns} 
-                    data={products}
-                    isLoading={loading}
-                    onRefresh={refetchProducts}
-                    placeholder="Search catalog..."
-                    hidePagination={false}
-                    manualPagination={false}
-                    exportFilename="Products-Catalog"
-                    headerActions={
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="relative group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Search products..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
-                                />
+                {loading && products.length === 0 ? (
+                    <TableSkeleton columns={7} rows={10} />
+                ) : (
+                    <DataTable 
+                        columns={columns} 
+                        data={products}
+                        isLoading={loading}
+                        onRefresh={handleRefresh}
+                        placeholder="Search catalog..."
+                        hidePagination={false}
+                        manualPagination={false}
+                        exportFilename="Products-Catalog"
+                        headerActions={
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="relative group">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search products..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                    />
+                                </div>
+                                <select
+                                    value={categoryId}
+                                    onChange={(e) => setCategoryId(e.target.value)}
+                                    className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[160px]"
+                                >
+                                    <option value="all">Categories: All</option>
+                                    {categories.map((c: any) => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                                <select
+                                    value={isActiveFilter}
+                                    onChange={(e) => setIsActiveFilter(e.target.value)}
+                                    className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
+                                >
+                                    <option value="all">Status: All</option>
+                                    <option value="true">Active Only</option>
+                                    <option value="false">Inactive Only</option>
+                                </select>
                             </div>
-                            <select
-                                value={categoryId}
-                                onChange={(e) => setCategoryId(e.target.value)}
-                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[160px]"
-                            >
-                                <option value="all">Categories: All</option>
-                                {categories.map((c: any) => (
-                                    <option key={c.id} value={c.id}>{c.name}</option>
-                                ))}
-                            </select>
-                            <select
-                                value={isActiveFilter}
-                                onChange={(e) => setIsActiveFilter(e.target.value)}
-                                className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
-                            >
-                                <option value="all">Status: All</option>
-                                <option value="true">Active Only</option>
-                                <option value="false">Inactive Only</option>
-                            </select>
-                        </div>
-                    }
-                />
+                        }
+                    />
+                )}
             </div>
 
             <AddStockModal 
                 open={isAddStockModalOpen} 
                 onClose={() => setIsAddStockModalOpen(false)} 
                 product={selectedProductForStock} 
-                onSuccess={() => refetchProducts()}
+                onSuccess={() => handleRefresh()}
             />
 
             <AddProductModal
                 open={openOpeningModal}
                 onClose={() => setOpenOpeningModal(false)}
-                onSuccess={() => refetchProducts()}
+                onSuccess={() => handleRefresh()}
                 mode="opening"
             />
 
             <AddProductModal
                 open={openMasterModal}
                 onClose={() => setOpenMasterModal(false)}
-                onSuccess={() => refetchProducts()}
+                onSuccess={() => handleRefresh()}
                 mode="master"
             />
         </div>

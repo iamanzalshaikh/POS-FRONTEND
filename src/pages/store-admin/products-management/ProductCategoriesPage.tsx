@@ -1,60 +1,41 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useQuery } from '@tanstack/react-query';
 import AddCategoryModal from "@/components/store-admin/AddCategoryModal"
-import { CheckCircle2, Plus, Search, Box, Trash2 } from "lucide-react"
+import { Plus, Search, Trash2 } from "lucide-react"
 import { deleteCategory, getCategories } from "@/api/category.api";
 import { toast } from '@/lib/toast';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
+import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
 
 const ProductCategoriesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-
-  const [categories, setCategories] = useState<any[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const limit = 5;
+  const limit = 10;
 
-  const fetchCategories = async (p = page, q = searchQuery) => {
-    setLoading(true);
-    try {
-      const resp = await getCategories({ page: p, limit, search: q });
-      const rawPayload = resp?.data;
+  // Queries
+  const { 
+    data: catRes, 
+    isLoading: loading, 
+    refetch 
+  } = useQuery({
+    queryKey: ['categories', page, searchQuery],
+    queryFn: () => getCategories({ page, limit, search: searchQuery }),
+    staleTime: 1000 * 60 * 5,
+  });
 
-      if (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
-        // Paginated response: { data: [], total: 10, ... }
-        setCategories(rawPayload.data || []);
-        setTotal(rawPayload.total || 0);
-      } else {
-        // Flat array response: [...]
-        const data = Array.isArray(rawPayload) ? rawPayload : [];
-        setCategories(data);
-        setTotal(data.length);
-      }
-    } catch (error) {
-      console.error("Failed to fetch categories:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const rawPayload = catRes?.data;
+  let categories: any[] = [];
+  let total = 0;
 
-  // Handle Search Input Change (Debounced)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (page !== 1) {
-        setPage(1);
-      } else {
-        fetchCategories(1, searchQuery);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  // Handle Page Change
-  useEffect(() => {
-    fetchCategories(page, searchQuery);
-  }, [page]);
+  if (rawPayload && typeof rawPayload === 'object' && !Array.isArray(rawPayload)) {
+    categories = rawPayload.data || [];
+    total = rawPayload.total || 0;
+  } else {
+    categories = Array.isArray(rawPayload) ? rawPayload : [];
+    total = categories.length;
+  }
 
   const handleDelete = async (c: any) => {
     const childCount = c._count?.children ?? 0
@@ -70,7 +51,7 @@ const ProductCategoriesPage = () => {
     try {
       await deleteCategory(c.id)
       toast.success("Category deleted.", "Success")
-      await fetchCategories()
+      refetch()
     } catch (e: any) {
       toast.error(e.response?.data?.message || "Delete failed.", "Action Failed")
     }
@@ -114,12 +95,11 @@ const ProductCategoriesPage = () => {
         )
     },
     {
-        header: "Items Linked",
+        header: "Items",
         meta: { align: 'center' },
         cell: ({ row }) => (
             <span className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-[2px] flex items-center justify-center gap-2 border border-transparent">
-                <Box size={12} />
-                {row.original._count?.products || 0} PRODUCTS
+                {row.original._count?.products || 0}
             </span>
         )
     },
@@ -153,7 +133,7 @@ const ProductCategoriesPage = () => {
   ];
 
   const handleCategoryAdded = () => {
-    fetchCategories(page, searchQuery)
+    refetch()
     toast.success("Category created successfully!", "Success")
   }
 
@@ -176,34 +156,38 @@ const ProductCategoriesPage = () => {
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
-        <DataTable 
-            columns={columns} 
-            data={categories}
-            isLoading={loading}
-            onRefresh={() => fetchCategories(page, searchQuery)}
-            placeholder="Search categories..."
-            hidePagination={false}
-            manualPagination={true}
-            pageIndex={page}
-            pageSize={limit}
-            totalItems={total}
-            pageCount={Math.ceil(total / limit)}
-            onPageChange={(newPageIndex) => setPage(newPageIndex)}
-            headerActions={
-                <div className="flex items-center gap-3">
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Find collections..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[280px]"
-                        />
+        {loading && categories.length === 0 ? (
+            <TableSkeleton columns={6} rows={limit} />
+        ) : (
+            <DataTable 
+                columns={columns} 
+                data={categories}
+                isLoading={loading}
+                onRefresh={() => refetch()}
+                placeholder="Search categories..."
+                hidePagination={false}
+                manualPagination={true}
+                pageIndex={page}
+                pageSize={limit}
+                totalItems={total}
+                pageCount={Math.ceil(total / limit)}
+                onPageChange={(newPageIndex) => setPage(newPageIndex)}
+                headerActions={
+                    <div className="flex items-center gap-3">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder="Find collections..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[280px]"
+                            />
+                        </div>
                     </div>
-                </div>
-            }
-        />
+                }
+            />
+        )}
       </div>
 
       <AddCategoryModal

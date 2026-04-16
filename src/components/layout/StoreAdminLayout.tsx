@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '@/components/layout/MainSidebar';
 import TopNavbar from '@/components/store-admin/TopNavbar';
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
-import { Columns2, Users, Boxes, ShoppingCart, Monitor, BarChart3, Settings, Layers, Package, Settings2, Truck, ClipboardList, PlusCircle, History } from 'lucide-react';
+import { Columns2, Users, Boxes, ShoppingCart, Monitor, BarChart3, Settings, Layers, Package, Settings2, Truck, ClipboardList, PlusCircle, History, User } from 'lucide-react';
 
 const storeAdminMenu = [
     { name: 'Dashboard', icon: Columns2, path: '/store-admin/dashboard' },
@@ -33,7 +33,11 @@ const storeAdminMenu = [
     { name: 'Reports', icon: BarChart3, path: '/store-admin/reports' },
     { name: 'Audit Logs', icon: History, path: '/store-admin/audit-logs' },
     { name: 'User Management', icon: Users, path: '/store-admin/staff' },
-    { name: 'Settings', icon: Settings, path: '/store-admin/settings' },
+    { 
+        name: 'Settings', 
+        icon: Settings, 
+        path: '/store-admin/settings' 
+    }
 ];
 
 export default function StoreAdminLayout() {

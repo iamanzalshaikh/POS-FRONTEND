@@ -128,18 +128,20 @@ const ExpenseTracker: React.FC = () => {
       if (expensesResponse.success && expensesResponse.data) {
         const businessExpenses = expensesResponse.data as ExpenseType[];
 
-        businessExpenses.forEach(expense => {
-          const dateRaw = new Date(expense.date);
-          transactionList.push({
-            id: expense.id,
-            description: `${expense.category} - ${expense.description}`,
-            amount: expense.amount,
-            date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            dateRaw,
-            type: 'Business Expense',
-            status: 'processed'
+        businessExpenses
+          .filter(expense => expense.category !== 'SALARIES')
+          .forEach(expense => {
+            const dateRaw = new Date(expense.date);
+            transactionList.push({
+              id: expense.id,
+              description: `${expense.category} - ${expense.description}`,
+              amount: expense.amount,
+              date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              dateRaw,
+              type: 'Business Expense',
+              status: 'processed'
+            });
           });
-        });
       }
 
       transactionList.sort((a, b) => b.dateRaw.getTime() - a.dateRaw.getTime());

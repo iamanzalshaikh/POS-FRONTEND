@@ -9,8 +9,11 @@ import {
     Trash2,
     Power,
     MapPin,
-    Shield
+    Shield,
+    Warehouse
 } from 'lucide-react';
+import PageHeader from '@/components/global-components/PageHeader';
+import { useToast } from '@/hooks/use-toast';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,13 +21,13 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { showToast } from '../../utils/admin-toast';
-import { DataTable } from '@/components/global-components/data-table';
+import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const StoresListPage: React.FC = () => {
     const { stores, isLoading, fetchStores, toggleStoreStatus } = useStoreStore();
     const navigate = useNavigate();
+    const { toast } = useToast();
 
     useEffect(() => {
         fetchStores();
@@ -33,9 +36,17 @@ const StoresListPage: React.FC = () => {
     const handleToggleStatus = async (id: string, currentStatus: boolean) => {
         const success = await toggleStoreStatus(id, !currentStatus);
         if (success) {
-            showToast(`Store ${!currentStatus ? 'Activated' : 'Deactivated'} Successfully`);
+            toast({
+                title: "Status Updated",
+                description: `Store ${!currentStatus ? 'Activated' : 'Deactivated'} Successfully`,
+                variant: "success"
+            });
         } else {
-            showToast('Failed to update store status', 'error');
+            toast({
+                title: "Update Failed",
+                description: 'Failed to update store status',
+                variant: "destructive"
+            });
         }
     };
 
@@ -63,48 +74,37 @@ const StoresListPage: React.FC = () => {
             accessorKey: "name",
             header: "Store Name",
             cell: ({ row }) => (
-                <div className="flex flex-col text-left">
-                    <span className="font-black text-slate-900 dark:text-white text-sm tracking-tight leading-tight">
-                        {formatStoreName(row.original.name)}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                        {row.original.email || 'NO_ENDPOINT_LINKED'}
-                    </span>
+                <div className="text-left text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                    {formatStoreName(row.original.name)}
+                </div>
+            )
+        },
+        {
+            accessorKey: "email",
+            header: "Email",
+            cell: ({ row }) => (
+                <div className="text-center text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest tabular-nums">
+                    {row.original.email || 'None'}
                 </div>
             )
         },
         {
             accessorKey: "city",
-            header: "Store City",
+            header: "City",
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <MapPin size={12} className="text-slate-400" />
-                    <span className="text-sm text-slate-900 dark:text-slate-200 font-bold tracking-tight">
-                        {row.getValue("city") || 'Universal Node'}
+                <div className="flex justify-center">
+                    <span className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl text-[9px] font-black uppercase tracking-[2px]">
+                        {row.getValue("city") || 'Universal'}
                     </span>
                 </div>
             )
         },
         {
-            accessorKey: "state",
-            header: "Region",
-            cell: ({ row }) => (
-                <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]">
-                    {row.original.state || 'National Port'}
-                </span>
-            )
-        },
-        {
             accessorKey: "ownerName",
-            header: "Owner Name",
+            header: "Owner",
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center font-bold text-indigo-600 text-[10px]">
-                        { (row.original.owner?.name?.[0] || 'U').toUpperCase() }
-                    </div>
-                    <span className="text-sm text-slate-900 dark:text-slate-200 font-bold">
-                        {row.original.owner?.name || row.original.ownerName || 'Unassigned Root'}
-                    </span>
+                <div className="text-center text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-tight">
+                    {row.original.owner?.name || row.original.ownerName || 'Root'}
                 </div>
             )
         },
@@ -114,11 +114,15 @@ const StoresListPage: React.FC = () => {
             cell: ({ row }) => {
                 const active = row.original.isActive;
                 return (
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                        active ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-200'
-                    }`}>
-                        <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                        {active ? 'Active' : 'Inactive'}
+                    <div className="flex justify-center">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${
+                            active 
+                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50' 
+                                : 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50'
+                        }`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                            {active ? 'Active' : 'Suspended'}
+                        </span>
                     </div>
                 );
             }
@@ -127,73 +131,58 @@ const StoresListPage: React.FC = () => {
             id: "actions",
             header: "Action",
             cell: ({ row }) => (
-                <div className="flex justify-center">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-10 w-10 p-0 hover:bg-slate-100 rounded-full transition-all active:scale-90">
-                                <MoreVertical className="h-5 w-5 text-black" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-[180px] rounded-2xl border-slate-900 shadow-2xl p-2 bg-white ring-1 ring-black/5">
-                        <DropdownMenuItem 
-                            onClick={() => navigate(`/super-admin/stores/${row.original.id}`)}
-                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer"
-                        >
-                            <Eye size={14} className="text-slate-400" />
-                            View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            onClick={() => navigate(`/super-admin/stores/edit/${row.original.id}`)}
-                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer"
-                        >
-                            <Edit2 size={14} className="text-slate-400" />
-                            Edit Node
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            onClick={() => handleToggleStatus(row.original.id, row.original.isActive)}
-                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer text-amber-600 focus:text-amber-600 focus:bg-amber-50"
-                        >
-                            <Power size={14} />
-                            {row.original.isActive ? 'Suspend' : 'Reactive'}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                            className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest cursor-pointer text-rose-600 focus:text-rose-600 focus:bg-rose-50"
-                        >
-                            <Trash2 size={14} />
-                            Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-        )
-    }
+                <div className="flex justify-center items-center gap-2">
+                    <button
+                        onClick={() => navigate(`/super-admin/stores/${row.original.id}`)}
+                        className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-all"
+                        title="Store Details"
+                    >
+                        <Eye size={16} />
+                    </button>
+                    <button
+                        onClick={() => navigate(`/super-admin/stores/edit/${row.original.id}`)}
+                        className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-all"
+                        title="Edit Store"
+                    >
+                        <Edit2 size={16} />
+                    </button>
+                    <button
+                        onClick={() => handleToggleStatus(row.original.id, row.original.isActive)}
+                        className={`p-2 rounded-lg transition-all ${row.original.isActive 
+                            ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30' 
+                            : 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                        }`}
+                        title={row.original.isActive ? "Suspend Store" : "Restore Store"}
+                    >
+                        <Power size={16} />
+                    </button>
+                </div>
+            )
+        }
 ], [toggleStoreStatus, navigate]);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Stores Directory</h1>
-                    <p className="text-slate-500 font-medium uppercase tracking-widest text-[11px] mt-1">Manage system branches and provisioned network nodes</p>
-                </div>
-                <button
-                    onClick={() => navigate('/super-admin/stores/create')}
-                    className="flex items-center gap-2 px-6 py-4 bg-[#262255] text-white rounded-[20px] font-bold text-[11px] uppercase tracking-[2px] shadow-xl shadow-indigo-900/10 hover:bg-[#312E81] transition-all active:scale-95 border-b-4 border-indigo-950"
-                >
-                    <Plus size={16} />
-                    Provision New Node
-                </button>
-            </div>
-
-            <DataTable
-                columns={columns}
-                data={stores}
-                isLoading={isLoading}
-                searchKey="name"
-                placeholder="Filter network by store name..."
-                onRefresh={fetchStores}
+            <PageHeader
+                title="Stores"
+                description="Manage all store locations"
+                icon={Warehouse}
+                primaryAction={{
+                    label: "Add New Store",
+                    onClick: () => navigate('/super-admin/stores/create'),
+                    icon: Plus
+                }}
             />
+
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10 border border-slate-100 dark:border-slate-800">
+                <DataTable
+                    columns={columns}
+                    data={stores}
+                    isLoading={isLoading}
+                    onRefresh={fetchStores}
+                    placeholder="Filter network nodes..."
+                />
+            </div>
         </div>
     );
 };

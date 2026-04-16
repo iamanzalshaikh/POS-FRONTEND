@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Package, Search, RefreshCcw, ShoppingCart, Box, AlertTriangle } from 'lucide-react';
 import { fetchProducts } from '../../api/products.api';
 import { formatCurrency, formatCurrencyShort, formatNumberShort } from '@/utils/format';
@@ -7,6 +8,7 @@ import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
+import { TableSkeleton } from '@/components/ui/skeletons/TableSkeleton';
 
 interface Product {
   id: string;
@@ -31,15 +33,12 @@ interface Product {
 }
 
 const ProductsListPage: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const loadProducts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  // Combined Query
+  const { data: productsRes, isLoading, refetch } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
       const res = await fetchProducts();
       let productList: Product[] = [];
       if (res?.success && Array.isArray(res.data)) {
@@ -51,25 +50,20 @@ const ProductsListPage: React.FC = () => {
       } else if (Array.isArray(res)) {
         productList = res;
       }
-      setProducts(productList);
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to load products';
-      setError(errorMessage);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return productList;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  const products = productsRes || [];
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.barcode.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.barcode.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [products, searchQuery]);
 
   const getStockQuantity = (product: Product) => {
     return product.inventoryStock?.totalQuantity ?? 0;
@@ -169,7 +163,7 @@ const ProductsListPage: React.FC = () => {
         primaryAction={{
           label: "Refresh List",
           icon: RefreshCcw,
-          onClick: loadProducts
+          onClick: () => refetch()
         }}
       />
 
@@ -190,32 +184,36 @@ const ProductsListPage: React.FC = () => {
           title="Low Stock"
           value={String(products.filter(p => getStockQuantity(p) <= 10).length)}
           icon={AlertTriangle}
-          colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
+          colorClass="bg-amber-50 text-amber-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
       </div>
 
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
-        <DataTable
-          columns={columns}
-          data={filteredProducts}
-          isLoading={loading}
-          onRefresh={loadProducts}
-          placeholder="Search catalog by name, sku, or barcode..."
-          headerActions={
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[320px]"
-                />
+        {isLoading && products.length === 0 ? (
+          <TableSkeleton columns={7} rows={10} />
+        ) : (
+          <DataTable
+            columns={columns}
+            data={filteredProducts}
+            isLoading={isLoading}
+            onRefresh={() => refetch()}
+            placeholder="Search catalog by name, sku, or barcode..."
+            headerActions={
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[320px]"
+                  />
+                </div>
               </div>
-            </div>
-          }
-        />
+            }
+          />
+        )}
       </div>
     </div>
   );
