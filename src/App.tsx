@@ -2,7 +2,8 @@ import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/useAuthStore';
 import { useQueryClient } from '@tanstack/react-query';
-import { getDashboardSummary, getProducts, getStoreInfo } from './api/dashboard.api';
+import { getDashboardSummary, getStoreInfo } from './api/dashboard.api';
+import { fetchProducts } from './api/products.api';
 
 // UI Components
 import { ThemeProvider } from '@/components/theme-provider';
@@ -76,9 +77,14 @@ const App: React.FC = () => {
         });
       }
 
-      // We remove the global getProducts prefetch here because it's massive.
-      // It will be handled lazily by the respective Management/POS pages
-      // using their own local useQuery staleTime.
+      // Cashier critical metadata: Prefetch products to have them ready for POS
+      if (role === 'CASHIER') {
+        queryClient.prefetchQuery({
+          queryKey: ['pos-products'], // Matches POSInterface.tsx
+          queryFn: () => fetchProducts(),
+          staleTime: 1000 * 60 * 5
+        });
+      }
     }
   }, [isAuthenticated, user?.id, queryClient]);
 

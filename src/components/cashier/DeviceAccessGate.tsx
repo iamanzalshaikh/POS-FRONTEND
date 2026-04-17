@@ -55,7 +55,7 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
 
   /**
    * TanStack Query for available devices
-   * Intelligent polling: only refetch if no deviceId is set
+   * Optimization: Use high staleTime if device is already connected
    */
   const { 
     data: devicesRes, 
@@ -65,15 +65,23 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
   } = useQuery({
     queryKey: ['available-devices'],
     queryFn: () => devicesApi.getAll(),
-    refetchInterval: deviceId ? 30000 : 5000, // Poll every 30s if connected (validation), 5s if not (discovery)
+    // If deviceId exists, we don't need to poll frequently (discovery vs validation)
+    refetchInterval: deviceId ? 60000 : 5000, 
+    staleTime: deviceId ? 1000 * 60 * 2 : 1000 * 2, // 2 mins stale if connected
     enabled: true,
   });
 
   // Simplified loading and error state from useQuery
   useEffect(() => {
-    if (devicesLoading !== undefined) setIsLoading(devicesLoading);
+    // Only show loading if we don't have a device yet
+    if (!deviceId && devicesLoading !== undefined) {
+      setIsLoading(devicesLoading);
+    } else {
+      setIsLoading(false);
+    }
+    
     if (devicesError) setError((devicesError as any).message || 'Failed to check device availability');
-  }, [devicesLoading, devicesError]);
+  }, [devicesLoading, devicesError, deviceId]);
 
     // Handle results from useQuery
     useEffect(() => {

@@ -66,8 +66,7 @@ export const useAuthStore = create<AuthState>()(
       
       hydrate: async () => {
         try {
-          set({ isLoading: true });
-          
+          // 1. Initial State Check
           const currentState = get();
           const token = currentState.accessToken;
           const authStorage = localStorage.getItem('auth-storage');
@@ -78,46 +77,46 @@ export const useAuthStore = create<AuthState>()(
             return;
           }
 
-          console.log('[AUTH] Persisted session found, synchronizing with backend...');
-          
+          // 2. FAST-PATH: Set loading to false immediately if we have a persisted session
+          // This allows the UI to render and parallelize other requests while we verify the token
+          set({ isLoading: false, isAuthenticated: true });
+          console.log('[AUTH] Fast-path hydration: UI unlocked, validating session in background...');
+
+          // 3. BACKGROUND SYNC: Verify session with backend
           try {
             const response = await profileApi.getProfile();
             
             if (response.data?.success && response.data?.data) {
               const userData = response.data.data.user;
-              console.log('✅ [AUTH] Session synchronized. User:', userData.email);
+              console.log('✅ [AUTH] Background session synchronization complete. User:', userData.email);
               set({ 
                 user: userData, 
-                isAuthenticated: true, 
-                isLoading: false 
+                isAuthenticated: true,
+                isLoading: false
               });
             } else {
               throw new Error('Malformed profile response');
             }
           } catch (error: any) {
-            const isNoResponse = !error.response;
             const status = error.response?.status;
-            
-            console.warn('⚠️ [AUTH] Hydration warning:', error.response?.data?.message || error.message);
+            console.warn('⚠️ [AUTH] Background hydration warning:', error.response?.data?.message || error.message);
             
             if (status === 401 || status === 403) {
+              console.error('🚫 [AUTH] Session invalid, logging out...');
               // Token is invalid/expired
               set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
               localStorage.removeItem('refresh-token');
               localStorage.removeItem('auth-storage');
               window.location.href = '/login';
-            } else if (isNoResponse) {
-              // Likely ERR_CONNECTION_REFUSED
-              console.error('🚫 [AUTH] Backend unreachable during hydration');
-              // Keep local state but stop loading
-              set({ isLoading: false });
             } else {
+              // Network error or server issues - we keep the persisted user for offline/stale access
+              console.warn('[AUTH] Session validation failed but keeping persisted state for offline resilience');
               set({ isLoading: false });
             }
           }
         } catch (error) {
           console.error('[AUTH] Root hydration failure:', error);
-          set({ isLoading: false });
+          set({ isLoading: false, isAuthenticated: false });
         }
       },
     }),

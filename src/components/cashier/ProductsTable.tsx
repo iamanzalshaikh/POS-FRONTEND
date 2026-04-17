@@ -1,5 +1,12 @@
-import React from "react";
-import { Package, Plus, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useMemo } from "react";
+import { 
+  useReactTable, 
+  getCoreRowModel, 
+  flexRender
+} from "@tanstack/react-table";
+import type { ColumnDef } from "@tanstack/react-table";
+import { Plus, Package, Info, AlertCircle } from "lucide-react";
+import { formatAmount } from "../../utils/expense-utils";
 
 interface Product {
   id: string;
@@ -19,6 +26,7 @@ interface Product {
 interface CartItem {
   id: string;
   quantity: number;
+  totalStock?: number;
 }
 
 interface ProductsTableProps {
@@ -34,157 +42,206 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
   onAddToCart,
   cart = [],
 }) => {
-  const [currentPage, setCurrentPage] = React.useState(1);
-  const itemsPerPage = 10;
+  const columns = useMemo<ColumnDef<Product>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Product Description",
+        cell: ({ row }) => {
+          const product = row.original;
+          return (
+            <div className="flex flex-col py-2">
+              <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">
+                {product.name}
+              </span>
+              
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "sellingPrice",
+        header: "Selling Price",
+        cell: ({ row }) => {
+          const product = row.original;
+          const price = Number(product.sellingPrice ?? product.price ?? 0);
+          return (
+            <span className="text-base font-black text-slate-900 dark:text-slate-100 tabular-nums">
+              {formatAmount(price)}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "unitType",
+        header: "Unit",
+        cell: ({ row }) => {
+          const product = row.original;
+          return (
+            <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800/50">
+              {product.unitType || "PIECE"}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: "stock",
+        header: "Stock",
+        cell: ({ row }) => {
+          const product = row.original;
+          const totalStock = product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
+          const cartQty = cart.find((item) => item.id === product.id)?.quantity ?? 0;
+          const availableStock = Math.max(0, totalStock - cartQty);
+          
+          const isOutOfStock = availableStock <= 0;
+          const isLowStock = availableStock > 0 && availableStock <= 5;
+
+          return (
+            <div className="flex flex-col items-center gap-1">
+              <div 
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all duration-300 ${
+                  isOutOfStock 
+                    ? "bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/50 shadow-sm shadow-rose-100/50" 
+                    : isLowStock
+                    ? "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50 shadow-sm shadow-amber-100/50"
+                    : "bg-orange-50 dark:bg-orange-950/10 text-orange-600 dark:text-orange-400 border-orange-100 dark:border-orange-800/50 shadow-sm shadow-orange-50/50"
+                }`}
+              >
+                <div className="flex flex-col items-center leading-none">
+                  <span className="text-[11px] font-black tabular-nums">{availableStock}</span>
+                  <span className="text-[8px] font-black uppercase tracking-tighter opacity-80">Units</span>
+                </div>
+              </div>
+              {cartQty > 0 && (
+                <span className="text-[9px] font-black text-blue-600 uppercase tracking-tighter animate-pulse">
+                  {cartQty} Selected
+                </span>
+              )}
+            </div>
+          );
+        },
+      },
+      {
+        id: "actions",
+        header: "Action",
+        cell: ({ row }) => {
+          const product = row.original;
+          const totalStock = product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
+          const cartQty = cart.find((item) => item.id === product.id)?.quantity ?? 0;
+          const availableStock = Math.max(0, totalStock - cartQty);
+          const isOutOfStock = availableStock <= 0;
+
+          return (
+            <button
+              onClick={() => onAddToCart(product)}
+              disabled={isOutOfStock}
+              className={`group flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 ${
+                isOutOfStock
+                  ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-200 dark:border-slate-700"
+                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 dark:shadow-none hover:shadow-blue-300 active:scale-95 border border-blue-500"
+              }`}
+            >
+              <Plus size={14} className={isOutOfStock ? "" : "group-hover:rotate-90 transition-transform duration-300"} />
+              <span>{isOutOfStock ? "Limit" : "Add"}</span>
+            </button>
+          );
+        },
+      },
+    ],
+    [cart, onAddToCart]
+  );
+
+  const table = useReactTable({
+    data: products,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+  });
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-[2.5rem] overflow-hidden p-20 shadow-none">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">
-            Synchronizing Product Registry...
-          </p>
-        </div>
+      <div className="w-full space-y-4 p-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800 animate-pulse rounded-2xl border border-slate-200 dark:border-slate-700" />
+        ))}
       </div>
     );
   }
 
   if (products.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="py-12 text-center text-slate-400">
-          <Package className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p className="text-sm font-bold">No products found</p>
-          <p className="text-xs mt-1">Try adjusting your search or filters</p>
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-white dark:bg-slate-900 rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-800 m-4">
+        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+          <Package size={32} className="text-slate-300 dark:text-slate-600" />
         </div>
+        <h3 className="text-lg font-black text-slate-800 dark:text-white uppercase tracking-tight">No Products Found</h3>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-[200px]">
+          Try adjusting your search or filters to find products.
+        </p>
       </div>
     );
   }
 
-  const totalPages = Math.ceil(products.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedProducts = products.slice(startIndex, startIndex + itemsPerPage);
-
   return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] overflow-hidden shadow-sm transition-colors duration-500">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/10 border-b border-slate-100 dark:border-slate-800">
-                <th className="text-left py-5 px-6 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em] min-w-[200px]">
-                  Product Description
-                </th>
-                <th className="text-center py-5 px-6 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em] min-w-[120px]">
-                  Selling Price
-                </th>
-                <th className="text-center py-5 px-6 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em] min-w-[100px]">
-                  Unit
-                </th>
-                <th className="text-center py-5 px-6 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em] min-w-[100px]">
-                  Stock
-                </th>
-                <th className="text-right py-5 px-6 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-[0.2em] min-w-[100px]">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {paginatedProducts.map((product) => {
-                const totalStock = product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
-                const cartQty = cart.find(item => item.id === product.id)?.quantity ?? 0;
-                const availableStock = Math.max(0, totalStock - cartQty);
-                
-                const price = Number(product.sellingPrice ?? product.price ?? 0);
-                const isOutOfStock = availableStock <= 0;
-                const isLowStock = availableStock > 0 && availableStock <= 5;
-
-                return (
-                  <tr
-                    key={product.id}
-                    className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all duration-300"
+    <div className="p-4 w-full">
+      <div className="overflow-hidden rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
+        <table className="w-full border-collapse">
+          <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="px-6 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500"
                   >
-                    <td className="py-5 px-6">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors">
-                          {product.name}
-                        </span>
-                        
-                      </div>
-                    </td>
-                    <td className="py-5 px-6 text-center">
-                      <span className="text-sm font-black text-[#1e293b] dark:text-slate-200 tabular-nums">
-                        {price.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                    <td className="py-5 px-6 text-center text-center">
-                      <span className="inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
-                      {product.unitQuantity}  {product.unitType || "PIECE"} 
-                      </span>
-                    </td>
-                    <td className="py-5 px-6 text-center">
-                      {isOutOfStock ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50">
-                          {totalStock > 0 ? "Cart Limit Reached" : "Out of Stock"}
-                        </span>
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                            isLowStock 
-                              ? "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50" 
-                              : "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50"
-                          }`}>
-                            {availableStock} UNITS
-                          </span>
-                          {cartQty > 0 && (
-                            <span className="text-[8px] font-bold text-blue-500 mt-1">({cartQty} in cart)</span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-5 px-6 text-right">
-                      <button
-                        onClick={() => onAddToCart(product)}
-                        disabled={isOutOfStock}
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-400 text-white text-[9px] font-black uppercase tracking-widest rounded-lg transition-all active:scale-95 shadow-sm"
-                      >
-                        <Plus className="w-3 h-3" />
-                        Add
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    {flexRender(header.column.columnDef.header, header.getContext())}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+            {table.getRowModel().rows.map((row) => (
+              <tr 
+                key={row.id} 
+                className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/30 transition-all duration-300"
+              >
+                {row.getVisibleCells().map((cell, index) => (
+                  <td
+                    key={cell.id}
+                    className={`px-6 py-5 align-middle ${
+                      index === 0 ? "text-left" : index === 4 ? "text-right" : "text-center"
+                    }`}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-6 py-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
-          <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Page {currentPage} of {totalPages}
+      
+      {/* Table Legend/Info */}
+      <div className="flex items-center justify-between mt-6 px-4">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Available</span>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 transition-all"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="p-2 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-30 transition-all"
-            >
-              <ChevronRight size={16} />
-            </button>
+            <div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-200" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Low Stock</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-200" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Out of Stock</span>
           </div>
         </div>
-      )}
+        <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 italic">
+          <Info size={12} />
+          <span className="text-[9px] font-bold uppercase tracking-widest">Pricing includes applicable taxes</span>
+        </div>
+      </div>
     </div>
   );
 };

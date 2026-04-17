@@ -97,6 +97,20 @@ function DataTableComponent<TData, TValue>({
         React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
 
+    const [pagination, setPagination] = React.useState({
+        pageIndex: (pageIndex ?? 1) - 1,
+        pageSize: hidePagination ? 100000 : pageSize,
+    })
+
+    React.useEffect(() => {
+        if (manualPagination) {
+            setPagination({
+                pageIndex: (pageIndex ?? 1) - 1,
+                pageSize: pageSize,
+            })
+        }
+    }, [pageIndex, pageSize, manualPagination])
+
     const table = useReactTable({
         data,
         columns,
@@ -108,25 +122,21 @@ function DataTableComponent<TData, TValue>({
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
+        onPaginationChange: (updater) => {
+            const nextPagination = typeof updater === 'function' ? updater(pagination) : updater
+            setPagination(nextPagination)
+            if (manualPagination && onPageChange) {
+                onPageChange(nextPagination.pageIndex + 1)
+            }
+        },
         manualPagination: manualPagination,
         pageCount: pageCount,
-        initialState: {
-            pagination: {
-                pageIndex: 0,
-                pageSize: hidePagination ? 100000 : pageSize,
-            },
-        },
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
-            ...(manualPagination && {
-                pagination: {
-                    pageIndex: (pageIndex ?? 1) - 1,
-                    pageSize: pageSize,
-                },
-            }),
+            pagination,
         },
     })
 

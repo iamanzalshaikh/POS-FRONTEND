@@ -42,7 +42,7 @@ const ProductsFilters: React.FC<ProductsFiltersProps> = ({
   const hasActiveFilters = searchQuery || selectedCategory !== 'ALL' || stockFilter !== 'ALL';
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-4">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 space-y-4">
       <div className="flex flex-col md:flex-row gap-4 items-center">
         {/* Search */}
         <div className="flex-1 relative w-full">
@@ -56,23 +56,7 @@ const ProductsFilters: React.FC<ProductsFiltersProps> = ({
           />
         </div>
 
-        {/* Category Filter */}
-        <div className="w-full md:w-36">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-[#1e293b] focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all cursor-pointer appearance-none"
-          >
-            <option value="ALL">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Stock Filter */}
+        {/* Stock Filter (Consolidated) */}
         <div className="w-full md:w-36">
           <select
             value={stockFilter}
@@ -112,7 +96,27 @@ const ProductsFilters: React.FC<ProductsFiltersProps> = ({
           )}
         </div>
       </div>
+
+      {/* Horizontal Category Scroll */}
+      <div className="pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar no-scrollbar-buttons">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border ${
+                selectedCategory === cat
+                  ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200"
+                  : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600"
+              }`}
+            >
+              {cat === "ALL" ? "All Categories" : cat}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
+
   );
 };
 

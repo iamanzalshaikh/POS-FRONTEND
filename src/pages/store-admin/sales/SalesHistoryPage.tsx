@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Download, Search, AlertCircle } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import MonthlyActivityChart from "@/components/global-components/monthly-activity-chart";
@@ -8,6 +8,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { formatCurrency, formatAmount, toLocalYMD } from "@/utils/format";
 import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
+import { useDebounce } from '@/hooks';
 
 import { getDashboardSummary } from "@/api/dashboard.api";
 import { getSalesTransactions, cancelSale } from "@/api/sales.api";
@@ -16,6 +17,7 @@ import { getSaleGrandTotal } from "@/utils/saleAmounts";
 const SalesHistoryPage = () => {
     // Filters state
     const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search, 500);
     const [statusFilter] = useState("All Status");
     const [paymentMethod] = useState("All Methods");
     const [dateRange, setDateRange] = useState({
@@ -27,16 +29,20 @@ const SalesHistoryPage = () => {
     const [page, setPage] = useState(1);
     const [limit] = useState(10);
 
-    const params: any = {
+    // Reset to page 1 on filter change
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, dateRange, statusFilter, paymentMethod]);
+
+    const params: any = useMemo(() => ({
         startDate: dateRange.start,
         endDate: dateRange.end,
         page,
-        limit
-    };
-
-    if (search) params.search = search;
-    if (statusFilter !== 'All Status') params.paymentStatus = statusFilter;
-    if (paymentMethod !== 'All Methods') params.paymentMethod = paymentMethod;
+        limit,
+        ...(debouncedSearch && { search: debouncedSearch }),
+        ...(statusFilter !== 'All Status' && { paymentStatus: statusFilter }),
+        ...(paymentMethod !== 'All Methods' && { paymentMethod: paymentMethod })
+    }), [dateRange, page, limit, debouncedSearch, statusFilter, paymentMethod]);
 
     // Queries
     const { 
@@ -44,7 +50,7 @@ const SalesHistoryPage = () => {
         isLoading: salesLoading, 
         refetch: refetchSales 
     } = useQuery({
-        queryKey: ['sales-transactions', page, search, statusFilter, paymentMethod, dateRange],
+        queryKey: ['sales-transactions', params],
         queryFn: () => getSalesTransactions(params),
         staleTime: 1000 * 60 * 5,
     });
@@ -107,8 +113,9 @@ const SalesHistoryPage = () => {
     }, [reportData, dateRange]);
 
 
-    const columns: ColumnDef<any>[] = [
+    const columns: ColumnDef<any>[] = useMemo(() => [
         {
+            id: "rowNumber",
             header: "ID",
             cell: ({ row }) => (
                 <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
@@ -127,7 +134,9 @@ const SalesHistoryPage = () => {
             )
         },
         {
+            id: "saleDate",
             header: "Date",
+            accessorKey: "createdAt",
             cell: ({ row }) => (
                 <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
                     {new Date(row.original.createdAt).toLocaleDateString()}
@@ -135,7 +144,9 @@ const SalesHistoryPage = () => {
             )
         },
         {
+            id: "saleTime",
             header: "Time",
+            accessorKey: "createdAt",
             cell: ({ row }) => (
                 <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
                     {new Date(row.original.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -224,9 +235,7 @@ const SalesHistoryPage = () => {
                 </div>
             )
         }
-    ];
-
-    const loading = salesLoading;
+    ], [refetchSales]);
 
     return (
         <div className="animate-in fade-in duration-500 space-y-10">
