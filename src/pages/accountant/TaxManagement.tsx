@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
-import { FileText, Download, AlertCircle, CheckCircle, DollarSign } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { FileText, Download, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import { getSalesReport } from '../../api/finance.api';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
+import { formatAmount } from '@/utils/format';
 import type { ColumnDef } from '@tanstack/react-table';
-import { TrendingUp } from 'lucide-react';
+import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
+import { cn } from '@/lib/utils';
+import { Calculator } from 'lucide-react';
 
 interface TaxItem {
   id: string;
@@ -17,88 +21,70 @@ interface TaxItem {
 }
 
 const TaxManagement: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [taxItems, setTaxItems] = useState<TaxItem[]>([]);
-  const [totalLiability, setTotalLiability] = useState(0);
-  const [totalPaid, setTotalPaid] = useState(0);
-  const [totalOverdue, setTotalOverdue] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  // Queries
+  const { data: salesRes, isLoading: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['accountant-tax-sales-report'],
+    queryFn: () => {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30);
+      return getSalesReport({
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0]
+      });
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
-  useEffect(() => {
-    const fetchTaxData = async () => {
-      try {
-        setLoading(true);
+  const { taxItems, totalLiability, totalPaid, totalOverdue } = useMemo(() => {
+    if (!salesRes?.success) {
+      return { taxItems: [], totalLiability: 0, totalPaid: 0, totalOverdue: 0 };
+    }
 
-        // Get the last 30 days of sales to calculate tax
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
+    const reportData = salesRes.data as any;
+    const totalTax = reportData?.summary?.totalTax || 0;
 
-        console.log('🧾 [TaxManagement] Fetching tax data...');
-        const response = await getSalesReport({
-          startDate: startDate.toISOString().split('T')[0],
-          endDate: endDate.toISOString().split('T')[0]
-        });
+    // Mock tax breakdown based on total tax collected
+    const gstAmount = totalTax * 0.75; // 75% is GST
+    const incomeTaxAmount = totalTax * 0.20; // 20% is income tax
+    const tdsAmount = totalTax * 0.05; // 5% is TDS
 
-        console.log('🧾 [TaxManagement] API Response:', response);
-
-        if (response && 'success' in response && response.success) {
-          const reportData = response.data as any;
-          const totalTax = reportData?.summary?.totalTax || 0;
-
-          console.log('🧾 [TaxManagement] Total Tax:', totalTax);
-
-          // Mock tax breakdown based on total tax collected
-          // In a real system, you'd have separate tax tables
-          const gstAmount = totalTax * 0.75; // 75% is GST
-          const incomeTaxAmount = totalTax * 0.20; // 20% is income tax
-          const tdsAmount = totalTax * 0.05; // 5% is TDS
-
-          const taxData: TaxItem[] = [
-            {
-              id: '1',
-              type: 'GST (18%)',
-              rate: '18%',
-              amount: gstAmount,
-              status: gstAmount > 0 ? 'paid' : 'pending',
-              dueDate: new Date(new Date().setDate(15)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            },
-            {
-              id: '2',
-              type: 'Income Tax',
-              rate: '30%',
-              amount: incomeTaxAmount,
-              status: 'pending',
-              dueDate: new Date(new Date().setDate(30)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            },
-            {
-              id: '3',
-              type: 'TDS',
-              rate: '10%',
-              amount: tdsAmount,
-              status: tdsAmount > 100 ? 'overdue' : 'pending',
-              dueDate: new Date(new Date().setDate(1)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-            }
-          ];
-
-          setTaxItems(taxData);
-          setTotalLiability(totalTax);
-          setTotalPaid(gstAmount);
-          setTotalOverdue(tdsAmount > 100 ? tdsAmount : 0);
-        } else if (response && 'success' in response && !response.success) {
-          console.error('🧾 [TaxManagement] API returned error:', response);
-          setError((response as any).message || 'Failed to load tax data');
-        }
-      } catch (err: any) {
-        console.error('Failed to fetch tax data:', err);
-        setError(err.message || 'Failed to load tax data');
-      } finally {
-        setLoading(false);
+    const taxData: TaxItem[] = [
+      {
+        id: '1',
+        type: 'GST (18%)',
+        rate: '18%',
+        amount: gstAmount,
+        status: gstAmount > 0 ? 'paid' : 'pending',
+        dueDate: new Date(new Date().setDate(15)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      },
+      {
+        id: '2',
+        type: 'Income Tax',
+        rate: '30%',
+        amount: incomeTaxAmount,
+        status: 'pending',
+        dueDate: new Date(new Date().setDate(30)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      },
+      {
+        id: '3',
+        type: 'TDS',
+        rate: '10%',
+        amount: tdsAmount,
+        status: tdsAmount > 100 ? 'overdue' : 'pending',
+        dueDate: new Date(new Date().setDate(1)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       }
-    };
+    ];
 
-    fetchTaxData();
-  }, []);
+    return {
+      taxItems: taxData,
+      totalLiability: totalTax,
+      totalPaid: gstAmount,
+      totalOverdue: tdsAmount > 100 ? tdsAmount : 0
+    };
+  }, [salesRes]);
+
+  const error = queryError ? (queryError as any).message : (salesRes?.success === false ? salesRes.message : null);
 
   const getStatusStyles = (status: TaxItem['status']) => {
     switch (status) {
@@ -158,18 +144,7 @@ const TaxManagement: React.FC = () => {
     alert(`Pay tax ${taxId} - Would open payment gateway`);
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6 animate-fade-in">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <div className="text-sm font-bold text-slate-500">Loading tax data...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <ManagementPageSkeleton cards={3} columns={4} />;
 
   if (error) {
     return (
@@ -199,19 +174,19 @@ const TaxManagement: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
           title="Total Liability"
-          value={`₹${totalLiability.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={formatAmount(totalLiability)}
           icon={FileText}
           colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
         <MetricCard
           title="Paid Taxes"
-          value={`₹${totalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={formatAmount(totalPaid)}
           icon={CheckCircle}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <MetricCard
           title="Overdue Taxes"
-          value={`₹${totalOverdue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={formatAmount(totalOverdue)}
           icon={AlertCircle}
           colorClass="bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-400"
         />
@@ -219,7 +194,7 @@ const TaxManagement: React.FC = () => {
 
       {/* Tax Breakdown Table */}
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
-        <TaxTable taxItems={taxItems} onExport={handleExportReport} />
+        <TaxTable taxItems={taxItems} onExport={handleExportReport} onRefresh={refetch} />
       </div>
 
       {/* Tax Reminders */}
@@ -247,7 +222,7 @@ const TaxManagement: React.FC = () => {
 export default TaxManagement;
 
 // Tax DataTable Component
-const TaxTable: React.FC<{ taxItems: TaxItem[]; onExport: () => void }> = ({ taxItems, onExport }) => {
+const TaxTable: React.FC<{ taxItems: TaxItem[]; onExport: () => void; onRefresh: () => void }> = ({ taxItems, onExport, onRefresh }) => {
   const handlePayTax = (taxId: string) => {
     alert(`Pay tax ${taxId} - Would open payment gateway`);
   };
@@ -284,7 +259,7 @@ const TaxTable: React.FC<{ taxItems: TaxItem[]; onExport: () => void }> = ({ tax
       header: "Amount",
       cell: ({ row }) => (
         <div className="text-center text-slate-900 dark:text-white text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
-          ₹{row.original.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {formatAmount(row.original.amount)}
         </div>
       )
     },
@@ -328,6 +303,7 @@ const TaxTable: React.FC<{ taxItems: TaxItem[]; onExport: () => void }> = ({ tax
       columns={columns}
       data={taxItems}
       onExport={() => onExport()}
+      onRefresh={onRefresh}
       placeholder="Search tax records..."
       hidePagination={false}
     />

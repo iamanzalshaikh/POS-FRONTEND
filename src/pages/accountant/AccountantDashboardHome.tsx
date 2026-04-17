@@ -58,15 +58,15 @@ const AccountantDashboardHome: React.FC = () => {
 
   // Queries
   const { data: summaryRes, isLoading: summaryLoading } = useQuery({
-      queryKey: ['finance-summary', startDate, endDate],
+      queryKey: ['accountant-finance-summary', periodPreset],
       queryFn: () => getFinanceSummary({ startDate, endDate }),
-      staleTime: 30000, 
+      staleTime: 1000 * 60, // 1 minute
   });
 
   const { data: salesRes, isLoading: salesLoading } = useQuery({
-      queryKey: ['finance-sales-report', startDate, endDate],
+      queryKey: ['accountant-finance-sales-report', periodPreset],
       queryFn: () => getSalesReport({ startDate, endDate }),
-      staleTime: 30000,
+      staleTime: 1000 * 60, // 1 minute
   });
 
   const summary = summaryRes?.success ? summaryRes.data : null;
@@ -238,48 +238,53 @@ const AccountantDashboardHome: React.FC = () => {
       {/* Dynamic Charts Section */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Revenue Trend - Area Chart */}
-        <div className="xl:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Activity className="w-24 h-24 text-blue-600" />
+        <div className="xl:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[3rem] shadow-sm relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-15 transition-opacity">
+            <Activity className="w-28 h-28 text-indigo-500/20" strokeWidth={1} />
           </div>
           <div className="mb-10 relative z-10">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Transaction Pulse</h3>
-            <p className="text-lg font-black text-slate-900 dark:text-white mt-1 uppercase">Revenue Velocity</p>
+            <p className="text-xl font-black text-slate-900 dark:text-white mt-1 uppercase">Revenue Velocity</p>
           </div>
           
           <div className="h-[350px] w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={dailyRevenue} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={dailyRevenue} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="dashRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.2}/>
+                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-100 dark:stroke-slate-800" />
+                <CartesianGrid vertical={false} stroke="#f1f5f9" strokeDasharray="4 4" />
                 <XAxis 
                   dataKey="label" 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }}
-                  dy={10}
+                  tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }}
+                  dy={15}
                 />
                 <YAxis 
                   axisLine={false} 
                   tickLine={false} 
-                  tick={{ fontSize: 9, fontWeight: 900, fill: '#94a3b8' }} 
-                  tickFormatter={val => `${(val / 1000).toFixed(0)}k`}
+                  width={40}
+                  tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} 
+                  tickFormatter={val => val >= 1000 ? `${(val / 1000).toFixed(0)}K` : `${val}`}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip 
+                  content={<CustomTooltip />} 
+                  cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }}
+                />
                 <Area 
                   type="monotone" 
                   dataKey="revenue" 
-                  stroke="#2563eb" 
+                  stroke="#4f46e5" 
                   strokeWidth={4} 
                   fillOpacity={1} 
+                  strokeLinecap="round"
                   fill="url(#dashRev)" 
-                  dot={{ r: 4, fill: '#2563eb', strokeWidth: 2, stroke: '#fff' }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  dot={{ r: 6, fill: '#4f46e5', strokeWidth: 3, stroke: '#fff' }}
+                  activeDot={{ r: 8, fill: '#4f46e5', strokeWidth: 4, stroke: '#fff' }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -343,11 +348,11 @@ const AccountantDashboardHome: React.FC = () => {
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xl">
-        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 dark:border-slate-800 pb-2">{label}</p>
+      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-none">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 border-b border-slate-100 dark:border-slate-800 pb-2">{label}</p>
         <div className="flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-blue-600" />
-          <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(payload[0].value)}</span>
+          <div className="size-2.5 rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]" />
+          <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(payload[0].value)}</span>
         </div>
       </div>
     );

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2 } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2, Loader2 } from 'lucide-react';
 import {
   getExpenses,
   createExpense,
@@ -10,52 +11,80 @@ import {
 import type { Expense } from '../../utils/expense-utils';
 import {
   getExpenseSummary,
-  formatCurrency,
-  formatAmount,
   getCategoryLabel,
   formatDate,
 } from '../../utils/expense-utils';
+import { formatAmount } from '@/utils/format';
 import ExpenseModal, { type ExpenseFormData } from '../../components/accountant/ExpenseModal';
 import CategoryModal from '../../components/accountant/CategoryModal';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import { toast } from '@/lib/toast';
-import { Button } from '@/components/ui/button';
 import type { ColumnDef } from '@tanstack/react-table';
+import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
 
 const ExpensesPage: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
-  const [summary, setSummary] = useState({ today: 0, thisMonth: 0, total: 0 });
 
-  useEffect(() => {
-    fetchExpenses();
-  }, []);
+  // Queries
+  const { data: expensesRes, isLoading: loading, refetch } = useQuery({
+    queryKey: ['accountant-expenses-list'],
+    queryFn: () => getExpenses(),
+    staleTime: 1000 * 60 * 5,
+  });
 
-  useEffect(() => {
-    setSummary(getExpenseSummary(expenses));
-  }, [expenses]);
+  const expenses = useMemo(() => {
+    if (expensesRes?.success) return expensesRes.data || [];
+    return [];
+  }, [expensesRes]);
 
-  const fetchExpenses = async () => {
-    try {
-      setLoading(true);
-      const response = await getExpenses();
-      if (response.success) {
-        setExpenses(response.data);
+  const summary = useMemo(() => getExpenseSummary(expenses), [expenses]);
+
+  // Mutations
+  const createMutation = useMutation({
+    mutationFn: (data: CreateExpenseData) => createExpense(data),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('Expense created successfully');
+        queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] });
+        setIsModalOpen(false);
+      } else {
+        toast.error(res.message || 'Failed to create expense');
       }
-    } catch (error: any) {
-      showToast('Failed to fetch expenses', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CreateExpenseData }) => updateExpense(id, data),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('Expense updated successfully');
+        queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] });
+        setIsModalOpen(false);
+      } else {
+        toast.error(res.message || 'Failed to update expense');
+      }
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteExpense(id),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('Expense deleted successfully');
+        queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] });
+      } else {
+        toast.error(res.message || 'Failed to delete expense');
+      }
+    }
+  });
 
   const handleSubmit = async (data: ExpenseFormData) => {
     const expenseData: CreateExpenseData = {
@@ -68,34 +97,16 @@ const ExpensesPage: React.FC = () => {
     };
 
     if (editingExpense) {
-      const response = await updateExpense(editingExpense.id, expenseData);
-      if (response.success) {
-        showToast('Expense updated successfully', 'success');
-        await fetchExpenses();
-      }
+      updateMutation.mutate({ id: editingExpense.id, data: expenseData });
     } else {
-      const response = await createExpense(expenseData);
-      if (response.success) {
-        showToast('Expense created successfully', 'success');
-        await fetchExpenses();
-      }
+      createMutation.mutate(expenseData);
     }
   };
 
   const handleDelete = async (id: string) => {
-    try {
-      const response = await deleteExpense(id);
-      if (response.success) {
-        showToast('Expense deleted successfully', 'success');
-        await fetchExpenses();
-      }
-    } catch (error: any) {
-      showToast('Failed to delete expense', 'error');
+    if (confirm('Are you sure you want to delete this expense?')) {
+      deleteMutation.mutate(id);
     }
-  };
-
-  const showToast = (message: string, type: 'success' | 'error' | 'warning' | 'info') => {
-    toast[type](message);
   };
 
   const filteredExpenses = expenses.filter(e => {
@@ -164,22 +175,30 @@ const ExpensesPage: React.FC = () => {
               setEditingExpense(row.original);
               setIsModalOpen(true);
             }}
-            className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-slate-700 dark:hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
+            className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-slate-700 dark:hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
             title="Edit"
+            disabled={updateMutation.isPending}
           >
             <Edit2 size={16} />
           </button>
           <button
             onClick={() => handleDelete(row.original.id)}
-            className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50"
+            className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50 disabled:opacity-50"
             title="Delete"
+            disabled={deleteMutation.isPending}
           >
-            <Trash2 size={16} />
+            {deleteMutation.isPending && deleteMutation.variables === row.original.id ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Trash2 size={16} />
+            )}
           </button>
         </div>
       )
     }
   ];
+
+  if (loading) return <ManagementPageSkeleton cards={3} columns={5} />;
 
   return (
     <div className="animate-fade-in space-y-8">
@@ -204,19 +223,19 @@ const ExpensesPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
           title="Today's Expenses"
-          value={formatCurrency(summary.today)}
+          value={formatAmount(summary.today)}
           icon={DollarSign}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <MetricCard
           title="This Month"
-          value={formatCurrency(summary.thisMonth)}
+          value={formatAmount(summary.thisMonth)}
           icon={Calendar}
           colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
         <MetricCard
           title="Total Expenses"
-          value={formatCurrency(summary.total)}
+          value={formatAmount(summary.total)}
           icon={TrendingUp}
           colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
         />
@@ -227,7 +246,7 @@ const ExpensesPage: React.FC = () => {
           columns={columns}
           data={filteredExpenses}
           isLoading={loading}
-          onRefresh={fetchExpenses}
+          onRefresh={refetch}
           placeholder="Search expenses..."
           hidePagination={false}
           headerActions={
@@ -265,7 +284,7 @@ const ExpensesPage: React.FC = () => {
       <CategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
-        onCategoryCreated={fetchExpenses}
+        onCategoryCreated={() => queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] })}
       />
     </div>
   );

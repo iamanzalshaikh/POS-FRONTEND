@@ -1,7 +1,8 @@
 // Hooks & Routing
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useQuery } from "@tanstack/react-query";
 import { usePurchasingBasePath } from "@/hooks/usePurchasingBasePath";
 
 // Icons
@@ -48,8 +49,6 @@ export default function NewSupplierPurchasePage() {
   const user = useAuthStore((s) => s.user);
   const base = usePurchasingBasePath();
   
-  const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -57,34 +56,44 @@ export default function NewSupplierPurchasePage() {
   const [items, setItems] = useState<ProductRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [totalAmount, setTotalAmount] = useState(0);
 
-  useEffect(() => {
-    const total = items.reduce((acc, it) => {
+  // Queries
+  const { data: supsRes } = useQuery({
+    queryKey: ['suppliers-active'],
+    queryFn: () => getSuppliers(),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const { data: prodsRes } = useQuery({
+    queryKey: ['products-catalog-lite'],
+    queryFn: () => fetchProducts({ isActive: true, limit: 1000 }),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const suppliers = useMemo(() => {
+    const d = supsRes?.data?.data || supsRes?.data;
+    if (Array.isArray(d)) {
+      return d.filter((s: any) => s.isActive).map((s: any) => ({ id: s.id, name: s.name }));
+    }
+    return [];
+  }, [supsRes]);
+
+  const products = useMemo(() => {
+    const body = prodsRes;
+    return body?.data?.data || body?.data || (Array.isArray(body) ? body : []);
+  }, [prodsRes]);
+
+  const totalAmount = useMemo(() => {
+    return items.reduce((acc, it) => {
       const q = parseFloat(it.quantity) || 0;
       const c = parseFloat(it.purchaseCost) || 0;
       return acc + (q * c);
     }, 0);
-    setTotalAmount(total);
   }, [items]);
-
-  useEffect(() => {
-    void getSuppliers().then((r) => {
-      const d = r.data?.data;
-      if (Array.isArray(d)) {
-        setSuppliers(d.filter((s) => s.isActive).map((s) => ({ id: s.id, name: s.name })));
-      }
-    });
-
-    void fetchProducts({ isActive: true, limit: 1000 }).then((body: any) => {
-      const raw = body?.data?.data || body?.data || (Array.isArray(body) ? body : []);
-      setProducts(raw);
-    });
-  }, []);
 
   const addSelectedProduct = () => {
     if (!selectedProductId) return;
-    const p = products.find((prod) => prod.id === selectedProductId);
+    const p = products.find((prod: any) => prod.id === selectedProductId);
     if (!p) return;
     if (items.some((it) => it.productId === p.id)) return;
 
@@ -100,8 +109,8 @@ export default function NewSupplierPurchasePage() {
         unitType: p.unitType || "PIECE",
         qtyPerUnit: p.unitQuantity ? String(p.unitQuantity) : "",
         quantity: "1",
-        purchaseCost: p.purchasePrice ? String(p.purchasePrice) : "0",
-        sellingPrice: p.sellingPrice ? String(p.sellingPrice) : "0",
+        purchaseCost: p.latestPurchasePrice ? String(p.latestPurchasePrice) : (p.purchasePrice ? String(p.purchasePrice) : "0"),
+        sellingPrice: p.latestSellingPrice ? String(p.latestSellingPrice) : (p.sellingPrice ? String(p.sellingPrice) : "0"),
         gstPercentage: "18",
         lineDiscount: p.discountPercentage ? String(p.discountPercentage) : "0",
         alertAt: String(p.reorderLevel ?? 10),
@@ -328,7 +337,7 @@ export default function NewSupplierPurchasePage() {
                   className="h-10 w-full sm:min-w-[260px] px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
                 >
                   <option value="">Select Product...</option>
-                  {products.map((p) => (
+                  {products.map((p: any) => (
                     <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
                   ))}
                 </select>
@@ -355,6 +364,7 @@ export default function NewSupplierPurchasePage() {
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Sell</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">GST (18%)</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Disc</th>
+                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Net Sell</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Reorder Level</th>
                       <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 w-[4%]"></th>
                     </tr>
@@ -421,6 +431,14 @@ export default function NewSupplierPurchasePage() {
                             value={line.lineDiscount} 
                             onChange={(e) => updateLine(line.key, { lineDiscount: e.target.value })} 
                             className="h-9 w-full font-bold text-xs" 
+                          />
+                        </td>
+                        <td className="py-3 px-1">
+                          <Input 
+                            value={(parseFloat(line.sellingPrice || "0") * (1 - (parseFloat(line.lineDiscount || "0") / 100))).toFixed(2)} 
+                            readOnly
+                            disabled
+                            className="h-9 w-full font-bold text-xs bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-70" 
                           />
                         </td>
                         <td className="py-3 px-1">

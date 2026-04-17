@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks';
 import {
   Users,
   Plus,
@@ -11,14 +13,8 @@ import {
   AlertCircle,
   CheckCircle2,
   DollarSign,
-  MoreHorizontal
+  Eye
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../../components/global-components/dropdown-menu';
 import { 
   getStaff, 
   createStaff, 
@@ -34,6 +30,7 @@ import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from '@/lib/toast';
+import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
 
 // Valid staff roles
 const STAFF_ROLES = [
@@ -80,20 +77,10 @@ const formatRole = (role: string): string => {
 const StaffManagementPage: React.FC = () => {
   const navigate = useNavigate();
 
-  // State
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | StaffStatus>('ALL');
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
-
-  // Summary state
-  const [summary, setSummary] = useState({
-    totalStaff: 0,
-    activeStaff: 0,
-    totalMonthlySalary: 0
-  });
 
   // Modal state
   const [showStaffForm, setShowStaffForm] = useState(false);
@@ -103,36 +90,33 @@ const StaffManagementPage: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editingStaffData, setEditingStaffData] = useState<StaffFormData | null>(null);
 
-  // Fetch staff
-  const fetchStaffData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [staffRes, summaryRes] = await Promise.all([
-        getStaff({ 
-          status: statusFilter === 'ALL' ? 'all' : statusFilter,
-          role: roleFilter === 'ALL' ? undefined : roleFilter,
-          search: searchQuery || undefined
-        }),
-        getStaffSummary()
-      ]);
-      
-      if (staffRes.success) {
-        setStaff(staffRes.data.items);
-      }
-      if (summaryRes.success) {
-        setSummary(summaryRes.data);
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load staff metadata');
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter, roleFilter, searchQuery]);
+  const debouncedSearch = useDebounce(searchQuery, 500);
 
-  useEffect(() => {
-    fetchStaffData();
-  }, [fetchStaffData]);
+  // Queries
+  const { data: staffRes, isLoading: staffLoading, error: staffError, refetch: refetchStaff } = useQuery({
+    queryKey: ['accountant-staff-list', statusFilter, roleFilter, debouncedSearch],
+    queryFn: () => getStaff({ 
+      status: statusFilter === 'ALL' ? 'all' : statusFilter,
+      role: roleFilter === 'ALL' ? undefined : roleFilter,
+      search: debouncedSearch || undefined
+    }),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const { data: summaryRes, isLoading: summaryLoading, refetch: refetchSummary } = useQuery({
+    queryKey: ['accountant-staff-summary'],
+    queryFn: () => getStaffSummary(),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const staff = staffRes?.success ? staffRes.data.items : [];
+  const summary = summaryRes?.success ? summaryRes.data : { totalStaff: 0, activeStaff: 0, totalMonthlySalary: 0 };
+  const loading = staffLoading || summaryLoading;
+  
+  const refetchData = useCallback(() => {
+    refetchStaff();
+    refetchSummary();
+  }, [refetchStaff, refetchSummary]);
 
   const handleSaveStaff = async (formData: StaffFormData) => {
     setIsSubmitting(true);
@@ -164,7 +148,7 @@ const StaffManagementPage: React.FC = () => {
       setShowStaffForm(false);
       setEditingStaffData(null);
       setSelectedStaff(null);
-      fetchStaffData();
+      refetchData();
     } catch (err: any) {
       const message = err.response?.data?.message || 'Failed to sync staff record with registry';
       toast.error(message);
@@ -182,7 +166,7 @@ const StaffManagementPage: React.FC = () => {
       toast.success('Staff member deactivated successfully');
       setShowDeleteModal(false);
       setSelectedStaff(null);
-      fetchStaffData();
+      refetchData();
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Termination sequence failed');
     } finally {
@@ -202,9 +186,12 @@ const StaffManagementPage: React.FC = () => {
     {
       header: "Staff Member",
       cell: ({ row }) => (
-        <div className="flex items-center justify-center gap-3">
+        <div 
+          className="flex items-center justify-center gap-3 cursor-pointer group/name"
+          onClick={() => navigate(`/accountant/staff/${row.original.id}`)}
+        >
           <div className="text-left">
-            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{row.original.name}</p>
+            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover/name:text-indigo-600 transition-colors">{row.original.name}</p>
           </div>
         </div>
       )
@@ -254,57 +241,61 @@ const StaffManagementPage: React.FC = () => {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex justify-center">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl border border-slate-100 dark:border-slate-700 transition-all active:scale-95 shadow-sm">
-                <MoreHorizontal size={18} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 p-2 rounded-2xl border-slate-100 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900 z-[9999]">
-              <DropdownMenuItem
-                onClick={() => {
-                  setSelectedStaff(row.original);
-                  setEditingStaffData({
-                    firstName: row.original.firstName || row.original.name.split(' ')[0] || '',
-                    lastName: row.original.lastName || row.original.name.split(' ').slice(1).join(' ') || '',
-                    fatherName: row.original.fatherHusbandName || '',
-                    cnic: row.original.cnic || '',
-                    email: row.original.email || '',
-                    mobile: row.original.phone || '',
-                    role: row.original.role,
-                    maritalStatus: 'SINGLE',
-                    dob: row.original.dateOfBirth ? row.original.dateOfBirth.split('T')[0] : '',
-                    joinDate: row.original.joiningDate.split('T')[0],
-                    address: row.original.address || '',
-                    basicSalary: String(row.original.baseSalary || row.original.monthlySalary),
-                    joiningType: 'FULL_TIME',
-                    status: row.original.status,
-                  });
-                  setShowStaffForm(true);
-                }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-default hover:bg-slate-50 dark:hover:bg-slate-800 group outline-none"
-              >
-                <Edit2 size={14} className="text-slate-400 group-hover:text-blue-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white">Modify Record</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  setSelectedStaff(row.original);
-                  setShowDeleteModal(true);
-                }}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-default hover:bg-rose-50 dark:hover:bg-rose-950/30 group mt-1 outline-none"
-              >
-                <Trash2 size={14} className="text-slate-400 group-hover:text-rose-500" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 group-hover:text-rose-600">Deactivate</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="flex items-center justify-center gap-2">
+          {/* View / Insight Button */}
+          <button 
+            onClick={() => navigate(`/accountant/staff/${row.original.id}`)}
+            className="p-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl border border-indigo-100 dark:border-indigo-900/50 transition-all active:scale-95 group"
+            title="Insight Report"
+          >
+            <Eye size={16} className="group-hover:scale-110 transition-transform" />
+          </button>
+
+          {/* Edit Button */}
+          <button 
+            onClick={() => {
+              setSelectedStaff(row.original);
+              setEditingStaffData({
+                firstName: row.original.firstName || row.original.name.split(' ')[0] || '',
+                lastName: row.original.lastName || row.original.name.split(' ').slice(1).join(' ') || '',
+                fatherName: row.original.fatherHusbandName || '',
+                cnic: row.original.cnic || '',
+                email: row.original.email || '',
+                mobile: row.original.phone || '',
+                role: row.original.role,
+                maritalStatus: 'SINGLE',
+                dob: row.original.dateOfBirth ? row.original.dateOfBirth.split('T')[0] : '',
+                joinDate: row.original.joiningDate.split('T')[0],
+                address: row.original.address || '',
+                basicSalary: String(row.original.baseSalary || row.original.monthlySalary),
+                joiningType: 'FULL_TIME',
+                status: row.original.status,
+              });
+              setShowStaffForm(true);
+            }}
+            className="p-2 bg-slate-50 dark:bg-slate-800 text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl border border-slate-100 dark:border-slate-700 hover:border-blue-200 transition-all active:scale-95 group"
+            title="Modify Record"
+          >
+            <Edit2 size={16} className="group-hover:rotate-12 transition-transform" />
+          </button>
+
+          {/* Delete Button */}
+          <button 
+            onClick={() => {
+              setSelectedStaff(row.original);
+              setShowDeleteModal(true);
+            }}
+            className="p-2 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 rounded-xl border border-rose-100 dark:border-rose-900/50 transition-all active:scale-95 group"
+            title="Deactivate"
+          >
+            <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+          </button>
         </div>
-       
       )
     }
   ];
+
+  if (loading) return <ManagementPageSkeleton cards={3} columns={7} />;
 
   return (
     <div className="animate-fade-in space-y-8">
@@ -358,7 +349,7 @@ const StaffManagementPage: React.FC = () => {
           columns={columns}
           data={staff}
           isLoading={loading}
-          onRefresh={fetchStaffData}
+          onRefresh={refetchData}
           placeholder="Search staff..."
           hidePagination={false}
           headerActions={

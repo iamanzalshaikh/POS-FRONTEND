@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks';
 import StockOverviewCards from '@/components/store-admin/StockOverviewCards';
 import { fetchProducts } from '@/api/products.api';
 import { fetchFullInventory } from '@/api/inventory.api';
@@ -11,73 +13,57 @@ import { cn } from '@/lib/utils';
 const StockLevelsPage = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebounce(searchQuery, 500);
     const [activeFilter, setActiveFilter] = useState('All');
-
     const [page, setPage] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
     const pageSize = 10;
 
-    const [productsDataRes, setProductsDataRes] = useState<any>(null);
-    const [productsLoading, setProductsLoading] = useState(true);
-    const [inventoryDataRes, setInventoryDataRes] = useState<any>(null);
-    const [inventoryLoading, setInventoryLoading] = useState(true);
-
-    const loadData = async () => {
-        setProductsLoading(true);
-        setInventoryLoading(true);
-        try {
-            const params: any = { page, limit: pageSize };
+    // Use TanStack Query for efficient, cached data fetching
+    const { 
+        data: inventoryRes, 
+        isLoading: loading, 
+        refetch: loadData 
+    } = useQuery({
+        queryKey: ['stock-levels', debouncedSearch, activeFilter, page],
+        queryFn: () => {
+            const params: any = { 
+                page, 
+                limit: pageSize,
+                ...(debouncedSearch && { search: debouncedSearch })
+            };
             if (activeFilter === 'Low') params.lowStock = 'true';
             if (activeFilter === 'Out') params.outOfStock = 'true';
             if (activeFilter === 'OK') params.healthy = 'true';
 
-            const [products, inventoryRes] = await Promise.all([
-                fetchProducts(),
-                fetchFullInventory(params)
-            ]);
-            setProductsDataRes(products);
-            setInventoryDataRes(inventoryRes);
-            setTotalItems(inventoryRes?.data?.total || 0);
-        } catch (error) {
-            console.error("Failed to load stock data:", error);
-        } finally {
-            setProductsLoading(false);
-            setInventoryLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        setPage(1); // Reset to first page when filter changes
-        loadData();
-    }, [activeFilter]);
-
-    useEffect(() => {
-        loadData();
-    }, [page]);
-
-    const loading = productsLoading || inventoryLoading;
-
-    // Process data
-    const productsData = (productsDataRes as any)?.data?.data || (productsDataRes as any)?.data || (Array.isArray(productsDataRes) ? productsDataRes : []);
-    const inventoryData = (inventoryDataRes as any)?.data?.data || (inventoryDataRes as any)?.data || (Array.isArray(inventoryDataRes?.data) ? inventoryDataRes.data : []);
-
-    const inventory = inventoryData.map((inv: any) => {
-        const item = inv.product || {};
-        return {
-            id: inv.productId,
-            productName: item.name || 'Unnamed Product',
-            sku: item.sku || 'N/A',
-            currentStock: inv.totalQuantity || 0,
-            reorderLevel: item.reorderLevel || 10,
-            category: typeof item.category === 'object' ? item.category?.name : item.category || 'General',
-        };
+            return fetchFullInventory(params);
+        },
+        staleTime: 30000,
+        placeholderData: (prev) => prev
     });
 
-    const stats = {
-        totalItems: inventory.length,
+    const inventoryData = inventoryRes?.data?.data || inventoryRes?.data || [];
+    const totalItems = inventoryRes?.data?.total || 0;
+
+    const inventory = useMemo(() => {
+        return (Array.isArray(inventoryData) ? inventoryData : []).map((inv: any) => {
+            const item = inv.product || {};
+            return {
+                id: inv.productId,
+                productName: item.name || 'Unnamed Product',
+                sku: item.sku || 'N/A',
+                currentStock: inv.totalQuantity || 0,
+                reorderLevel: item.reorderLevel || 10,
+                category: typeof item.category === 'object' ? item.category?.name : item.category || 'General',
+            };
+        });
+    }, [inventoryData]);
+
+    // Simplified summary stats (Total items on current page or from pagination metadata)
+    const stats = useMemo(() => ({
+        totalItems: totalItems,
         lowStockItems: inventory.filter((item: any) => item.currentStock > 0 && item.currentStock <= item.reorderLevel).length,
         outOfStockItems: inventory.filter((item: any) => item.currentStock === 0).length
-    };
+    }), [inventory, totalItems]);
 
     const columns: ColumnDef<any>[] = [
         {

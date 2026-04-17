@@ -9,6 +9,7 @@ import {
   Minus,
   Plus,
   X,
+  NotebookTabs,
   Percent,
   Banknote,
   Clock,
@@ -40,6 +41,7 @@ type CartItem = {
   /** Matches product tax; backend uses batch % then product % — cart uses product for preview. */
   taxPercentage?: number;
   discountPercentage?: number;
+  totalStock?: number;
 };
 
 type HoldOrder = {
@@ -110,8 +112,16 @@ const POSInterface: React.FC = () => {
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string | null>('CASH');
   const [notes, setNotes] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
   
   // Filter states for products table
   const [productSearch, setProductSearch] = useState('');
@@ -210,21 +220,34 @@ const POSInterface: React.FC = () => {
     const unitPrice = Number(
       (product as any).sellingPrice ?? (product as any).price ?? 0
     );
+    const totalStock = product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
     
     console.log('🛒 Adding to cart:', {
       id: product.id,
       name: product.name,
       price: unitPrice,
-      type: typeof unitPrice
+      totalStock
     });
     
+    setError(null);
+
     setCart((prev) => {
       const existing = prev.find((i) => i.id === product.id);
       if (existing) {
+        if (existing.quantity + 1 > (existing.totalStock ?? totalStock)) {
+          setError(`Cannot add more ${product.name}. Only ${totalStock} in stock.`);
+          return prev;
+        }
         return prev.map((i) =>
           i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
+      
+      if (totalStock <= 0) {
+        setError(`${product.name} is out of stock.`);
+        return prev;
+      }
+
       return [
         ...prev,
         {
@@ -234,6 +257,7 @@ const POSInterface: React.FC = () => {
           quantity: 1,
           taxPercentage: parseProductTaxPct(product),
           discountPercentage: product.discountPercentage || 0,
+          totalStock: totalStock, // Store it for validation in other handlers
         },
       ];
     });
@@ -277,6 +301,12 @@ const POSInterface: React.FC = () => {
 
   const handleQuantityChange = (itemId: string, delta: number) => {
     setCart((prev) => {
+      const item = prev.find(i => i.id === itemId);
+      if (item && delta > 0 && item.quantity + delta > (item.totalStock ?? Infinity)) {
+        setError(`Cannot add more. Only ${item.totalStock} units available.`);
+        return prev;
+      }
+
       const updated = prev
         .map((item) =>
           item.id === itemId
@@ -296,11 +326,17 @@ const POSInterface: React.FC = () => {
     const numericValue = parseInt(value, 10);
     if (isNaN(numericValue) || numericValue < 1) return;
     
-    setCart((prev) => 
-      prev.map((item) => 
+    setCart((prev) => {
+      const item = prev.find(i => i.id === itemId);
+      if (item && numericValue > (item.totalStock ?? Infinity)) {
+        setError(`Limit reached. Only ${item.totalStock} units available.`);
+        return prev.map((i) => i.id === itemId ? { ...i, quantity: item.totalStock ?? i.quantity } : i);
+      }
+
+      return prev.map((item) => 
         item.id === itemId ? { ...item, quantity: numericValue } : item
-      )
-    );
+      );
+    });
   };
 
   const handleClearCart = () => {
@@ -736,8 +772,9 @@ const POSInterface: React.FC = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-10rem)] overflow-hidden flex flex-col bg-slate-100 dark:bg-slate-950 p-0">
-      <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-900 rounded-none border-x lg:border border-slate-100 dark:border-slate-800 shadow-sm transition-colors duration-500 overflow-hidden m-0">
+    <div className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+      <div className="flex flex-col min-w-[1200px] min-h-[calc(100vh-10rem)] bg-slate-100 dark:bg-slate-950">
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 shadow-sm transition-colors duration-500 m-0">
       {/* Offline Banner */}
       {isOnline === false && (
         <div className="flex items-center justify-between px-6 py-3 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm font-medium">
@@ -820,9 +857,10 @@ const POSInterface: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col lg:flex-row overflow-x-auto custom-scrollbar min-h-0 min-w-[1200px]">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0">
           {/* Left: Product Selection */}
-          <section className="flex-1 flex flex-col min-h-[500px] lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50/30">
+          <section className="flex-1 flex flex-col min-h-[600px] lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-transparent">
             {/* Barcode Scanner */}
             <form onSubmit={handleScanSubmit} className="flex-shrink-0">
               <div className="relative">
@@ -872,19 +910,19 @@ const POSInterface: React.FC = () => {
             <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50">
 {/* Hold Orders Section */}
       {holdOrders.length > 0 && (
-        <div className="p-5 pb-0 mb-4 animate-in slide-in-from-top duration-500 overflow-hidden flex flex-col max-h-[220px]">
+        <div className="p-4 animate-in slide-in-from-top duration-500 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between mb-3 px-2 flex-shrink-0">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
               <Clock size={14} className="text-indigo-500" />
               Hold Orders <span className="bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] ml-1">{holdOrders.length}</span>
             </h3>
           </div>
-          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="overflow-x-auto pb-2 custom-scrollbar">
+            <div className="flex gap-3 min-w-max">
               {holdOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="p-3.5 rounded-[1.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+                  className="w-[200px] p-3.5 rounded-[1.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
                 >
                   <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-full -mr-8 -mt-8"></div>
                   <div className="relative z-10">
@@ -922,11 +960,12 @@ const POSInterface: React.FC = () => {
           </div>
         </div>
       )}
+
       </div>
     </section>
 
     {/* Right: Added Products & Active Checkout Stack */}
-    <aside className="w-full lg:w-[500px] xl:w-[550px] flex flex-col bg-white overflow-hidden flex-shrink-0">
+    <aside className="w-full lg:w-[350px] 2xl:w-[420px] flex flex-col bg-white overflow-hidden flex-shrink-0">
       <div className="flex-1 flex flex-col overflow-hidden border-b border-slate-200">
         <div className="px-5 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
                 <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
@@ -1292,8 +1331,10 @@ const POSInterface: React.FC = () => {
                   </button>
                 </div>
               </div>
-            </aside>
+          </aside>
         </div>
+      </div>
+      </div>
       </div>
       
       {/* Hidden Receipt for direct thermal printing */}

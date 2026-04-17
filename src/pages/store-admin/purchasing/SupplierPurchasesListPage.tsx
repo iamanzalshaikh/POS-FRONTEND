@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { 
     ClipboardList,
@@ -6,7 +6,8 @@ import {
     Search,
     Truck,
     Wallet,
-    AlertCircle
+    AlertCircle,
+    RefreshCw
 } from "lucide-react";
 import { 
     getSupplierPurchases, 
@@ -21,7 +22,8 @@ import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks';
 
 function num(v: string | number | undefined): number {
     if (v === undefined || v === null) return 0;
@@ -35,57 +37,66 @@ export default function SupplierPurchasesListPage() {
     const [searchParams] = useSearchParams();
     const filterSupplierId = searchParams.get("supplierId") || "";
 
-    const [rows, setRows] = useState<SupplierPurchase[]>([]);
-    const [total, setTotal] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [suppliers, setSuppliers] = useState<{ id: string; name: string }[]>([]);
     const [supplierFilter, setSupplierFilter] = useState(filterSupplierId);
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebounce(searchQuery, 500);
+    const [page, setPage] = useState(1);
+    const [limit] = useState(25);
 
     useEffect(() => {
         setSupplierFilter(filterSupplierId);
     }, [filterSupplierId]);
 
-    const loadPurchases = async () => {
-        setLoading(true);
-        try {
-            const res = await getSupplierPurchases({
-                limit: 100,
-                page: 1,
-                ...(supplierFilter ? { supplierId: supplierFilter } : {}),
-            });
-            const payload = res.data?.data;
-            setRows(payload?.items || []);
-            setTotal(payload?.total ?? 0);
-        } catch (e: any) {
-            console.error("Failed to load purchases:", e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Reset page when filters change
     useEffect(() => {
-        loadPurchases();
-    }, [supplierFilter]);
+        setPage(1);
+    }, [debouncedSearch, supplierFilter]);
 
-    useEffect(() => {
-        void getSuppliers().then((r) => {
-            const d = r.data?.data;
-            if (Array.isArray(d)) setSuppliers(d.map((s) => ({ id: s.id, name: s.name })));
-        });
-    }, []);
+    const { data: purchasesRes, isLoading: loading, refetch: loadPurchases } = useQuery({
+        queryKey: ['supplier-purchases', supplierFilter, debouncedSearch, page, limit],
+        queryFn: () => getSupplierPurchases({
+            limit,
+            page,
+            ...(supplierFilter ? { supplierId: supplierFilter } : {}),
+            ...(debouncedSearch ? { search: debouncedSearch } : {})
+        }),
+        placeholderData: (previousData) => previousData,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const { data: suppliersRes } = useQuery({
+        queryKey: ['suppliers-active'], 
+        queryFn: () => getSuppliers(),
+        staleTime: 1000 * 60 * 30, // 30 minutes
+    });
+
+    const suppliers = useMemo(() => {
+        const d = suppliersRes?.data?.data;
+        if (Array.isArray(d)) return d.map((s) => ({ id: s.id, name: s.name }));
+        return [];
+    }, [suppliersRes]);
+
+    const rows = useMemo(() => {
+        return purchasesRes?.data?.data?.items || [];
+    }, [purchasesRes]);
+
+    const total = purchasesRes?.data?.data?.total ?? 0;
+    const pageCount = Math.ceil(total / limit) || 1;
 
     const metrics = useMemo(() => {
-        const totalAmount = rows.reduce((acc, r) => acc + num(r.totalAmount), 0);
-        const totalBalance = rows.reduce((acc, r) => acc + num(r.balance), 0);
+        // Since we only have the current page's rows, we ideally need a summary endpoint
+        // But for now we calculate based on what we have or zero out if uncertain
+        const totalAmount = rows.reduce((acc: number, r: SupplierPurchase) => acc + num(r.totalAmount), 0);
+        const totalBalance = rows.reduce((acc: number, r: SupplierPurchase) => acc + num(r.balance), 0);
         return {
             totalAmount,
             totalBalance
         };
-    }, [rows]);
+    }, [rows, purchasesRes]);
 
-    const columns: ColumnDef<SupplierPurchase>[] = [
+    const columns: ColumnDef<SupplierPurchase>[] = useMemo(() => [
         {
+            id: "purchaseNo",
             header: "ID",
             cell: ({ row }) => (
                 <div className="flex justify-center uppercase tracking-widest text-[11px] font-black text-slate-400">
@@ -105,7 +116,7 @@ export default function SupplierPurchasesListPage() {
             header: "Total Amount",
             accessorKey: "totalAmount",
             cell: ({ row }) => (
-                <div className="font-bold text-sm text-slate-900 dark:text-white tracking-tight">
+                <div className="font-bold text-sm text-slate-900 dark:text-white tracking-tight text-center">
                     {formatAmountShort(num(row.original.totalAmount))}
                 </div>
             )
@@ -116,7 +127,7 @@ export default function SupplierPurchasesListPage() {
                 const bal = num(row.original.balance);
                 const isPaid = bal <= 0;
                 return (
-                    <div className="flex flex-col gap-1 items-start">
+                    <div className="flex flex-col gap-1 items-center">
                         <span className={cn(
                             "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border",
                             isPaid 
@@ -150,10 +161,11 @@ export default function SupplierPurchasesListPage() {
             }
         },
         {
+            id: "purchaseDate",
             header: "Purchase Date",
             accessorKey: "purchaseDate",
             cell: ({ row }) => (
-                <div className="flex flex-col">
+                <div className="flex flex-col items-center">
                     <span className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">
                         {new Date(row.original.purchaseDate).toLocaleDateString()}
                     </span>
@@ -182,13 +194,7 @@ export default function SupplierPurchasesListPage() {
                 </div>
             )
         }
-    ];
-
-    const filteredRows = rows.filter(r => {
-        const qArr = searchQuery.toLowerCase().split(' ');
-        const supplierName = (r.supplier?.name || '').toLowerCase();
-        return qArr.every(q => supplierName.includes(q));
-    });
+    ], [base]);
 
     return (
         <div className="animate-fade-in space-y-10">
@@ -222,69 +228,55 @@ export default function SupplierPurchasesListPage() {
                 />
             </div>
 
-            {loading ? (
-                <div className="space-y-10 animate-fade-in">
-                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
-                        <div className="flex items-center justify-between mb-8">
-                            <Skeleton className="h-10 w-64 rounded-xl" />
-                            <div className="flex gap-3">
-                                <Skeleton className="h-10 w-32 rounded-xl" />
-                                <Skeleton className="h-10 w-32 rounded-xl" />
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
+                <DataTable 
+                    columns={columns} 
+                    data={rows}
+                    isLoading={loading}
+                    onRefresh={loadPurchases}
+                    manualPagination={true}
+                    pageCount={pageCount}
+                    pageIndex={page}
+                    onPageChange={setPage}
+                    totalItems={total}
+                    pageSize={limit}
+                    placeholder="Search purchases..."
+                    exportFilename="Supplier-Purchases"
+                    headerActions={
+                        <div className="flex items-center gap-3">
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Identify vendor..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                />
                             </div>
-                        </div>
-                        <div className="space-y-4">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
-                    <DataTable 
-                        columns={columns} 
-                        data={filteredRows}
-                        isLoading={loading}
-                        onRefresh={loadPurchases}
-                        placeholder="Search purchases..."
-                        hidePagination={false}
-                        manualPagination={false}
-                        exportFilename="Supplier-Purchases"
-                        headerActions={
-                            <div className="flex items-center gap-3">
-                                <div className="relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="Identify vendor..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
-                                    />
-                                </div>
-                                <div className="relative flex items-center">
-                                    <Truck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                                    <select
-                                        value={supplierFilter}
-                                        onChange={(e) => setSupplierFilter(e.target.value)}
-                                        className="pl-11 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[200px] h-10"
-                                    >
-                                        <option value="">All Suppliers</option>
-                                        {suppliers.map((s) => (
-                                            <option key={s.id} value={s.id}>
-                                                {s.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                    </div>
+                            <div className="relative flex items-center">
+                                <Truck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                                <select
+                                    value={supplierFilter}
+                                    onChange={(e) => setSupplierFilter(e.target.value)}
+                                    className="pl-11 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[200px] h-10"
+                                >
+                                    <option value="">All Suppliers</option>
+                                    {suppliers.map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                            {s.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                 </div>
                             </div>
-                        }
-                    />
-                </div>
-            )}
+                        </div>
+                    }
+                />
+            </div>
         </div>
     );
 }
+

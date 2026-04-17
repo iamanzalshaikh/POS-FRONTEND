@@ -44,6 +44,7 @@ export interface SalesTransactionsParams {
   startDate?: string;
   endDate?: string;
   paymentMethod?: string;
+  search?: string;
 }
 
 export interface InventoryLogsParams {
@@ -52,6 +53,7 @@ export interface InventoryLogsParams {
   changeType?: string;
   startDate?: string;
   endDate?: string;
+  search?: string;
 }
 
 export interface ProfitLossData {
@@ -387,7 +389,12 @@ export const getSalesReport = async (params: SalesReportParams): Promise<Standar
  */
 export const getSalesTransactions = async (params?: SalesTransactionsParams): Promise<StandardApiResponse<SalesTransaction[]> | ApiError> => {
   return withErrorHandling(
-    () => api.get<BackendApiResponse<SalesTransaction[]>>('/sales', { params }),
+    () => api.get<BackendApiResponse<SalesTransaction[]>>('/sales', { 
+      params: {
+        ...params,
+        search: params?.search
+      } 
+    }),
     'Failed to fetch sales transactions'
   );
 };
@@ -441,7 +448,12 @@ export const getInventoryReport = async (): Promise<StandardApiResponse<Inventor
  */
 export const getInventoryLogs = async (params?: InventoryLogsParams): Promise<StandardApiResponse<InventoryLogsData> | ApiError> => {
   return withErrorHandling(
-    () => api.get<BackendApiResponse<InventoryLogsData>>('/inventory/logs', { params }),
+    () => api.get<BackendApiResponse<InventoryLogsData>>('/inventory/logs', { 
+      params: {
+        ...params,
+        search: params?.search
+      }
+    }),
     'Failed to fetch inventory logs'
   );
 };
@@ -558,6 +570,7 @@ export const getRecentTransactions = async (params?: {
   limit?: number;
   startDate?: string;
   endDate?: string;
+  search?: string;
 }): Promise<StandardApiResponse<RecentTransactionsData> | ApiError> => {
   return withErrorHandling(
     () =>
@@ -566,6 +579,7 @@ export const getRecentTransactions = async (params?: {
           type: params?.type ?? 'all',
           page: params?.page ?? 1,
           limit: params?.limit ?? 30,
+          search: params?.search,
           ...(params?.startDate && params?.endDate
             ? { startDate: params.startDate, endDate: params.endDate }
             : {}),

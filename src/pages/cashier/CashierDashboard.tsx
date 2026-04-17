@@ -26,8 +26,10 @@ const CashierDashboard: React.FC = () => {
   React.useEffect(() => {
     if (!deviceId) return;
 
-    // Pulse immediately on mount
-    devicesApi.heartbeat(deviceId).catch(err => console.error("[HEARTBEAT] Initial Pulse Failure:", err));
+    // Pulse with a small delay on mount to avoid competing with critical product fetch
+    const initialPulse = setTimeout(() => {
+      devicesApi.heartbeat(deviceId).catch(err => console.error("[HEARTBEAT] Initial Pulse Failure:", err));
+    }, 500);
 
     const interval = setInterval(() => {
       devicesApi.heartbeat(deviceId).catch(err => {
@@ -35,7 +37,10 @@ const CashierDashboard: React.FC = () => {
       });
     }, 60000); // 1 minute interval
 
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialPulse);
+      clearInterval(interval);
+    };
   }, [deviceId]);
   const terminal = user?.assignedTerminals?.[0];
   const displayTerminalId = terminal?.id ?? null;

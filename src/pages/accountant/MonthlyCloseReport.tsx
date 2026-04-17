@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart, Download, Search, Loader2, ArrowDownRight } from 'lucide-react';
 import { getMonthlyCloseReport, type MonthlyCloseData } from '../../api/finance.api';
 import { formatCurrency } from '../../utils/expense-utils';
@@ -12,37 +13,20 @@ import type { ColumnDef } from '@tanstack/react-table';
 // Use interface from finance.api.ts
 
 const MonthlyCloseReport: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<MonthlyCloseData | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [selectedMonth, setSelectedMonth] = useState(toLocalYMD(new Date()).slice(0, 7)); // YYYY-MM
 
-  useEffect(() => {
-    fetchMonthlyData();
-  }, [selectedMonth]);
-
-  const fetchMonthlyData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
+  // Query
+  const { data: closeRes, isLoading: loading, error: closeError, refetch } = useQuery({
+    queryKey: ['accountant-monthly-close', selectedMonth],
+    queryFn: () => {
       const [year, month] = selectedMonth.split('-').map(Number);
-      console.log('📊 [MonthlyClose] Fetching P&L Close for:', { year, month });
+      return getMonthlyCloseReport(year, month);
+    },
+    staleTime: 1000 * 60 * 10,
+  });
 
-      const response = await getMonthlyCloseReport(year, month);
-
-      if (response.success && response.data) {
-        setData(response.data);
-      } else {
-        throw new Error(response.message || 'Failed to fetch monthly close data');
-      }
-    } catch (err: any) {
-      console.error('Failed to fetch monthly close data:', err);
-      setError(err.message || 'Failed to load monthly close report');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const data = closeRes?.success ? closeRes.data : null;
+  const error = closeError ? (closeError as any).message : (!closeRes?.success && closeRes?.message ? closeRes.message : null);
 
   const formatCurrencyLocal = (value: number) => {
     return formatCurrency(value);
@@ -238,7 +222,7 @@ const MonthlyCloseReport: React.FC = () => {
           columns={columns}
           data={tableRows}
           isLoading={loading}
-          onRefresh={fetchMonthlyData}
+          onRefresh={refetch}
           placeholder="Search line items..."
           hidePagination={false}
           manualPagination={false}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import React, { useState, useMemo, useEffect } from "react"
 import { useQuery } from '@tanstack/react-query';
 import ProductsHeader from "@/components/store-admin/ProductsHeader"
 import AddProductModal from "@/components/store-admin/AddProductModal"
@@ -6,11 +6,12 @@ import MetricCard from "@/components/global-components/MetricCard";
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
-import { Plus, Trash, Box, Search, ShoppingCart, PackageOpen, AlertTriangle } from 'lucide-react';
+import { Plus, Trash, Box, Search, ShoppingCart, PackageOpen, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { formatCurrencyShort, formatAmountShort, formatNumberShort } from "@/utils/format";
 import AddStockModal from "@/components/store-admin/AddStockModal";
 import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
+import { useDebounce } from '@/hooks';
 
 import { fetchProducts } from "@/api/products.api";
 import { fetchFullInventory } from "@/api/inventory.api";
@@ -24,67 +25,69 @@ export default function ProductsManagementPage() {
     const [selectedProductForStock, setSelectedProductForStock] = useState<any>(null);
 
     const [search, setSearch] = useState('')
-    const [categoryId, setCategoryId] = useState('')
+    const debouncedSearch = useDebounce(search, 500);
+    const [categoryId, setCategoryId] = useState('all')
     const [isActiveFilter, setIsActiveFilter] = useState<string>('all')
+    const [page, setPage] = useState(1);
+    const [limit] = useState(25);
+
+    // Reset page when filters change
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, categoryId, isActiveFilter]);
 
     // Queries
     const { data: catRes } = useQuery({
         queryKey: ['categories'],
         queryFn: () => getCategories(),
-        staleTime: 1000 * 60 * 10,
+        staleTime: 1000 * 60 * 60, // Cache categories for an hour
     });
     const categories = catRes?.data?.data || (Array.isArray(catRes?.data) ? catRes?.data : []);
-
-    const queryParams: any = {}
-    if (search) queryParams.search = search;
-    if (categoryId && categoryId !== 'all') queryParams.categoryId = categoryId;
-    if (isActiveFilter !== 'all') queryParams.isActive = isActiveFilter === 'true';
 
     const { 
         data: productsRes, 
         isLoading: productsLoading, 
         refetch: refetchProducts 
     } = useQuery({
-        queryKey: ['products', search, categoryId, isActiveFilter],
-        queryFn: () => fetchProducts(queryParams),
-        staleTime: 1000 * 60 * 5,
+        queryKey: ['products-catalog', debouncedSearch, categoryId, isActiveFilter, page, limit],
+        queryFn: () => fetchProducts({
+            page,
+            limit,
+            ...(debouncedSearch && { search: debouncedSearch }),
+            ...(categoryId !== 'all' && { categoryId }),
+            ...(isActiveFilter !== 'all' && { isActive: isActiveFilter === 'true' })
+        }),
+        placeholderData: (previousData) => previousData,
+        staleTime: 60000, // 1 minute stale time
     });
-
-    const { 
-        data: inventoryRes, 
-        isLoading: inventoryLoading, 
-        refetch: refetchInventory 
-    } = useQuery({
-        queryKey: ['inventory-full'],
-        queryFn: () => fetchFullInventory(),
-        staleTime: 1000 * 60 * 5,
-    });
-
-    const loading = productsLoading || inventoryLoading;
 
     const products = useMemo(() => {
         const productsRaw = productsRes?.data?.data || productsRes?.data || (Array.isArray(productsRes) ? productsRes : [])
-        const invResData = inventoryRes?.data
-        const inventoryRaw = Array.isArray(invResData) ? invResData : (invResData?.data || [])
-
-        const inventoryMap = inventoryRaw.reduce((acc: any, inv: any) => {
-            acc[inv.productId] = inv.totalQuantity || inv.stock || 0
-            return acc
-        }, {})
-
-        return productsRaw.map((p: any) => ({
+        
+        return (Array.isArray(productsRaw) ? productsRaw : []).map((p: any) => ({
             ...p,
-            stock: inventoryMap[p.id] || 0
-        }))
-    }, [productsRes, inventoryRes]);
+            stock: p.inventoryStock?.totalQuantity ?? 0
+        }));
+    }, [productsRes]);
+
+    const totalItems = productsRes?.data?.total || (Array.isArray(productsRes?.data) ? productsRes.data.length : 0);
+    const pageCount = Math.ceil(totalItems / limit) || 1;
+
+    const summary = useMemo(() => {
+        return {
+            total: totalItems,
+            lowStock: products.filter((p: any) => p.stock > 0 && p.stock <= (p.reorderLevel || 10)).length,
+            active: products.filter((p: any) => p.isActive).length
+        };
+    }, [products, totalItems]);
 
     const handleRefresh = () => {
         refetchProducts();
-        refetchInventory();
     }
 
-    const columns: ColumnDef<any>[] = [
+    const columns: ColumnDef<any>[] = useMemo(() => [
         {
+            id: "rowNumber",
             header: "ID",
             cell: ({ row }) => (
                 <div className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest text-center">
@@ -129,7 +132,7 @@ export default function ProductsManagementPage() {
             accessorKey: "purchasePrice",
             cell: ({ row }) => (
                 <div className="text-center text-slate-500 dark:text-slate-400 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {formatAmountShort(row.getValue("purchasePrice"))}
+                    {formatAmountShort(row.original.purchasePrice || 0)}
                 </div>
             )
         },
@@ -138,14 +141,14 @@ export default function ProductsManagementPage() {
             accessorKey: "sellingPrice",
             cell: ({ row }) => (
                 <div className="text-center text-[#1e293b] dark:text-slate-300 text-[11px] font-black uppercase tracking-widest tabular-nums">
-                    {formatAmountShort(row.getValue("sellingPrice"))}
+                    {formatAmountShort(row.original.sellingPrice || 0)}
                 </div>
             )
         },
         {
             header: "Disc. %",
             cell: ({ row }) => {
-                const disc = Number(row.original.discountPercentage || 0);
+                const disc = Number(row.original.latestDiscountPercentage ?? row.original.discountPercentage ?? 0);
                 return (
                     <div className="text-center">
                         <span className={cn(
@@ -162,7 +165,7 @@ export default function ProductsManagementPage() {
             header: "Net Price",
             cell: ({ row }) => {
                 const base = parseFloat(row.original.latestSellingPrice || row.original.sellingPrice || 0);
-                const disc = Number(row.original.discountPercentage || 0);
+                const disc = Number(row.original.latestDiscountPercentage ?? row.original.discountPercentage ?? 0);
                 const net = base * (1 - disc / 100);
                 return (
                     <div className="text-center text-emerald-600 text-[11px] font-black uppercase tracking-widest tabular-nums">
@@ -233,7 +236,7 @@ export default function ProductsManagementPage() {
                 </div>
             )
         }
-    ];
+    ], []);
 
     return (
         <div className="animate-fade-in space-y-8">
@@ -245,19 +248,19 @@ export default function ProductsManagementPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                 <MetricCard 
                     title="Total Products" 
-                    value={products.length} 
+                    value={summary.total} 
                     icon={ShoppingCart} 
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                 />
                 <MetricCard 
-                    title="Active Store" 
-                    value={products.filter((p: any) => p.isActive).length} 
+                    title="Active Products" 
+                    value={summary.active} 
                     icon={PackageOpen} 
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
                     title="Low Stock" 
-                    value={products.filter((p: any) => p.stock > 0 && p.stock <= (p.reorderLevel || 10)).length} 
+                    value={summary.lowStock} 
                     icon={AlertTriangle} 
                     colorClass="bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400"
                 />
@@ -270,17 +273,21 @@ export default function ProductsManagementPage() {
             </div>
 
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
-                {loading && products.length === 0 ? (
+                {productsLoading && products.length === 0 ? (
                     <TableSkeleton columns={7} rows={10} />
                 ) : (
                     <DataTable 
                         columns={columns} 
                         data={products}
-                        isLoading={loading}
+                        isLoading={productsLoading}
                         onRefresh={handleRefresh}
+                        manualPagination={true}
+                        pageCount={pageCount}
+                        pageIndex={page}
+                        onPageChange={setPage}
+                        totalItems={totalItems}
+                        pageSize={limit}
                         placeholder="Search catalog..."
-                        hidePagination={false}
-                        manualPagination={false}
                         exportFilename="Products-Catalog"
                         headerActions={
                             <div className="flex flex-wrap items-center gap-3">
@@ -342,3 +349,4 @@ export default function ProductsManagementPage() {
         </div>
     )
 }
+

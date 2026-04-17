@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Calendar, Eye, Download, Printer, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { DataTable } from '@/components/global-components/data-table-2';
@@ -7,52 +7,45 @@ import { getSalesTransactions } from '@/api/sales.api';
 import { formatCurrency, toLocalYMD } from '@/utils/format';
 import { cn } from '@/lib/utils';
 import PageHeader from '@/components/global-components/PageHeader';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '../../hooks/use-debounce';
 
 const SalesHistoryPage: React.FC = () => {
     const navigate = useNavigate();
     const [search, setSearch] = useState("");
+    const debouncedSearch = useDebounce(search, 500);
+    
     const [dateRange, setDateRange] = useState({
         start: toLocalYMD(new Date(new Date().setDate(new Date().getDate() - 7))), // Default to last 7 days
         end: toLocalYMD(new Date())
     });
 
     const [page, setPage] = useState(1);
-    const [limit] = useState(1000); // High limit for scroll-based UX
-    const [salesRes, setSalesRes] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [limit] = useState(25); // Reduced from 1000 to 25 for sub-500ms performance
 
-    const loadSales = async () => {
-        setLoading(true);
-        try {
-            const params: any = {
-                startDate: dateRange.start,
-                endDate: dateRange.end,
-                page,
-                limit
-            };
-            if (search) params.search = search;
-
-            const res = await getSalesTransactions(params);
-            setSalesRes(res);
-        } catch (error) {
-            console.error("Failed to load sales history:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Reset to page 1 when filters change
     useEffect(() => {
-        loadSales();
-    }, [search, dateRange, page, limit]);
+        setPage(1);
+    }, [debouncedSearch, dateRange]);
 
-    useEffect(() => {
-        setPage(1); // Reset page on filter change
-    }, [search, dateRange]);
+    const { data: salesRes, isLoading, refetch } = useQuery({
+        queryKey: ['sales-history', debouncedSearch, dateRange, page, limit],
+        queryFn: () => getSalesTransactions({
+            startDate: dateRange.start,
+            endDate: dateRange.end,
+            page,
+            limit,
+            ...(debouncedSearch && { search: debouncedSearch })
+        }),
+        placeholderData: (previousData) => previousData,
+        staleTime: 30000,
+    });
 
-    const transactions = salesRes?.data?.data || salesRes?.data || [];
-    const total = salesRes?.data?.total || (Array.isArray(salesRes?.data) ? salesRes?.data.length : 0);
+    const transactions = useMemo(() => salesRes?.data?.data || salesRes?.data || [], [salesRes]);
+    const totalItems = salesRes?.data?.total || (Array.isArray(salesRes?.data) ? salesRes?.data.length : 0);
+    const pageCount = salesRes?.data?.lastPage || Math.ceil(totalItems / limit) || 1;
 
-    const columns: ColumnDef<any>[] = [
+    const columns: ColumnDef<any>[] = useMemo(() => [
         {
             header: "Invoice",
             accessorKey: "invoiceNumber",
@@ -72,7 +65,7 @@ const SalesHistoryPage: React.FC = () => {
             )
         },
         {
-            header: "Total Amount",
+            header: "Amount",
             accessorKey: "totalAmount",
             meta: { align: 'right' },
             cell: ({ row }) => (
@@ -110,6 +103,7 @@ const SalesHistoryPage: React.FC = () => {
             }
         },
         {
+            id: "saleDate", // Unique ID to fix key warnings
             header: "Date",
             accessorKey: "createdAt",
             cell: ({ row }) => (
@@ -119,6 +113,7 @@ const SalesHistoryPage: React.FC = () => {
             )
         },
         {
+            id: "saleTime", // Unique ID to fix key warnings
             header: "Time",
             accessorKey: "createdAt",
             cell: ({ row }) => (
@@ -149,7 +144,7 @@ const SalesHistoryPage: React.FC = () => {
                 </div>
             )
         }
-    ];
+    ], [navigate]);
 
     return (
         <div className="animate-fade-in space-y-8">
@@ -159,7 +154,7 @@ const SalesHistoryPage: React.FC = () => {
                 primaryAction={{
                     label: "Refresh Ledger",
                     icon: RefreshCw,
-                    onClick: loadSales
+                    onClick: () => refetch()
                 }}
             />
 
@@ -167,10 +162,14 @@ const SalesHistoryPage: React.FC = () => {
                 <DataTable 
                     columns={columns} 
                     data={transactions}
-                    isLoading={loading}
-                    onRefresh={loadSales}
-                    manualPagination={false}
-                    hidePagination={false}
+                    isLoading={isLoading}
+                    onRefresh={refetch}
+                    manualPagination={true}
+                    pageCount={pageCount}
+                    pageIndex={page}
+                    onPageChange={setPage}
+                    totalItems={totalItems}
+                    pageSize={limit}
                     placeholder="Search ledger..."
                     headerActions={
                         <div className="flex flex-wrap items-center gap-4">
