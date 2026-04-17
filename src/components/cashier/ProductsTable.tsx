@@ -16,16 +16,23 @@ interface Product {
   unitQuantity?: number;
 }
 
+interface CartItem {
+  id: string;
+  quantity: number;
+}
+
 interface ProductsTableProps {
   products: Product[];
   loading: boolean;
   onAddToCart: (product: Product) => void;
+  cart?: CartItem[];
 }
 
 const ProductsTable: React.FC<ProductsTableProps> = ({
   products,
   loading,
   onAddToCart,
+  cart = [],
 }) => {
   const [currentPage, setCurrentPage] = React.useState(1);
   const itemsPerPage = 10;
@@ -85,10 +92,13 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {paginatedProducts.map((product) => {
-                const stock = product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
+                const totalStock = product.inventoryStock?.totalQuantity ?? product.stock ?? 0;
+                const cartQty = cart.find(item => item.id === product.id)?.quantity ?? 0;
+                const availableStock = Math.max(0, totalStock - cartQty);
+                
                 const price = Number(product.sellingPrice ?? product.price ?? 0);
-                const isOutOfStock = stock <= 0;
-                const isLowStock = stock > 0 && stock <= 5;
+                const isOutOfStock = availableStock <= 0;
+                const isLowStock = availableStock > 0 && availableStock <= 5;
 
                 return (
                   <tr
@@ -116,16 +126,21 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                     <td className="py-5 px-6 text-center">
                       {isOutOfStock ? (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/50">
-                          Out of Stock
+                          {totalStock > 0 ? "Cart Limit Reached" : "Out of Stock"}
                         </span>
                       ) : (
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                          isLowStock 
-                            ? "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50" 
-                            : "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50"
-                        }`}>
-                          {stock} UNITS
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                            isLowStock 
+                              ? "bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/50" 
+                              : "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50"
+                          }`}>
+                            {availableStock} UNITS
+                          </span>
+                          {cartQty > 0 && (
+                            <span className="text-[8px] font-bold text-blue-500 mt-1">({cartQty} in cart)</span>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="py-5 px-6 text-right">

@@ -37,7 +37,12 @@ export default function AddTerminalModal({ isOpen, onClose, onSuccess }: AddTerm
           const data = res.data?.data;
           if (data?.registered && data?.terminal) {
             setExistingName(data.terminal.deviceName);
-            setStep('already');
+            if (data.isSameStore) {
+              setStep('already');
+            } else {
+              setStep('error');
+              setError('This hardware is already registered to another store. Please contact support if you need to transfer it.');
+            }
           } else {
             setStep('form');
           }
