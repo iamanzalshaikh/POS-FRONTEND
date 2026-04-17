@@ -9,6 +9,7 @@ export interface AssignedTerminal {
 
 export interface StaffMember {
     id: string;
+    displayId?: string | null;
     name: string;
     email: string;
     role: StaffRole;
@@ -16,6 +17,7 @@ export interface StaffMember {
     lastLogin: string;
     lastLogout: string;
     assignedTerminals?: AssignedTerminal[];
+    currentDevice?: { id: string; lastActiveAt: string } | null;
 }
 
 export interface StaffAuthActivity {

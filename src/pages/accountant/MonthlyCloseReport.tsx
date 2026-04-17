@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, DollarSign, TrendingUp, TrendingDown, FileText, CheckCircle, AlertCircle, PieChart, Download, Search, Loader2, ArrowDownRight } from 'lucide-react';
-import { getSalesReport, getInventoryReport } from '../../api/finance.api';
-import { getExpenses } from '../../api/expenses.api';
-import type { SalesReportData, InventoryReportData } from '../../api/finance.api';
-import type { Expense } from '../../utils/expense-utils';
-import { EXPENSE_CATEGORIES, formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
+import { getMonthlyCloseReport, type MonthlyCloseData } from '../../api/finance.api';
+import { formatCurrency } from '../../utils/expense-utils';
 import { toLocalYMD } from '../../utils/format';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
@@ -12,40 +9,7 @@ import { DataTable } from '../../components/global-components/data-table-2';
 import { MonthPicker } from '../../components/global-components/Calendar/MonthPicker';
 import type { ColumnDef } from '@tanstack/react-table';
 
-interface MonthlyCloseData {
-  period: {
-    startDate: string;
-    endDate: string;
-  };
-  sales: {
-    totalRevenue: number;
-    totalTransactions: number;
-    totalDiscount: number;
-    totalTax: number;
-    netRevenue: number;
-  };
-  expenses: {
-    total: number;
-    byCategory: Array<{
-      category: string;
-      amount: number;
-      percentage: number;
-    }>;
-  };
-  inventory: {
-    openingStock?: number;
-    closingStock: number;
-    stockValuation: number;
-    lowStockCount: number;
-    outOfStockCount: number;
-  };
-  profit: {
-    grossProfit: number;
-    grossMargin: number;
-    netProfit: number;
-    netMargin: number;
-  };
-}
+// Use interface from finance.api.ts
 
 const MonthlyCloseReport: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -62,105 +26,16 @@ const MonthlyCloseReport: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Calculate month start and end dates
       const [year, month] = selectedMonth.split('-').map(Number);
-      const startDate = toLocalYMD(new Date(year, month - 1, 1));
-      const endDate = toLocalYMD(new Date(year, month, 0));
+      console.log('📊 [MonthlyClose] Fetching P&L Close for:', { year, month });
 
-      console.log('≡ƒôè [MonthlyClose] Fetching data for:', { startDate, endDate, selectedMonth });
+      const response = await getMonthlyCloseReport(year, month);
 
-      // Fetch sales, inventory, and expenses
-      const [salesResponse, inventoryResponse, expensesResponse] = await Promise.all([
-        getSalesReport({ startDate, endDate }),
-        getInventoryReport(),
-        getExpenses()
-      ]);
-
-      console.log('≡ƒôè [MonthlyClose] Sales Response:', salesResponse);
-      console.log('≡ƒôè [MonthlyClose] Inventory Response:', inventoryResponse);
-      console.log('≡ƒôè [MonthlyClose] Expenses Response:', expensesResponse);
-
-      if (!salesResponse.success || !inventoryResponse.success) {
-        throw new Error('Failed to fetch data');
+      if (response.success && response.data) {
+        setData(response.data);
+      } else {
+        throw new Error(response.message || 'Failed to fetch monthly close data');
       }
-
-      const salesData = salesResponse.data as SalesReportData;
-      const inventoryData = inventoryResponse.data as InventoryReportData;
-      
-      // Filter expenses by selected month
-      let allExpenses: Expense[] = [];
-      if (expensesResponse.success && expensesResponse.data) {
-        allExpenses = expensesResponse.data.filter((expense: Expense) => {
-          const expenseDate = new Date(expense.date);
-          const expenseMonth = expenseDate.toISOString().slice(0, 7);
-          return expenseMonth === selectedMonth;
-        });
-      }
-      
-      console.log('≡ƒôè [MonthlyClose] Filtered expenses:', allExpenses.length, 'items');
-
-      // Calculate sales metrics
-      const totalRevenue = salesData.summary.totalRevenue;
-      const totalDiscount = salesData.summary.totalDiscount;
-      const totalTax = salesData.summary.totalTax;
-      const netRevenue = totalRevenue - totalDiscount - totalTax;
-
-      // Calculate actual expenses from API
-      const totalExpenses = allExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
-      console.log('≡ƒôè [MonthlyClose] Total Expenses:', totalExpenses);
-
-      // Calculate expense breakdown by category
-      const expenseByCategory = EXPENSE_CATEGORIES
-        .map(cat => {
-          const catExpenses = allExpenses.filter(e => e.category === cat.value);
-          const catAmount = catExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-          return {
-            category: cat.label,
-            value: cat.value,
-            amount: catAmount,
-            percentage: totalExpenses > 0 ? (catAmount / totalExpenses) * 100 : 0,
-          };
-        })
-        .filter(c => c.amount > 0)
-        .sort((a, b) => b.amount - a.amount);
-
-      console.log('≡ƒôè [MonthlyClose] Expense by Category:', expenseByCategory);
-
-      // Calculate profit with ACTUAL expenses (no estimates)
-      const grossProfit = netRevenue - totalExpenses;
-      const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
-      const netProfit = grossProfit; // For now, net = gross (can add other deductions later)
-      const netMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-
-      setData({
-        period: {
-          startDate,
-          endDate
-        },
-        sales: {
-          totalRevenue,
-          totalTransactions: salesData.summary.totalTransactions,
-          totalDiscount,
-          totalTax,
-          netRevenue
-        },
-        expenses: {
-          total: totalExpenses,
-          byCategory: expenseByCategory
-        },
-        inventory: {
-          closingStock: inventoryData.summary.totalStockValue,
-          stockValuation: inventoryData.summary.totalStockValue,
-          lowStockCount: inventoryData.summary.lowStockCount,
-          outOfStockCount: inventoryData.summary.outOfStockCount
-        },
-        profit: {
-          grossProfit,
-          grossMargin,
-          netProfit,
-          netMargin
-        }
-      });
     } catch (err: any) {
       console.error('Failed to fetch monthly close data:', err);
       setError(err.message || 'Failed to load monthly close report');
@@ -414,7 +289,7 @@ const MonthlyCloseReport: React.FC = () => {
               <span className="text-[12px] font-black text-slate-900 dark:text-white tabular-nums">Rs {new Intl.NumberFormat('en-IN', {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 0,
-              }).format(data.inventory.closingStock)}</span>
+              }).format(data.inventory.stockValuation)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-widest">Stock Status</span>
