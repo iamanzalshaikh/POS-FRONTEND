@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { useDebounce } from '@/hooks';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -34,16 +35,14 @@ interface TransactionRow {
   createdAt: string;
   total: number;
 }
-
 const AllTransactions: React.FC = () => {
   const navigate = useNavigate();
   const [filterType, setFilterType] = useState<StreamFilter>('all');
   const [page, setPage] = useState(1);
-
-  // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 500);
 
   // Queries
   const { 
@@ -51,11 +50,12 @@ const AllTransactions: React.FC = () => {
     isLoading: recentLoading,
     refetch: refetchRecent 
   } = useQuery({
-    queryKey: ['recent-transactions', filterType, page, dateFrom, dateTo],
+    queryKey: ['accountant-recent-transactions', filterType, page, dateFrom, dateTo, debouncedSearch],
     queryFn: () => getRecentTransactions({
       type: filterType === 'inventory' ? 'all' : filterType,
       page,
-      limit: 1000,
+      limit: 100, // Reduced from 1000
+      search: debouncedSearch || undefined,
       ...(dateFrom && dateTo ? { startDate: dateFrom, endDate: dateTo } : {}),
     }),
     enabled: filterType !== 'inventory',
@@ -67,8 +67,13 @@ const AllTransactions: React.FC = () => {
     isLoading: invLoading, 
     refetch: refetchInv 
   } = useQuery({
-    queryKey: ['inventory-logs-ledger'],
-    queryFn: () => getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' }),
+    queryKey: ['accountant-inventory-logs-ledger', page, debouncedSearch],
+    queryFn: () => getInventoryLogs({ 
+      page,
+      limit: 100, 
+      changeType: 'ADJUSTMENT',
+      search: debouncedSearch || undefined 
+    }),
     enabled: filterType === 'inventory',
     staleTime: 1000 * 60 * 5,
   });

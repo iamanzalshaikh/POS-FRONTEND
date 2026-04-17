@@ -30,6 +30,7 @@ import AllTransactions from './AllTransactions';
 import TransactionReceipt from './TransactionReceipt';
 import StaffSalaryReceipt from './StaffSalaryReceipt';
 import StaffManagementPage from './StaffManagementPage';
+import StaffDetail from './StaffDetail';
 import PayrollManagementPage from './PayrollManagementPage';
 import SuppliersPage from '@/pages/store-admin/purchasing/SuppliersPage';
 import SupplierPurchasesListPage from '@/pages/store-admin/purchasing/SupplierPurchasesListPage';
@@ -72,8 +73,7 @@ const AccountantDashboard: React.FC = () => {
     { name: 'Expense Report', icon: FileSpreadsheet, path: '/accountant/expense-report' },
     { name: 'Staff', icon: Users, path: '/accountant/staff' },
     { name: 'Payroll', icon: Wallet, path: '/accountant/payroll' },
-    // Temporarily disabled - can be re-enabled by uncommenting
-    // { name: 'Tax', icon: FileText, path: '/accountant/tax' },
+    { name: 'Tax', icon: FileText, path: '/accountant/tax' },
     { name: 'P&L', icon: PieChart, path: '/accountant/pl' },
     { name: 'Monthly Close', icon: FileText, path: '/accountant/monthly-close' },
     { name: 'Export', icon: Download, path: '/accountant/export' },
@@ -104,6 +104,7 @@ const AccountantDashboard: React.FC = () => {
         <Route path="expenses" element={<ExpensesPage />} />
         <Route path="expense-report" element={<ExpenseReport />} />
         <Route path="staff" element={<StaffManagementPage />} />
+        <Route path="staff/:id" element={<StaffDetail />} />
         <Route path="payroll" element={<PayrollManagementPage />} />
         <Route path="transactions" element={<AllTransactions />} />
         <Route path="transaction/:transactionId" element={<TransactionReceipt />} />

@@ -6,6 +6,7 @@ import { getInventoryLogs, getSalesTransactions } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
 import type { Expense as ExpenseType } from '../../utils/expense-utils';
 import { getSaleGrandTotal, getSaleTaxTotal } from '../../utils/saleAmounts';
+import { useDebounce } from '@/hooks';
 
 interface Transaction {
   id: string;
@@ -35,23 +36,25 @@ const ExpenseTracker: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 8;
 
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
   // 1. Fetch Sales
   const { data: salesRes, isLoading: salesLoading } = useQuery({
-    queryKey: ['recent-sales'],
-    queryFn: () => getSalesTransactions({ limit: 200 }),
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    queryKey: ['accountant-recent-sales'],
+    queryFn: () => getSalesTransactions({ limit: 50 }),
+    staleTime: 1000 * 60 * 5,
   });
 
   // 2. Fetch Inventory
   const { data: inventoryRes, isLoading: inventoryLoading } = useQuery({
-    queryKey: ['recent-inventory-logs'],
-    queryFn: () => getInventoryLogs({ limit: 100, changeType: 'ADJUSTMENT' }),
+    queryKey: ['accountant-recent-inventory-logs'],
+    queryFn: () => getInventoryLogs({ limit: 50, changeType: 'ADJUSTMENT' }),
     staleTime: 1000 * 60 * 5,
   });
 
   // 3. Fetch Expenses
   const { data: expensesRes, isLoading: expensesLoading } = useQuery({
-    queryKey: ['recent-expenses'],
+    queryKey: ['accountant-recent-expenses'],
     queryFn: () => getExpenses(),
     staleTime: 1000 * 60 * 5,
   });
@@ -128,8 +131,8 @@ const ExpenseTracker: React.FC = () => {
     let result = [...transactions];
 
     // Search filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase();
       result = result.filter(t =>
         t.description.toLowerCase().includes(q) ||
         t.invoiceNumber?.toLowerCase().includes(q) ||
@@ -169,7 +172,7 @@ const ExpenseTracker: React.FC = () => {
     });
 
     return result;
-  }, [transactions, searchQuery, filterType, filterStatus, sortField, sortDirection]);
+  }, [transactions, debouncedSearch, filterType, filterStatus, sortField, sortDirection]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / pageSize));
   const paginatedItems = filteredAndSorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);

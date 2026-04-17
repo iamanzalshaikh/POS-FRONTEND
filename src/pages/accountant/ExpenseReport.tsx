@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Download, FileSpreadsheet, Calendar, Filter, TrendingUp } from 'lucide-react';
 import { getExpenses } from '../../api/expenses.api';
 import type { Expense } from '../../utils/expense-utils';
@@ -6,8 +7,8 @@ import { EXPENSE_CATEGORIES, formatCurrency, formatDate } from '../../utils/expe
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 
+
 const ExpenseReport: React.FC = () => {
-  const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState(() => {
     const date = new Date();
     date.setDate(1);
@@ -15,34 +16,39 @@ const ExpenseReport: React.FC = () => {
   });
   const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [fetched, setFetched] = useState(false);
 
-  const fetchReport = async () => {
-    try {
-      setLoading(true);
-      const response = await getExpenses();
-      let filtered = response.data;
+  // Query
+  const { data: expRes, isLoading: loading, refetch } = useQuery({
+    queryKey: ['accountant-expenses-report'],
+    queryFn: () => getExpenses(),
+    staleTime: 1000 * 60 * 5,
+    enabled: fetched,
+  });
 
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      filtered = filtered.filter(expense => {
-        const expenseDate = new Date(expense.date);
-        return expenseDate >= start && expenseDate <= end;
-      });
-
-      if (selectedCategory !== 'ALL') {
-        filtered = filtered.filter(expense => expense.category === selectedCategory);
-      }
-
-      setExpenses(filtered);
-      setFetched(true);
-    } catch (error) {
-      console.error('[ExpenseReport] Failed to fetch:', error);
-    } finally {
-      setLoading(false);
-    }
+  const fetchReport = () => {
+    setFetched(true);
+    refetch();
   };
+
+  const rawExpenses = expRes?.data || [];
+
+  const expenses = useMemo(() => {
+    if (!fetched) return [];
+    let filtered = rawExpenses;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    filtered = filtered.filter((expense: any) => {
+      const expenseDate = new Date(expense.date);
+      return expenseDate >= start && expenseDate <= end;
+    });
+
+    if (selectedCategory !== 'ALL') {
+      filtered = filtered.filter((expense: any) => expense.category === selectedCategory);
+    }
+    return filtered;
+  }, [rawExpenses, startDate, endDate, selectedCategory, fetched]);
 
   const calculateTotals = () => {
     const total = expenses.reduce((sum, e) => sum + e.amount, 0);

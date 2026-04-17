@@ -58,15 +58,15 @@ const AccountantDashboardHome: React.FC = () => {
 
   // Queries
   const { data: summaryRes, isLoading: summaryLoading } = useQuery({
-      queryKey: ['finance-summary', startDate, endDate],
+      queryKey: ['accountant-finance-summary', periodPreset],
       queryFn: () => getFinanceSummary({ startDate, endDate }),
-      staleTime: 30000, 
+      staleTime: 1000 * 60, // 1 minute
   });
 
   const { data: salesRes, isLoading: salesLoading } = useQuery({
-      queryKey: ['finance-sales-report', startDate, endDate],
+      queryKey: ['accountant-finance-sales-report', periodPreset],
       queryFn: () => getSalesReport({ startDate, endDate }),
-      staleTime: 30000,
+      staleTime: 1000 * 60, // 1 minute
   });
 
   const summary = summaryRes?.success ? summaryRes.data : null;

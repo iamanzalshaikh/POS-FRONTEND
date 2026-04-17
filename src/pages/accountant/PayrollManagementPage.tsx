@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -56,15 +58,11 @@ const PayrollManagementPage: React.FC = () => {
   const navigate = useNavigate();
 
   // State
-  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | PayrollStatus>('ALL');
   const [monthFilter, setMonthFilter] = useState('');
   const [yearFilter, setYearFilter] = useState(String(new Date().getFullYear()));
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
-  const [totalRecords, setTotalRecords] = useState(0);
 
   // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -79,30 +77,24 @@ const PayrollManagementPage: React.FC = () => {
     notes: '',
   });
 
-  useEffect(() => {
-    fetchPayroll();
-  }, [page, searchQuery, statusFilter, monthFilter, yearFilter]);
+  const debouncedSearch = useDebounce(searchQuery, 500);
 
-  const fetchPayroll = async () => {
-    try {
-      setLoading(true);
-      const params: any = { page, limit };
-      if (searchQuery) params.search = searchQuery;
+  // Query
+  const { data: payrollRes, isLoading: loading, refetch } = useQuery({
+    queryKey: ['accountant-payroll-list', page, statusFilter, monthFilter, yearFilter, debouncedSearch],
+    queryFn: () => {
+      const params: any = { page, limit: 20 };
+      if (debouncedSearch) params.search = debouncedSearch;
       if (statusFilter !== 'ALL') params.status = statusFilter;
       if (monthFilter) params.month = parseInt(monthFilter);
       if (yearFilter) params.year = parseInt(yearFilter);
+      return getPayroll(params);
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
-      const response = await getPayroll(params);
-      if (response.success) {
-        setPayrollRecords(response.data.items);
-        setTotalRecords(response.data.pagination.total);
-      }
-    } catch (error: any) {
-      toast.error('Failed to fetch payroll records');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const payrollRecords = payrollRes?.success ? payrollRes.data.items : [];
+  const totalRecords = payrollRes?.success ? payrollRes.data.pagination.total : 0;
 
   const handleUpdatePayment = async () => {
     if (!selectedPayroll) return;
@@ -118,7 +110,7 @@ const PayrollManagementPage: React.FC = () => {
         toast.success('Payment details updated');
         setShowPaymentModal(false);
         setSelectedPayroll(null);
-        await fetchPayroll();
+        refetch();
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update payment');
@@ -277,7 +269,7 @@ const PayrollManagementPage: React.FC = () => {
           columns={columns}
           data={payrollRecords}
           isLoading={loading}
-          onRefresh={fetchPayroll}
+          onRefresh={refetch}
           placeholder="Search payments..."
           hidePagination={false}
           headerActions={
@@ -321,7 +313,7 @@ const PayrollManagementPage: React.FC = () => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={() => {
-          fetchPayroll();
+          refetch();
           toast.success('Disbursement sequence completed');
         }}
       />

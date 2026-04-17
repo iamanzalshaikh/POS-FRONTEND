@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { PieChart, TrendingUp, DollarSign, ArrowDownRight, Calendar, Loader2 } from 'lucide-react';
 import { getProfitAndLoss, getSalesReport } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
@@ -11,125 +12,100 @@ import { ProfitLossChart } from '../../components/charts/ProfitLossChart';
 import type { ProfitLossData as ChartData } from '../../components/charts/ProfitLossChart';
 
 const ProfitLossReport: React.FC = () => {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<ProfitLossData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [chartData, setChartData] = useState<ChartData[]>([]);
-
-  useEffect(() => {
-    const fetchFullData = async () => {
-      try {
-        setLoading(true);
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 90); // Last 90 days
-
-        const sDateStr = startDate.toISOString().split('T')[0];
-        const eDateStr = endDate.toISOString().split('T')[0];
-
-        // Fetch P&L Summary, Daily Sales, and Individual Expenses in parallel
-        const [pnlRes, salesRes, expRes] = await Promise.all([
-          getProfitAndLoss({ startDate: sDateStr, endDate: eDateStr }),
-          getSalesReport({ startDate: sDateStr, endDate: eDateStr }),
-          getExpenses()
-        ]);
-
-        if (pnlRes.success && pnlRes.data) {
-          setData(pnlRes.data);
-          
-          const salesData = (salesRes as any).data as SalesReportData;
-          const expensesList = (expRes as any).data as Expense[];
-          
-          // Map to hold weekly aggregates for better granularity
-          const weeklyMap = new Map<string, { revenue: number, expense: number, profit: number }>();
-
-          const getWeekKey = (dateStr: string) => {
-            const d = new Date(dateStr);
-            d.setHours(0, 0, 0, 0);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
-            const monday = new Date(d.setDate(diff));
-            return monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          };
-
-          // 1. Process Sales Data (Daily to Weekly)
-          if (salesData && salesData.data) {
-            salesData.data.forEach(day => {
-              const weekKey = getWeekKey(day.date);
-              const existing = weeklyMap.get(weekKey) || { revenue: 0, expense: 0, profit: 0 };
-              weeklyMap.set(weekKey, {
-                ...existing,
-                revenue: existing.revenue + day.revenue
-              });
-            });
-          }
-
-          // 2. Process Expenses Data (Daily to Weekly)
-          if (expensesList) {
-            expensesList.forEach(exp => {
-              // Exclude Stock Purchases from chart overhead to avoid double-counting with COGS
-              if (exp.category === 'SUPPLIER_PURCHASE' || exp.category === 'SALARIES') return;
-              
-              const expDate = new Date(exp.date);
-              if (expDate >= startDate && expDate <= endDate) {
-                const weekKey = getWeekKey(exp.date);
-                const existing = weeklyMap.get(weekKey) || { revenue: 0, expense: 0, profit: 0 };
-                weeklyMap.set(weekKey, {
-                  ...existing,
-                  expense: existing.expense + Number(exp.amount)
-                });
-              }
-            });
-          }
-
-          // 3. Calculate COGS and Profit per week
-          const cogsRatio = pnlRes.data.revenue > 0 ? pnlRes.data.cogs / pnlRes.data.revenue : 0;
-          
-          const sortedWeeks = Array.from(weeklyMap.keys()).sort((a, b) => 
-            new Date(a + ', ' + new Date().getFullYear()).getTime() - 
-            new Date(b + ', ' + new Date().getFullYear()).getTime()
-          );
-
-          const formattedChartData: ChartData[] = sortedWeeks.map(week => {
-            const vals = weeklyMap.get(week)!;
-            const weeklyCogs = vals.revenue * cogsRatio;
-            const weeklyProfit = vals.revenue - weeklyCogs - vals.expense;
-            
-            return {
-              month: week, // Label on X-axis
-              revenue: vals.revenue,
-              expense: vals.expense + weeklyCogs,
-              profit: weeklyProfit
-            };
-          });
-
-          // Ensure at least two points for AreaChart rendering
-          if (formattedChartData.length === 1) {
-            const singlePoint = formattedChartData[0];
-            const prevWeek = new Date(new Date(singlePoint.month + ', ' + new Date().getFullYear()));
-            prevWeek.setDate(prevWeek.getDate() - 7);
-            const prevLabel = prevWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            
-            setChartData([
-               { month: prevLabel, revenue: 0, expense: 0, profit: 0 },
-               singlePoint
-            ]);
-          } else if (formattedChartData.length === 0) {
-            setChartData([{ month: 'No Data', revenue: 0, expense: 0, profit: 0 }, { month: 'Today', revenue: 0, expense: 0, profit: 0 }]);
-          } else {
-            setChartData(formattedChartData);
-          }
-        } else {
-          setError(pnlRes.message || 'Failed to load P&L data');
-        }
-      } catch (err: any) {
-        setError(err.message || 'Failed to load P&L data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchFullData();
+  const endDate = useMemo(() => new Date(), []);
+  const startDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 90);
+    return d;
   }, []);
+
+  const sDateStr = startDate.toISOString().split('T')[0];
+  const eDateStr = endDate.toISOString().split('T')[0];
+
+  // Queries
+  const { data: pnlRes, isLoading: pnlLoading, error: pnlError } = useQuery({
+    queryKey: ['accountant-pnl-summary', sDateStr, eDateStr],
+    queryFn: () => getProfitAndLoss({ startDate: sDateStr, endDate: eDateStr }),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const { data: salesRes, isLoading: salesLoading } = useQuery({
+    queryKey: ['accountant-pnl-sales', sDateStr, eDateStr],
+    queryFn: () => getSalesReport({ startDate: sDateStr, endDate: eDateStr }),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const { data: expRes, isLoading: expLoading } = useQuery({
+    queryKey: ['accountant-pnl-expenses'],
+    queryFn: () => getExpenses(),
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const loading = pnlLoading || salesLoading || expLoading;
+  const data = pnlRes?.success ? pnlRes.data : null;
+  const error = pnlError ? (pnlError as any).message : (!pnlRes?.success && pnlRes?.message ? pnlRes.message : null);
+
+  const chartData = useMemo(() => {
+    if (!pnlRes?.success || !pnlRes.data) return [];
+    
+    const salesData = (salesRes as any)?.data as SalesReportData;
+    const expensesList = (expRes as any)?.data as Expense[];
+    
+    const weeklyMap = new Map<string, { revenue: number, expense: number, profit: number }>();
+    const getWeekKey = (dateStr: string) => {
+      const d = new Date(dateStr);
+      d.setHours(0, 0, 0, 0);
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(d.setDate(diff));
+      return monday.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+
+    if (salesData?.data) {
+      salesData.data.forEach(day => {
+        const weekKey = getWeekKey(day.date);
+        const existing = weeklyMap.get(weekKey) || { revenue: 0, expense: 0, profit: 0 };
+        weeklyMap.set(weekKey, { ...existing, revenue: existing.revenue + day.revenue });
+      });
+    }
+
+    if (expensesList) {
+      expensesList.forEach(exp => {
+        if (exp.category === 'SUPPLIER_PURCHASE' || exp.category === 'SALARIES') return;
+        const expDate = new Date(exp.date);
+        if (expDate >= startDate && expDate <= endDate) {
+          const weekKey = getWeekKey(exp.date);
+          const existing = weeklyMap.get(weekKey) || { revenue: 0, expense: 0, profit: 0 };
+          weeklyMap.set(weekKey, { ...existing, expense: existing.expense + Number(exp.amount) });
+        }
+      });
+    }
+
+    const cogsRatio = pnlRes.data.revenue > 0 ? pnlRes.data.cogs / pnlRes.data.revenue : 0;
+    const sortedWeeks = Array.from(weeklyMap.keys()).sort((a, b) => 
+      new Date(a + ', ' + new Date().getFullYear()).getTime() - 
+      new Date(b + ', ' + new Date().getFullYear()).getTime()
+    );
+
+    const formatted = sortedWeeks.map(week => {
+      const vals = weeklyMap.get(week)!;
+      const weeklyCogs = vals.revenue * cogsRatio;
+      return {
+        month: week,
+        revenue: vals.revenue,
+        expense: vals.expense + weeklyCogs,
+        profit: vals.revenue - weeklyCogs - vals.expense
+      };
+    });
+
+    if (formatted.length === 1) {
+      const single = formatted[0];
+      const prev = new Date(new Date(single.month + ', ' + new Date().getFullYear()));
+      prev.setDate(prev.getDate() - 7);
+      return [{ month: prev.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), revenue: 0, expense: 0, profit: 0 }, single];
+    }
+    return formatted.length === 0 ? [{ month: 'No Data', revenue: 0, expense: 0, profit: 0 }, { month: 'Today', revenue: 0, expense: 0, profit: 0 }] : formatted;
+  }, [pnlRes, salesRes, expRes, startDate, endDate]);
 
   if (loading) return <ProfitLossSkeleton />;
   if (error) return <ErrorState message={error} />;
