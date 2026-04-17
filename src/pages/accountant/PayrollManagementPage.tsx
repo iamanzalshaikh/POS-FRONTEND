@@ -30,6 +30,7 @@ import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import { toast } from '@/lib/toast';
 import type { ColumnDef } from '@tanstack/react-table';
+import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
 
 const formatAmount = (amount: number | string): string => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -228,6 +229,8 @@ const PayrollManagementPage: React.FC = () => {
       )
     }
   ];
+
+  if (loading) return <ManagementPageSkeleton cards={3} columns={7} />;
 
   return (
     <div className="animate-fade-in space-y-8">

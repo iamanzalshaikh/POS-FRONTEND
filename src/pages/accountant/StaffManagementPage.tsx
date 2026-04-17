@@ -30,6 +30,7 @@ import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { toast } from '@/lib/toast';
+import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
 
 // Valid staff roles
 const STAFF_ROLES = [
@@ -293,6 +294,8 @@ const StaffManagementPage: React.FC = () => {
       )
     }
   ];
+
+  if (loading) return <ManagementPageSkeleton cards={3} columns={7} />;
 
   return (
     <div className="animate-fade-in space-y-8">

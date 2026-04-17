@@ -7,7 +7,9 @@ import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import { formatAmount } from '@/utils/format';
 import type { ColumnDef } from '@tanstack/react-table';
-import { TableSkeleton } from '@/components/ui/skeletons/TableSkeleton';
+import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
+import { cn } from '@/lib/utils';
+import { Calculator } from 'lucide-react';
 
 interface TaxItem {
   id: string;
@@ -142,9 +144,7 @@ const TaxManagement: React.FC = () => {
     alert(`Pay tax ${taxId} - Would open payment gateway`);
   };
 
-  if (loading) {
-    return <TableSkeleton />;
-  }
+  if (loading) return <ManagementPageSkeleton cards={3} columns={4} />;
 
   if (error) {
     return (

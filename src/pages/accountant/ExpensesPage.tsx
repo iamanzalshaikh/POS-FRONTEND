@@ -22,7 +22,7 @@ import PageHeader from '../../components/global-components/PageHeader';
 import { DataTable } from '../../components/global-components/data-table-2';
 import { toast } from '@/lib/toast';
 import type { ColumnDef } from '@tanstack/react-table';
-import { TableSkeleton } from '@/components/ui/skeletons/TableSkeleton';
+import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
 
 const ExpensesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -197,6 +197,8 @@ const ExpensesPage: React.FC = () => {
       )
     }
   ];
+
+  if (loading) return <ManagementPageSkeleton cards={3} columns={5} />;
 
   return (
     <div className="animate-fade-in space-y-8">

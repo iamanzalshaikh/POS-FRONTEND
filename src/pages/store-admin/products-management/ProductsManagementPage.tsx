@@ -148,7 +148,7 @@ export default function ProductsManagementPage() {
         {
             header: "Disc. %",
             cell: ({ row }) => {
-                const disc = Number(row.original.discountPercentage || 0);
+                const disc = Number(row.original.latestDiscountPercentage ?? row.original.discountPercentage ?? 0);
                 return (
                     <div className="text-center">
                         <span className={cn(
@@ -165,7 +165,7 @@ export default function ProductsManagementPage() {
             header: "Net Price",
             cell: ({ row }) => {
                 const base = parseFloat(row.original.latestSellingPrice || row.original.sellingPrice || 0);
-                const disc = Number(row.original.discountPercentage || 0);
+                const disc = Number(row.original.latestDiscountPercentage ?? row.original.discountPercentage ?? 0);
                 const net = base * (1 - disc / 100);
                 return (
                     <div className="text-center text-emerald-600 text-[11px] font-black uppercase tracking-widest tabular-nums">

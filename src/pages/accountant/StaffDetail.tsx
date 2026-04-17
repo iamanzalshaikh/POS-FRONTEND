@@ -31,7 +31,7 @@ import {
   Heart
 } from "lucide-react";
 import { formatAmount, formatDate } from "@/utils/format";
-import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
+import { StaffDetailSkeleton } from "@/components/ui/skeletons/StaffDetailSkeleton";
 import { toast } from "@/lib/toast";
 
 const getMonthYearString = (year: number, month: number) => {
@@ -82,7 +82,7 @@ export default function StaffDetail() {
     }
   };
 
-  if (staffLoading || payrollLoading) return <div className="p-8"><TableSkeleton /></div>;
+  if (staffLoading || payrollLoading) return <div className="p-8"><StaffDetailSkeleton /></div>;
 
   if (!staff) {
     return (

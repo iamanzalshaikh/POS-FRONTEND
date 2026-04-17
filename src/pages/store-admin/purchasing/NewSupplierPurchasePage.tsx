@@ -109,8 +109,8 @@ export default function NewSupplierPurchasePage() {
         unitType: p.unitType || "PIECE",
         qtyPerUnit: p.unitQuantity ? String(p.unitQuantity) : "",
         quantity: "1",
-        purchaseCost: p.purchasePrice ? String(p.purchasePrice) : "0",
-        sellingPrice: p.sellingPrice ? String(p.sellingPrice) : "0",
+        purchaseCost: p.latestPurchasePrice ? String(p.latestPurchasePrice) : (p.purchasePrice ? String(p.purchasePrice) : "0"),
+        sellingPrice: p.latestSellingPrice ? String(p.latestSellingPrice) : (p.sellingPrice ? String(p.sellingPrice) : "0"),
         gstPercentage: "18",
         lineDiscount: p.discountPercentage ? String(p.discountPercentage) : "0",
         alertAt: String(p.reorderLevel ?? 10),
@@ -364,6 +364,7 @@ export default function NewSupplierPurchasePage() {
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Sell</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">GST (18%)</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Disc</th>
+                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Net Sell</th>
                       <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Reorder Level</th>
                       <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 w-[4%]"></th>
                     </tr>
@@ -430,6 +431,14 @@ export default function NewSupplierPurchasePage() {
                             value={line.lineDiscount} 
                             onChange={(e) => updateLine(line.key, { lineDiscount: e.target.value })} 
                             className="h-9 w-full font-bold text-xs" 
+                          />
+                        </td>
+                        <td className="py-3 px-1">
+                          <Input 
+                            value={(parseFloat(line.sellingPrice || "0") * (1 - (parseFloat(line.lineDiscount || "0") / 100))).toFixed(2)} 
+                            readOnly
+                            disabled
+                            className="h-9 w-full font-bold text-xs bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-70" 
                           />
                         </td>
                         <td className="py-3 px-1">
