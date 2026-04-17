@@ -140,7 +140,7 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                                 </td>
                             </tr>
                         ) : (
-                            data.slice(0, 5).map((log) => {
+                            data.map((log) => {
                                 const style = getActionStyles(log.action);
                                 return (
                                     <tr key={log.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">

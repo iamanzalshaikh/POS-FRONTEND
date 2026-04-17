@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import InventoryHeader from "@/components/store-admin/InventoryHeader"
 import { fetchInventoryLogs } from "@/api/inventory.api";
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
-import { Search, ShoppingCart, RefreshCw, AlertTriangle, Box, User, ArrowUpRight, ArrowDownRight, Package } from 'lucide-react';
+import { Search, Box, User, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks';
 
 export interface InventoryMovement {
   id: string
@@ -21,46 +23,47 @@ export interface InventoryMovement {
 const InventoryManagementPage = () => {
   // Filter States
   const [searchQuery, setSearchQuery] = useState("")
+  const debouncedSearch = useDebounce(searchQuery, 500);
   const [typeFilter, setTypeFilter] = useState("All Movements")
+  const [page, setPage] = useState(1);
+  const [limit] = useState(25);
 
-  const [inventoryDataRes, setInventoryDataRes] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<any>(null);
-
-  const loadMovements = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await fetchInventoryLogs({ limit: 1000 });
-      setInventoryDataRes(data);
-    } catch (err: any) {
-      console.error("Failed to fetch inventory logs:", err);
-      setError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Reset page when filters change
   useEffect(() => {
-    loadMovements();
-  }, []);
+    setPage(1);
+  }, [debouncedSearch, typeFilter]);
 
-  const refetch = loadMovements;
+  const { data: inventoryDataRes, isLoading, refetch } = useQuery({
+    queryKey: ['inventory-logs', debouncedSearch, typeFilter, page, limit],
+    queryFn: () => fetchInventoryLogs({
+      page,
+      limit,
+      ...(debouncedSearch && { search: debouncedSearch }),
+      ...(typeFilter !== 'All Movements' && { changeType: typeFilter.toLowerCase() })
+    }),
+    placeholderData: (previousData) => previousData,
+    staleTime: 30000,
+  });
 
-  const movementsRaw = (inventoryDataRes as any)?.data || (Array.isArray(inventoryDataRes) ? inventoryDataRes : []);
-  const movements: InventoryMovement[] = (movementsRaw as any[]).map((m: any) => ({
-    id: m.id,
-    productName: m.product?.name || "Unknown Product",
-    sku: m.product?.sku || "N/A",
-    quantityChange: m.quantityChange,
-    changeType: m.changeType,
-    referenceId: m.referenceId || m.id.slice(0, 8),
-    user: m.user?.name || "System",
-    timestamp: m.createdAt,
-    image: m.product?.image ? `http://localhost:3005${m.product.image}` : null
-  }));
+  const movementsRaw = inventoryDataRes?.data?.data || inventoryDataRes?.data || (Array.isArray(inventoryDataRes) ? inventoryDataRes : []);
+  const totalItems = inventoryDataRes?.data?.total || (Array.isArray(inventoryDataRes?.data) ? inventoryDataRes.data.length : 0);
+  const pageCount = Math.ceil(totalItems / limit) || 1;
 
-  const columns: ColumnDef<InventoryMovement>[] = [
+  const movements: InventoryMovement[] = useMemo(() => {
+    return (Array.isArray(movementsRaw) ? movementsRaw : []).map((m: any) => ({
+      id: m.id,
+      productName: m.product?.name || "Unknown Product",
+      sku: m.product?.sku || "N/A",
+      quantityChange: m.quantityChange,
+      changeType: m.changeType,
+      referenceId: m.referenceId || m.id.slice(0, 8),
+      user: m.user?.name || "System",
+      timestamp: m.createdAt,
+      image: m.product?.image ? `http://localhost:3005${m.product.image}` : null
+    }));
+  }, [movementsRaw]);
+
+  const columns: ColumnDef<InventoryMovement>[] = useMemo(() => [
     {
         header: "Product",
         accessorKey: "productName",
@@ -133,7 +136,9 @@ const InventoryManagementPage = () => {
         )
     },
     {
+        id: "date",
         header: "Date",
+        accessorKey: "timestamp",
         cell: ({ row }) => (
             <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
                 {new Date(row.original.timestamp).toLocaleDateString()}
@@ -141,28 +146,16 @@ const InventoryManagementPage = () => {
         )
     },
     {
+        id: "time",
         header: "Time",
+        accessorKey: "timestamp",
         cell: ({ row }) => (
             <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
                 {new Date(row.original.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
         )
     }
-  ];
-
-  const filteredMovements = movements.filter(m => {
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !q ||
-      m.productName.toLowerCase().includes(q) ||
-      m.sku.toLowerCase().includes(q) ||
-      m.referenceId.toLowerCase().includes(q);
-
-    const matchesType = typeFilter === "All Movements" ||
-      (typeFilter.toLowerCase() === m.changeType.toLowerCase());
-
-    return matchesSearch && matchesType;
-  });
-
+  ], []);
 
   return (
     <div className="animate-in fade-in duration-500 space-y-10">
@@ -170,9 +163,15 @@ const InventoryManagementPage = () => {
       <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none mt-10">
         <DataTable 
             columns={columns} 
-            data={filteredMovements}
-            isLoading={loading}
-            onRefresh={loadMovements}
+            data={movements}
+            isLoading={isLoading}
+            onRefresh={refetch}
+            manualPagination={true}
+            pageCount={pageCount}
+            pageIndex={page}
+            onPageChange={setPage}
+            totalItems={totalItems}
+            pageSize={limit}
             placeholder="Search movements..."
             headerActions={
                 <div className="flex flex-wrap items-center gap-3">
@@ -210,4 +209,4 @@ const InventoryManagementPage = () => {
   )
 }
 
-export default InventoryManagementPage
+export default InventoryManagementPage;

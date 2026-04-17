@@ -76,46 +76,23 @@ export default function StoreAdminDashboard() {
     staleTime: 30000,
   });
 
-  const { 
-    data: invRes, 
-    isLoading: invLoading,
-    error: invError
-  } = useQuery({
-    queryKey: ['inventory'],
-    queryFn: () => getInventory(),
-    staleTime: 30000,
-  });
-
-  const loading = dashLoading || devicesLoading || invLoading;
-  const isConnectionError = [dashError, devicesError, invError].some((e: any) => e && !e.response);
-  const error = dashError || devicesError || invError 
+  const loading = dashLoading || devicesLoading;
+  const isConnectionError = [dashError, devicesError].some((e: any) => e && !e.response);
+  const error = dashError || devicesError 
     ? (isConnectionError ? 'System connection failed. Is the backend running?' : 'Failed to synchronize analytics.') 
     : null;
-
   const raw = dashRes?.data ?? null;
   const deviceData = devicesRes?.data ?? [];
 
+  // 1. Optimized Dashboard Data Processing
   const data: DashboardView | null = useMemo(() => {
     if (!raw) return null;
 
-    const s = raw.summary ?? {};
-    const inv = raw.inventory ?? {};
-    const charts = raw.charts ?? {};
-    const revByDate = charts.revenueByDate ?? [];
-    const payBreakdown = charts.paymentBreakdown ?? [];
-    const topProductsRaw = raw.topProducts ?? [];
-    const invItemsRaw = invRes?.data ?? [];
-    const invItems = Array.isArray(invItemsRaw) ? invItemsRaw : (invItemsRaw.data ?? []);
-    
-    const stockMap = invItems.reduce((acc: any, item: any) => {
-      acc[item.productId] = {
-        quantity: item.totalQuantity,
-        reorderLevel: item.product?.reorderLevel || 10
-      };
-      return acc;
-    }, {});
+    const { summary: s = {}, inventory: inv = {}, charts = {}, topProducts: topProductsRaw = [] } = raw;
+    const { revenueByDate: revByDate = [], paymentBreakdown: payBreakdown = [] } = charts;
 
     const colors = ['#262255', '#24608F', '#508CBB', '#7CB8E7', '#A8D4F3'];
+    
     return {
       metrics: [
         { value: s.totalRevenue ?? 0 },
@@ -124,17 +101,23 @@ export default function StoreAdminDashboard() {
         { value: s.totalRefunds ?? 0 },
         { value: s.totalDiscount ?? 0 },
       ],
-      dailySales: revByDate.map((d: { date?: string; revenue?: number }) => ({ date: d.date ?? '', sales: d.revenue ?? 0 })),
-      weeklyRevenue: revByDate.map((d: { date?: string; revenue?: number }) => ({ week: d.date ?? '', revenue: d.revenue ?? 0 })),
+      dailySales: revByDate.map((d: { date?: string; revenue?: number }) => ({ 
+        date: d.date ?? '', 
+        sales: Number(d.revenue ?? 0) 
+      })),
+      weeklyRevenue: revByDate.map((d: { date?: string; revenue?: number }) => ({ 
+        week: d.date ?? '', 
+        revenue: Number(d.revenue ?? 0) 
+      })),
       categories: payBreakdown.map((p: { paymentMethod?: string; revenue?: number }, i: number) => ({
         name: p.paymentMethod ?? 'Other',
-        value: p.revenue ?? 0,
+        value: Number(p.revenue ?? 0),
         color: colors[i % colors.length],
       })),
       devices: deviceData.map((d: any) => {
         const lastActive = d.lastActiveAt ? new Date(d.lastActiveAt).getTime() : 0;
-        const now = new Date().getTime();
-        const isRecent = (now - lastActive) < (5 * 60 * 1000); // 5 minutes threshold
+        const now = Date.now();
+        const isRecent = (now - lastActive) < (5 * 60 * 1000); 
         
         return {
           id: d.id,
@@ -143,12 +126,11 @@ export default function StoreAdminDashboard() {
           status: (d.isActive && isRecent) ? 'online' : 'offline',
         };
       }),
-      topProducts: topProductsRaw.map((p: { productId?: string; id?: string; name?: string; sku?: string; quantitySold?: number; revenue?: number }) => {
+      topProducts: topProductsRaw.map((p: any) => {
         const productId = p.productId ?? p.id ?? '';
-        const invInfo = stockMap[productId];
-        const currentStock = invInfo?.quantity ?? 0;
-        const reorder = invInfo?.reorderLevel ?? 10;
-        const stockLevel = Math.min(100, Math.round((currentStock / (reorder * 2 || 20)) * 100));
+        // Note: We are no longer fetching the full inventory just for this bar.
+        // If the backend doesn't provide stock level in this summary, we show a default health value.
+        const stockLevel = p.stockLevel ?? 100; 
 
         return {
           id: productId,
@@ -160,7 +142,7 @@ export default function StoreAdminDashboard() {
         };
       }),
     };
-  }, [raw, deviceData, invRes]);
+  }, [raw, deviceData]);
 
   if (loading && !data) {
     return (

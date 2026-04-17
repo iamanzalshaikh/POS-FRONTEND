@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import StockAdjustmentForm from '@/components/store-admin/StockAdjustmentForm';
 import StockAdjustmentTable from '@/components/store-admin/StockAdjustmentTable';
 import { fetchProducts } from '@/api/products.api';
@@ -7,83 +8,68 @@ import { getAuditLogs } from '@/api/reports.api';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const StockAdjustmentPage = () => {
-    const [productsRes, setProductsRes] = useState<any>(null);
-    const [logsRes, setLogsRes] = useState<any>(null);
-    const [auditLogsRes, setAuditLogsRes] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-
-    // Pagination State
+    // 1. Pagination & Filtering State
     const [page, setPage] = useState(1);
-    const [totalItems, setTotalItems] = useState(0);
-    const pageSize = 5;
+    const pageSize = 10;
 
-    const loadData = async () => {
-        setLoading(true);
-        try {
-            const [products, paginatedLogs, auditLogs] = await Promise.all([
-                fetchProducts(),
-                fetchInventoryLogs({ limit: pageSize, page }),
-                getAuditLogs({ limit: 100 })
-            ]);
-            setProductsRes(products);
-            setLogsRes(paginatedLogs); // Now returns { data: logs, total }
-            setAuditLogsRes(auditLogs);
-            setTotalItems(paginatedLogs?.data?.total || 0);
-        } catch (error) {
-            console.error("Failed to load adjustment data:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // 2. Main Query: Inventory Logs (Recent Adjustments)
+    // We cache this for 30s to allow "snappy" navigation back to this page.
+    const { 
+        data: logsRes, 
+        isLoading: logsLoading, 
+        refetch: refetchLogs 
+    } = useQuery({
+        queryKey: ['inventory-logs-adjustments', page],
+        queryFn: () => fetchInventoryLogs({ limit: pageSize, page }),
+        staleTime: 30000,
+        placeholderData: (prev) => prev
+    });
 
-    useEffect(() => {
-        loadData();
-    }, [page]);
+    // 3. Products Query: Needed for the search/selection in the form
+    // We use a separate key that can be shared across the app for caching.
+    const { 
+        data: productsRes, 
+        isLoading: productsLoading 
+    } = useQuery({
+        queryKey: ['products-catalog-lite'], 
+        queryFn: () => fetchProducts({ limit: 100 }), // Fetching a smaller subset/recent for the form
+        staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    });
+
+    const products = productsRes?.data?.data || productsRes?.data || [];
+    const logsRaw = logsRes?.data?.data || logsRes?.data || [];
+    const totalItems = logsRes?.data?.total || 0;
+
+    // 4. Enrichment (Matching names is now handled by the backend join mostly)
+    const enrichedLogs = useMemo(() => {
+        return (Array.isArray(logsRaw) ? logsRaw : []).map((log: any) => ({
+            ...log,
+            // Fallback to "System" if user isn't joined
+            user: log.user || { name: 'System', role: 'SYSTEM' }
+        }));
+    }, [logsRaw]);
 
     const handleSuccess = () => {
         setPage(1);
-        loadData();
+        refetchLogs();
     };
 
-    const products = (productsRes as any)?.data?.data || (productsRes as any)?.data || (Array.isArray(productsRes) ? productsRes : []);
-    const logs = (logsRes as any)?.data?.data || (Array.isArray(logsRes?.data) ? logsRes.data : []);
-    const auditLogs = (auditLogsRes as any)?.data?.logs || (Array.isArray(auditLogsRes?.logs) ? auditLogsRes.logs : []);
+    const loading = logsLoading || productsLoading;
 
-    // Merge Audit Logs into Inventory Logs to get User Attribution
-    const enrichedLogs = logs.map((log: any) => {
-        // 1. Try to find the direct AuditLog for this inventory log
-        let audit = auditLogs.find((a: any) => a.entity === 'inventory_logs' && a.entityId === log.id);
-
-        // 2. If not found, check if it's a SALE and find the sale's AuditLog
-        if (!audit && log.changeType === 'SALE' && log.referenceId) {
-            audit = auditLogs.find((a: any) => a.entity === 'sales' && a.entityId === log.referenceId);
-        }
-
-        // 3. If still not found, check if it's an OPENING_STOCK and find the product's AuditLog
-        if (!audit && log.changeType === 'OPENING_STOCK') {
-            audit = auditLogs.find((a: any) => a.entity === 'products' && a.entityId === log.productId && a.action === 'CREATE_PRODUCT');
-        }
-
-        return {
-            ...log,
-            user: audit?.user || { name: 'System', role: 'SYSTEM' }
-        };
-    });
-
-    if (loading) {
+    if (loading && !logsRes) {
         return (
-            <div className="space-y-12 animate-fade-in">
+            <div className="space-y-12 animate-fade-in p-6">
                 <div className="space-y-4">
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="h-10 w-64" />
                     <Skeleton className="h-4 w-96" />
                 </div>
                 <div className="w-full">
-                    <Skeleton className="h-[300px] rounded-[32px]" />
+                    <Skeleton className="h-[350px] rounded-[40px]" />
                 </div>
                 <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-20 w-full rounded-2xl" />
+                        <Skeleton key={i} className="h-20 w-full rounded-3xl" />
                     ))}
                 </div>
             </div>

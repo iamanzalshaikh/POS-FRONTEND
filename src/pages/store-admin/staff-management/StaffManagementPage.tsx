@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Users, 
@@ -6,26 +6,22 @@ import {
     ShieldCheck, 
     BadgeInfo,
     Search,
-    MoreVertical, 
     Edit2, 
-    Trash2 
+    Trash2,
+    RefreshCw
 } from 'lucide-react';
 import AddStaffModal from '@/components/store-admin/AddStaffModal';
 import MetricCard from '@/components/global-components/MetricCard';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { StaffStatusBadge, RoleBadge } from '@/components/store-admin/StaffStatusBadge';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
-import { Skeleton } from '@/components/ui/skeleton';
 import type { StaffMember, CreateStaffInput, StaffRole, StaffStatus } from './types/staff.types';
 import { useUserStore } from '../../../store/useUserStore';
+import { useQuery } from '@tanstack/react-query';
+import { usersApi } from '@/service/api';
+import { useDebounce } from '@/hooks';
 
 function formatActivity(value?: string | null): string {
     return value ? new Date(value).toLocaleString() : 'Never';
@@ -46,26 +42,38 @@ function mapApiUser(u: any): StaffMember {
     };
 }
 
-
 export default function StaffManagementPage() {
     const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStaffToEdit, setSelectedStaffToEdit] = useState<StaffMember | undefined>(undefined);
 
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebounce(searchQuery, 500);
     const [roleFilter, setRoleFilter] = useState<StaffRole | 'All'>('All');
     const [statusFilter, setStatusFilter] = useState<StaffStatus | 'All'>('All');
 
-    const { users, isLoading, fetchUsers, createUser, updateUser, toggleUserStatus } = useUserStore();
+    const { createUser, updateUser, toggleUserStatus } = useUserStore();
 
-    useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
+    // Dedicated query for staff list with a static key to maximize caching.
+    // Since the API returns the full list, we filter it client-side.
+    const { 
+        data: usersRes, 
+        isLoading, 
+        refetch: fetchUsers 
+    } = useQuery({
+        queryKey: ['staff-list'], // Static key for universal caching
+        queryFn: () => usersApi.getAll(),
+        staleTime: 1000 * 60 * 10, // Cache for 10 minutes
+    });
 
-    const staff: StaffMember[] = users.map(mapApiUser);
+    const staff: StaffMember[] = useMemo(() => {
+        const raw = usersRes?.data?.data || usersRes?.data || [];
+        return (Array.isArray(raw) ? raw : []).map(mapApiUser);
+    }, [usersRes]);
 
-    const columns: ColumnDef<StaffMember>[] = [
+    const columns: ColumnDef<StaffMember>[] = useMemo(() => [
         {
+            id: "staffId",
             header: "ID",
             cell: ({ row }) => (
                 <div className="flex justify-center uppercase tracking-widest text-[11px] font-black text-slate-400">
@@ -110,15 +118,13 @@ export default function StaffManagementPage() {
             )
         },
         {
+            id: "activity",
             header: "Activity",
             cell: ({ row }) => {
                 const member = row.original;
                 const loginDate = member.lastLogin !== 'Never' ? new Date(member.lastLogin) : null;
                 const logoutDate = member.lastLogout !== 'Never' ? new Date(member.lastLogout) : null;
 
-                // Improved Logic: A session is only truly "Active" if:
-                // 1. For Cashiers: The terminal they are using has sent a heartbeat recently (last 5 mins)
-                // 2. For Others: They logged in recently (last 12 hours) and haven't logged out.
                 const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
                 const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
                 
@@ -126,10 +132,8 @@ export default function StaffManagementPage() {
                 const isRecentlyLoggedOut = logoutDate && loginDate && logoutDate > loginDate;
 
                 if (member.role === 'CASHIER' && member.currentDevice?.lastActiveAt) {
-                    // Cashier is active if heartbeat is fresh AND they haven't explicitly logged out more recently than logging in
                     isActiveSession = new Date(member.currentDevice.lastActiveAt) > fiveMinsAgo && !isRecentlyLoggedOut;
                 } else if (loginDate) {
-                    // Others: active if logged in recently and haven't logged out
                     isActiveSession = loginDate > twelveHoursAgo && !isRecentlyLoggedOut;
                 }
 
@@ -141,7 +145,7 @@ export default function StaffManagementPage() {
                         <span className={cn(
                             "text-[10px] font-black uppercase tracking-widest",
                             isActiveSession 
-                                ? "text-emerald-500 animate-pulse" 
+                                ? "text-emerald-500 animate-pulse font-bold" 
                                 : "text-slate-400 dark:text-slate-500"
                         )}>
                             OUT: {isActiveSession ? 'ACTIVE SESSION' : (member.lastLogout || 'Never')}
@@ -184,19 +188,20 @@ export default function StaffManagementPage() {
                 </div>
             )
         }
-    ];
+    ], []);
 
-    const filteredStaff = staff.filter(member => {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch =
-            member.name.toLowerCase().includes(q) ||
-            member.email.toLowerCase().includes(q) ||
-            member.id.includes(searchQuery);
-        const matchesRole = roleFilter === 'All' || member.role === roleFilter;
-        const matchesStatus = statusFilter === 'All' || member.status === statusFilter;
-        return matchesSearch && matchesRole && matchesStatus;
-    });
-
+    const filteredStaff = useMemo(() => {
+        return staff.filter(member => {
+            const q = debouncedSearch.toLowerCase();
+            const matchesSearch =
+                member.name.toLowerCase().includes(q) ||
+                member.email.toLowerCase().includes(q) ||
+                member.id.toLowerCase().includes(q);
+            const matchesRole = roleFilter === 'All' || member.role === roleFilter;
+            const matchesStatus = statusFilter === 'All' || member.status === statusFilter;
+            return matchesSearch && matchesRole && matchesStatus;
+        });
+    }, [staff, debouncedSearch, roleFilter, statusFilter]);
 
     const handleAddStaff = async (data: CreateStaffInput): Promise<{ success: boolean; error?: string }> => {
         const success = await createUser(data);
@@ -216,6 +221,7 @@ export default function StaffManagementPage() {
 
     const handleToggleStatus = async (id: string, active: boolean) => {
         await toggleUserStatus(id, active);
+        await fetchUsers();
     };
 
     return (
@@ -261,72 +267,53 @@ export default function StaffManagementPage() {
                 />
             </div>
 
-            {isLoading ? (
-                <div className="space-y-10 animate-fade-in">
-                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
-                        <div className="flex items-center justify-between mb-8">
-                            <Skeleton className="h-10 w-64 rounded-xl" />
-                            <div className="flex gap-3">
-                                <Skeleton className="h-10 w-32 rounded-xl" />
-                                <Skeleton className="h-10 w-32 rounded-xl" />
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
+                <DataTable 
+                    columns={columns} 
+                    data={filteredStaff}
+                    isLoading={isLoading}
+                    onRefresh={fetchUsers}
+                    placeholder="Filter list..."
+                    hidePagination={false}
+                    manualPagination={false}
+                    exportFilename="Staff-Records"
+                    headerActions={
+                        <div className="flex items-center gap-3">
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Search by name, email..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                />
                             </div>
-                        </div>
-                        <div className="space-y-4">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
-                    <DataTable 
-                        columns={columns} 
-                        data={filteredStaff}
-                        isLoading={isLoading}
-                        onRefresh={fetchUsers}
-                        placeholder="Filter list..."
-                        hidePagination={false}
-                        manualPagination={false}
-                        exportFilename="Staff-Records"
-                        headerActions={
-                            <div className="flex items-center gap-3">
-                                <div className="relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search by name, email..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
-                                    />
-                                </div>
-                                <select
-                                    value={roleFilter}
-                                    onChange={(e) => setRoleFilter(e.target.value as StaffRole | 'All')}
-                                    className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
-                                >
-                                    <option value="All">All Roles</option>
-                                    <option value="ADMIN">Admin</option>
-                                    <option value="MANAGER">Manager</option>
-                                    <option value="CASHIER">Cashier</option>
-                                    <option value="ACCOUNTANT">Accountant</option>
-                                </select>
+                            <select
+                                value={roleFilter}
+                                onChange={(e) => setRoleFilter(e.target.value as StaffRole | 'All')}
+                                className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
+                            >
+                                <option value="All">All Roles</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="MANAGER">Manager</option>
+                                <option value="CASHIER">Cashier</option>
+                                <option value="ACCOUNTANT">Accountant</option>
+                            </select>
 
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value as StaffStatus | 'All')}
-                                    className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
-                                >
-                                    <option value="All">All Status</option>
-                                    <option value="active">Active Only</option>
-                                    <option value="inactive">Inactive Only</option>
-                                </select>
-                            </div>
-                        }
-                    />
-                </div>
-            )}
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as StaffStatus | 'All')}
+                                className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
+                            >
+                                <option value="All">All Status</option>
+                                <option value="active">Active Only</option>
+                                <option value="inactive">Inactive Only</option>
+                            </select>
+                        </div>
+                    }
+                />
+            </div>
 
             <AddStaffModal
                 isOpen={isModalOpen}
@@ -341,3 +328,4 @@ export default function StaffManagementPage() {
         </div>
     );
 }
+

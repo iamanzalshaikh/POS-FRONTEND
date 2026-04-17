@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
     Truck, 
@@ -10,7 +10,8 @@ import {
     Edit2, 
     Power,
     ShieldAlert,
-    Ban
+    Ban,
+    RefreshCw
 } from 'lucide-react';
 import { 
     getSuppliers, 
@@ -27,36 +28,31 @@ import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddSupplierModal from '@/components/store-admin/purchasing/AddSupplierModal';
+import { useQuery } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks';
 
 export default function SuppliersPage() {
     const userAuth = useAuthStore((s) => s.user);
     const readOnly = userAuth?.role === "ACCOUNTANT";
     const base = usePurchasingBasePath();
-
-    const [list, setList] = useState<Supplier[]>([]);
-    const [loading, setLoading] = useState(true);
+    
     const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebounce(searchQuery, 500);
     const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
 
-    const loadSuppliers = async () => {
-        setLoading(true);
-        try {
-            const res = await getSuppliers({ activeOnly: false });
-            const raw = res.data?.data;
-            setList(Array.isArray(raw) ? raw : []);
-        } catch (e: any) {
-            console.error("Failed to load suppliers:", e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: suppliersRes, isLoading: loading, refetch: loadSuppliers } = useQuery({
+        queryKey: ['suppliers', statusFilter],
+        queryFn: () => getSuppliers({ activeOnly: statusFilter === 'Active' }),
+        staleTime: 1000 * 60 * 5,
+    });
 
-    useEffect(() => {
-        loadSuppliers();
-    }, []);
+    const list = useMemo(() => {
+        const raw = suppliersRes?.data?.data || suppliersRes?.data;
+        return Array.isArray(raw) ? raw : [];
+    }, [suppliersRes]);
 
     const handleAddSupplier = async (data: any) => {
         try {
@@ -87,8 +83,9 @@ export default function SuppliersPage() {
         }
     };
 
-    const columns: ColumnDef<Supplier>[] = [
+    const columns: ColumnDef<Supplier>[] = useMemo(() => [
         {
+            id: "vendorId",
             header: "ID",
             cell: ({ row }) => (
                 <div className="flex justify-center uppercase tracking-widest text-[11px] font-black text-slate-400">
@@ -192,14 +189,16 @@ export default function SuppliersPage() {
                 </div>
             )
         }
-    ];
+    ], [readOnly, base]);
 
-    const filteredList = list.filter(s => {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch = s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q));
-        const matchesStatus = statusFilter === 'All' || (statusFilter === 'Active' ? s.isActive : !s.isActive);
-        return matchesSearch && matchesStatus;
-    });
+    const filteredList = useMemo(() => {
+        return list.filter(s => {
+            const q = debouncedSearch.toLowerCase();
+            const matchesSearch = s.name.toLowerCase().includes(q) || (s.phone && s.phone.includes(q));
+            const matchesStatus = statusFilter === 'All' || (statusFilter === 'Active' ? s.isActive : !s.isActive);
+            return matchesSearch && matchesStatus;
+        });
+    }, [list, debouncedSearch, statusFilter]);
 
     return (
         <div className="animate-fade-in space-y-10">
@@ -243,60 +242,41 @@ export default function SuppliersPage() {
                 />
             </div>
 
-            {loading ? (
-                <div className="space-y-10 animate-fade-in">
-                    <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
-                        <div className="flex items-center justify-between mb-8">
-                            <Skeleton className="h-10 w-64 rounded-xl" />
-                            <div className="flex gap-3">
-                                <Skeleton className="h-10 w-32 rounded-xl" />
-                                <Skeleton className="h-10 w-32 rounded-xl" />
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
+                <DataTable 
+                    columns={columns} 
+                    data={filteredList}
+                    isLoading={loading}
+                    onRefresh={loadSuppliers}
+                    placeholder="Search vendors..."
+                    hidePagination={false}
+                    manualPagination={false}
+                    exportFilename="Suppliers-Records"
+                    headerActions={
+                        <div className="flex items-center gap-3">
+                            <div className="relative group">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                <input
+                                    type="text"
+                                    placeholder="Identify supplier..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                />
                             </div>
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as any)}
+                                className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
+                            >
+                                <option value="All">All Status</option>
+                                <option value="Active">Active Only</option>
+                                <option value="Inactive">Inactive Only</option>
+                            </select>
                         </div>
-                        <div className="space-y-4">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
-                    <DataTable 
-                        columns={columns} 
-                        data={filteredList}
-                        isLoading={loading}
-                        onRefresh={loadSuppliers}
-                        placeholder="Search vendors..."
-                        hidePagination={false}
-                        manualPagination={false}
-                        exportFilename="Suppliers-Records"
-                        headerActions={
-                            <div className="flex items-center gap-3">
-                                <div className="relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                    <input
-                                        type="text"
-                                        placeholder="Identify supplier..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
-                                    />
-                                </div>
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                                    className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
-                                >
-                                    <option value="All">All Status</option>
-                                    <option value="Active">Active Only</option>
-                                    <option value="Inactive">Inactive Only</option>
-                                </select>
-                            </div>
-                        }
-                    />
-                </div>
-            )}
+                    }
+                />
+            </div>
 
             <AddSupplierModal
                 isOpen={isModalOpen}
@@ -311,3 +291,4 @@ export default function SuppliersPage() {
         </div>
     );
 }
+

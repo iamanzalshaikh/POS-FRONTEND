@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Search, Plus, Minus, CheckCircle, Package, Loader2 } from 'lucide-react';
 import { adjustStock } from '@/api/inventory.api';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,12 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
     const [referenceId, setReferenceId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const filteredProducts = products.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        p.barcode?.includes(searchQuery)
-    );
+    const filteredProducts = useMemo(() => {
+        return products.filter(p => 
+            p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+            p.barcode?.includes(searchQuery)
+        );
+    }, [products, searchQuery]);
 
     const handleSubmit = async () => {
         if (!selectedProduct) return toast.error('Please select a product', 'Missing Data');

@@ -5,6 +5,7 @@ import { X, Search, Filter, History, Box, Activity } from 'lucide-react';
 import ActivityLogsTable from '@/components/shared/ActivityLogsTable';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useDebounce } from '@/hooks';
 
 const AuditLogsPage: React.FC = () => {
     // 1. Filter & Pagination State
@@ -14,6 +15,8 @@ const AuditLogsPage: React.FC = () => {
     const [action, setAction] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const debouncedSearch = useDebounce(searchQuery, 500);
 
     // Query
     const { 
@@ -28,7 +31,8 @@ const AuditLogsPage: React.FC = () => {
             entity: entity || undefined,
             action: action || undefined,
             startDate: startDate || undefined,
-            endDate: endDate || undefined
+            endDate: endDate || undefined,
+            search: debouncedSearch || undefined
         }),
         staleTime: 1000 * 60 * 5,
     });
@@ -42,6 +46,7 @@ const AuditLogsPage: React.FC = () => {
         setAction('');
         setStartDate('');
         setEndDate('');
+        setSearchQuery('');
         setPage(1);
     };
 
@@ -54,14 +59,24 @@ const AuditLogsPage: React.FC = () => {
                     <p className="text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest text-[11px] mt-1">Real-time event tracking and security history</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    {(entity || action || startDate || endDate) && (
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Universal search..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="h-12 pl-11 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[300px] shadow-sm"
+                        />
+                    </div>
+                    {(entity || action || startDate || endDate || searchQuery) && (
                         <Button
                             variant="secondary"
                             onClick={resetFilters}
                             className="flex items-center gap-2 px-6 h-12 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-rose-100 dark:border-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all active:scale-95 shadow-sm"
                         >
                             <X size={14} />
-                            Reset Filters
+                            Reset
                         </Button>
                     )}
                 </div>
