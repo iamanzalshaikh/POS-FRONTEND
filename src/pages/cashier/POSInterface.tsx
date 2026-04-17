@@ -850,6 +850,8 @@ const POSInterface: React.FC = () => {
                   setStockFilter={setProductStockFilter}
                   categories={categories}
                   onReset={handleResetFilters}
+                  onRefresh={() => refetchProducts()}
+                  isRefreshing={productsLoading}
                 />
               </div>
 
@@ -859,6 +861,7 @@ const POSInterface: React.FC = () => {
                   products={filteredProducts}
                   loading={productsLoading}
                   onAddToCart={handleAddProductToCart}
+                  cart={cart}
                 />
               </div>
             </div>

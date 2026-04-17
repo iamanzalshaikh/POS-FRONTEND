@@ -77,6 +77,11 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
             return;
         }
 
+        if (!formData.phone.trim()) {
+            setError('Contact phone is required');
+            return;
+        }
+
         setLoading(true);
         const result = editSupplier && onEdit
             ? await onEdit(editSupplier.id, {
@@ -171,11 +176,12 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
 
                         <div className="space-y-2">
                             <label className="text-[#1e293b] dark:text-slate-300">
-                                Contact Phone
+                                Contact Phone <span className="text-rose-500">*</span>
                             </label>
                             <div className="relative group">
                                 <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
                                 <input
+                                    required
                                     type="text"
                                     placeholder="+92 XXX XXXXXXX"
                                     value={formData.phone}

@@ -77,18 +77,21 @@ export function getSaleGrandTotal(sale: SaleLike): number {
   const effSub =
     lineSub > 0.0001 ? lineSub : Number.isFinite(headerSub) ? headerSub : NaN;
 
-  if (Number.isFinite(effSub) && effTax >= 0 && Number.isFinite(disc)) {
-    const computed = effSub + effTax - disc;
-    if (computed > 0) {
-      if (Number.isFinite(stored) && stored > 0) {
-        if (Math.abs(computed - stored) < 0.02) return roundMoney(stored);
-        if (effTax > 0.0001 && stored < computed - 0.02) return roundMoney(computed);
-      }
-      if (!Number.isFinite(stored) || stored <= 0) return roundMoney(computed);
-    }
+  // 1. If we have a valid stored Total Amount from the DB, USE IT.
+  // This is the most reliable source for what the customer actually paid.
+  if (Number.isFinite(stored) && stored > 0) {
+    return roundMoney(stored);
   }
 
-  if (Number.isFinite(stored) && stored > 0) return roundMoney(stored);
+  // 2. Calculations for missing or legacy data:
+  if (Number.isFinite(effSub) && Number.isFinite(disc)) {
+    // If we have tax but the stored amount is missing, we must decide 
+    // if it was inclusive or exclusive. 
+    // Defaulting to Inclusive logic (Total = Subtotal - Discount) 
+    // to match user business logic.
+    const inclusiveTotal = effSub - disc;
+    return roundMoney(inclusiveTotal);
+  }
 
   const fallbackTax = getSaleTaxTotal(sale);
   if (Number.isFinite(headerSub) && fallbackTax >= 0 && Number.isFinite(disc)) {
