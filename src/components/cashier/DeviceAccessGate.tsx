@@ -43,7 +43,7 @@ interface DeviceAccessGateProps {
  */
 const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { deviceId, setDevice } = useDeviceStore();
+  const { deviceId, setDevice, clearDevice } = useDeviceStore();
   const { logout, user } = useAuthStore();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -65,7 +65,7 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
   } = useQuery({
     queryKey: ['available-devices'],
     queryFn: () => devicesApi.getAll(),
-    refetchInterval: deviceId ? false : 5000, // Poll every 5s if not connected
+    refetchInterval: deviceId ? 30000 : 5000, // Poll every 30s if connected (validation), 5s if not (discovery)
     enabled: true,
   });
 
@@ -75,23 +75,33 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
     if (devicesError) setError((devicesError as any).message || 'Failed to check device availability');
   }, [devicesLoading, devicesError]);
 
-  // Handle results from useQuery
-  useEffect(() => {
-    if (devicesRes?.data?.success) {
-      const allDevices = (devicesRes.data.data?.devices || devicesRes.data.data || []) as Device[];
-      const activeDevices = allDevices.filter((d) => d.isActive);
-      
-      setAvailableDevices(activeDevices);
-      setLastChecked(new Date());
-      
-      // Auto-select if only one free device available
-      const freeDevices = activeDevices.filter((d) => !d.currentUserId);
-      if (freeDevices.length === 1 && !deviceId && !isSelecting) {
-        console.log('[DeviceGate] Auto-selecting single free device');
-        handleSelectDevice(freeDevices[0]);
+    // Handle results from useQuery
+    useEffect(() => {
+      if (devicesRes?.data?.success) {
+        const allDevices = (devicesRes.data.data?.devices || devicesRes.data.data || []) as Device[];
+        const activeDevices = allDevices.filter((d) => d.isActive);
+        
+        setAvailableDevices(activeDevices);
+        setLastChecked(new Date());
+
+        // CRITICAL FIX: If we have a stored deviceId, verify it still exists and is active
+        if (deviceId) {
+            const currentDevice = activeDevices.find(d => d.id === deviceId);
+            if (!currentDevice) {
+                console.warn('[DeviceGate] Persistent device is now inactive or deleted. Clearing...');
+                clearDevice();
+                setHasDevice(false);
+            }
+        }
+        
+        // Auto-select if only one free device available
+        const freeDevices = activeDevices.filter((d) => !d.currentUserId);
+        if (freeDevices.length === 1 && !deviceId && !isSelecting) {
+          console.log('[DeviceGate] Auto-selecting single free device');
+          handleSelectDevice(freeDevices[0]);
+        }
       }
-    }
-  }, [devicesRes, deviceId, isSelecting]);
+    }, [devicesRes, deviceId, isSelecting, clearDevice]);
 
   /**
    * Handle device selection

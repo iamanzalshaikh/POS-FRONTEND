@@ -103,7 +103,7 @@ export default function NewSupplierPurchasePage() {
         purchaseCost: p.purchasePrice ? String(p.purchasePrice) : "0",
         sellingPrice: p.sellingPrice ? String(p.sellingPrice) : "0",
         gstPercentage: "18",
-        lineDiscount: "0",
+        lineDiscount: p.discountPercentage ? String(p.discountPercentage) : "0",
         alertAt: String(p.reorderLevel ?? 10),
       },
     ]);

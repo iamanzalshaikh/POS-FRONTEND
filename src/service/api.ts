@@ -139,6 +139,7 @@ export const storesApi = {
 
 export const usersApi = {
   getAll: (storeId?: string) => api.get(storeId ? `/users?storeId=${storeId}` : '/users'),
+  getById: (id: string) => api.get(`/users/${id}`),
   create: (data: any) => api.post('/users', data),
   update: (id: string, data: any) => api.patch(`/users/${id}`, data),
 };

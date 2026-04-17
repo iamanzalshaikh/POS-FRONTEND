@@ -126,6 +126,10 @@ const LoginPage: React.FC = () => {
       
       if (err.response?.status === 403) {
         setError(msg || 'This device is not registered or you are not assigned to this terminal.');
+        // Clear stale device IDs to allow a clean retry
+        localStorage.removeItem('device-id');
+        localStorage.removeItem('deviceId');
+        localStorage.removeItem('cashier-device');
       } else if (err.response?.status === 401) {
         setError(msg || 'Invalid email or password.');
       } else {

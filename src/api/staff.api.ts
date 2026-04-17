@@ -269,6 +269,14 @@ export const getStaffById = async (id: string): Promise<StaffApiResponse> => {
   };
 };
 
+/**
+ * Get staff member detail (User account with activity/sessions)
+ * Used by StaffDetailPage.tsx
+ */
+export const fetchStaffMemberById = async (id: string): Promise<any> => {
+  return api.get(`/users/${id}`);
+};
+
 // ============================================================================
 // PAYROLL API FUNCTIONS
 // ============================================================================

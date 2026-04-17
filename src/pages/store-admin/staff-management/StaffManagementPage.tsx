@@ -34,6 +34,7 @@ function formatActivity(value?: string | null): string {
 function mapApiUser(u: any): StaffMember {
     return {
         id: u.id || u._id,
+        displayId: u.displayId,
         name: u.name,
         email: u.email,
         role: u.role as StaffRole,
@@ -41,6 +42,7 @@ function mapApiUser(u: any): StaffMember {
         lastLogin: formatActivity(u.lastLoginAt),
         lastLogout: formatActivity(u.lastLogoutAt),
         assignedTerminals: u.assignedTerminals || [],
+        currentDevice: u.currentDevice,
     };
 }
 
@@ -67,7 +69,7 @@ export default function StaffManagementPage() {
             header: "ID",
             cell: ({ row }) => (
                 <div className="flex justify-center uppercase tracking-widest text-[11px] font-black text-slate-400">
-                    {row.original.id.slice(-4)}
+                    {row.original.displayId || row.original.id.slice(-4)}
                 </div>
             )
         },
@@ -113,9 +115,23 @@ export default function StaffManagementPage() {
                 const member = row.original;
                 const loginDate = member.lastLogin !== 'Never' ? new Date(member.lastLogin) : null;
                 const logoutDate = member.lastLogout !== 'Never' ? new Date(member.lastLogout) : null;
+
+                // Improved Logic: A session is only truly "Active" if:
+                // 1. For Cashiers: The terminal they are using has sent a heartbeat recently (last 5 mins)
+                // 2. For Others: They logged in recently (last 12 hours) and haven't logged out.
+                const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+                const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
                 
-                // Logic: If login is more recent than logout, they are currently in an active session
-                const isActiveSession = loginDate && (!logoutDate || loginDate > logoutDate);
+                let isActiveSession = false;
+                const isRecentlyLoggedOut = logoutDate && loginDate && logoutDate > loginDate;
+
+                if (member.role === 'CASHIER' && member.currentDevice?.lastActiveAt) {
+                    // Cashier is active if heartbeat is fresh AND they haven't explicitly logged out more recently than logging in
+                    isActiveSession = new Date(member.currentDevice.lastActiveAt) > fiveMinsAgo && !isRecentlyLoggedOut;
+                } else if (loginDate) {
+                    // Others: active if logged in recently and haven't logged out
+                    isActiveSession = loginDate > twelveHoursAgo && !isRecentlyLoggedOut;
+                }
 
                 return (
                     <div className="flex flex-col items-center gap-1">
@@ -206,7 +222,7 @@ export default function StaffManagementPage() {
         <div className="animate-fade-in space-y-10">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Staff Management</h1>
+                    <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">User Management</h1>
                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Manage your team and access levels</p>
                 </div>
                 <button

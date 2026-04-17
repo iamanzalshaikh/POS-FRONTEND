@@ -143,13 +143,33 @@ export default function ProductsManagementPage() {
             )
         },
         {
-            header: "Latest",
-            accessorKey: "latestSellingPrice",
-            cell: ({ row }) => (
-                <div className="text-center text-emerald-600 text-[11px] font-black uppercase tracking-widest tabular-nums animate-pulse">
-                    {formatAmountShort(row.original.latestSellingPrice || row.original.sellingPrice)}
-                </div>
-            )
+            header: "Disc. %",
+            cell: ({ row }) => {
+                const disc = Number(row.original.discountPercentage || 0);
+                return (
+                    <div className="text-center">
+                        <span className={cn(
+                            "px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest",
+                            disc > 0 ? "bg-rose-50 text-rose-600 border border-rose-100" : "text-slate-400"
+                        )}>
+                            {disc > 0 ? `${disc}% OFF` : '0%'}
+                        </span>
+                    </div>
+                );
+            }
+        },
+        {
+            header: "Net Price",
+            cell: ({ row }) => {
+                const base = parseFloat(row.original.latestSellingPrice || row.original.sellingPrice || 0);
+                const disc = Number(row.original.discountPercentage || 0);
+                const net = base * (1 - disc / 100);
+                return (
+                    <div className="text-center text-emerald-600 text-[11px] font-black uppercase tracking-widest tabular-nums">
+                        {formatAmountShort(net)}
+                    </div>
+                );
+            }
         },
         {
             header: "Status",

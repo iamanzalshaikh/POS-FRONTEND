@@ -327,9 +327,14 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                     className={`${inputClass} text-blue-600 dark:text-blue-400 font-bold`}
                   />
                   <div className="mt-2 space-y-1">
-                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
                       Calculated GST (18%): Rs {((Number(sellingPrice) || 0) * 0.18).toFixed(2)}
                     </p>
+                    {Number(discountPercentage) > 0 && (
+                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                        Effective Price: Rs {(Number(sellingPrice) * (1 - Number(discountPercentage) / 100)).toFixed(2)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

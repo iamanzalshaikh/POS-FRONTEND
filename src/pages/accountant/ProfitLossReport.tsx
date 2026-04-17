@@ -67,6 +67,9 @@ const ProfitLossReport: React.FC = () => {
           // 2. Process Expenses Data (Daily to Weekly)
           if (expensesList) {
             expensesList.forEach(exp => {
+              // Exclude Stock Purchases from chart overhead to avoid double-counting with COGS
+              if (exp.category === 'SUPPLIER_PURCHASE' || exp.category === 'SALARIES') return;
+              
               const expDate = new Date(exp.date);
               if (expDate >= startDate && expDate <= endDate) {
                 const weekKey = getWeekKey(exp.date);
