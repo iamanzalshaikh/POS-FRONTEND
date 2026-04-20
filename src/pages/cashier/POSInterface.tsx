@@ -41,6 +41,10 @@ type CartItem = {
   /** Matches product tax; backend uses batch % then product % — cart uses product for preview. */
   taxPercentage?: number;
   discountPercentage?: number;
+  latestDiscountPercentage?: number;
+  latestSellingPrice?: number;
+  oldestBatchRemaining?: number;
+  oldestBatchDiscount?: number;
   totalStock?: number;
 };
 
@@ -61,6 +65,10 @@ type Product = {
   stock?: number;
   taxPercentage?: number;
   discountPercentage?: number;
+  latestSellingPrice?: number;
+  latestDiscountPercentage?: number;
+  oldestBatchRemaining?: number;
+  oldestBatchDiscount?: number;
   category?: any;
   inventoryStock?: { totalQuantity?: number };
 };
@@ -170,12 +178,39 @@ const POSInterface: React.FC = () => {
 
   // Totals
   const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () => cart.reduce((sum, item) => {
+      const oldestQty = item.oldestBatchRemaining || 0;
+      const oldestPrice = item.price || 0;
+      const latestPrice = item.latestSellingPrice ?? oldestPrice;
+
+      if (item.quantity <= oldestQty) {
+        return sum + (oldestPrice * item.quantity);
+      } else {
+        const oldestPart = oldestPrice * oldestQty;
+        const latestPart = latestPrice * (item.quantity - oldestQty);
+        return sum + oldestPart + latestPart;
+      }
+    }, 0),
     [cart]
   );
 
   const automaticDiscount = useMemo(
-    () => cart.reduce((sum, item) => sum + (item.price * (item.discountPercentage || 0) / 100) * item.quantity, 0),
+    () => cart.reduce((sum, item) => {
+      const oldestQty = item.oldestBatchRemaining || 0;
+      const oldestDisc = item.oldestBatchDiscount || 0;
+      const standardDisc = item.discountPercentage || 0;
+
+      if (item.quantity <= oldestQty) {
+        // Entirely within the oldest batch
+        return sum + (item.price * oldestDisc / 100) * item.quantity;
+      } else {
+        // Spans multiple batches: use oldest rate for available units, latest rate for others
+        const discountedPart = (item.price * oldestDisc / 100) * oldestQty;
+        const latestRate = item.latestDiscountPercentage || 0;
+        const remainderPart = (item.price * latestRate / 100) * (item.quantity - oldestQty);
+        return sum + discountedPart + remainderPart;
+      }
+    }, 0),
     [cart]
   );
   
@@ -257,6 +292,10 @@ const POSInterface: React.FC = () => {
           quantity: 1,
           taxPercentage: parseProductTaxPct(product),
           discountPercentage: product.discountPercentage || 0,
+          latestDiscountPercentage: (product as any).latestDiscountPercentage || 0,
+          latestSellingPrice: (product as any).latestSellingPrice,
+          oldestBatchRemaining: (product as any).oldestBatchRemaining || 0,
+          oldestBatchDiscount: (product as any).oldestBatchDiscount || 0,
           totalStock: totalStock, // Store it for validation in other handlers
         },
       ];
@@ -772,8 +811,8 @@ const POSInterface: React.FC = () => {
   };
 
   return (
-    <div className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
-      <div className="flex flex-col min-w-[1200px] min-h-[calc(100vh-10rem)] bg-slate-100 dark:bg-slate-950">
+    <div className="w-full overflow-hidden">
+      <div className="flex flex-col h-screen max-h-screen bg-slate-100 dark:bg-slate-950">
         <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 shadow-sm transition-colors duration-500 m-0">
       {/* Offline Banner */}
       {isOnline === false && (
@@ -860,7 +899,7 @@ const POSInterface: React.FC = () => {
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
         <div className="flex flex-col lg:flex-row flex-1 min-h-0">
           {/* Left: Product Selection */}
-          <section className="flex-1 flex flex-col min-h-[600px] lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-transparent">
+          <section className="flex-[1.2] flex flex-col lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-transparent">
             {/* Barcode Scanner */}
             <form onSubmit={handleScanSubmit} className="flex-shrink-0">
               <div className="relative">
@@ -894,7 +933,7 @@ const POSInterface: React.FC = () => {
               </div>
 
               {/* Table (Scrollable area) */}
-              <div className="flex-1 overflow-y-auto px-4 py-2 custom-scrollbar">
+              <div className="flex-1 overflow-auto px-2 py-1 custom-scrollbar">
                 <ProductsTable
                   products={filteredProducts}
                   loading={productsLoading}
@@ -965,7 +1004,7 @@ const POSInterface: React.FC = () => {
     </section>
 
     {/* Right: Added Products & Active Checkout Stack */}
-    <aside className="w-full lg:w-[350px] 2xl:w-[420px] flex flex-col bg-white overflow-hidden flex-shrink-0">
+    <aside className="flex-1 min-w-[380px] max-w-[450px] flex flex-col bg-white overflow-hidden flex-shrink-0 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] z-20">
       <div className="flex-1 flex flex-col overflow-hidden border-b border-slate-200">
         <div className="px-5 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
                 <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
@@ -1079,12 +1118,12 @@ const POSInterface: React.FC = () => {
                 </span>
               </div>
               <hr className="my-1 border-dashed border-slate-200" />
-              <div className="flex justify-between items-center text-[13px] font-black">
+              <div className="flex justify-between items-center text-[15px] font-black py-1">
                 <span className="flex items-center space-x-1 text-slate-900">
-                  <Banknote size={14} />
-                  <span>TOTAL</span>
+                  <Banknote size={18} className="text-blue-600" />
+                  <span className="tracking-tighter">TOTAL</span>
                 </span>
-                <span className="text-slate-900 font-black">
+                <span className="text-slate-950 font-black text-lg tabular-nums">
                   {formatCurrency(total)}
                 </span>
               </div>

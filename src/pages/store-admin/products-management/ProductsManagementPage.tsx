@@ -70,16 +70,18 @@ export default function ProductsManagementPage() {
         }));
     }, [productsRes]);
 
-    const totalItems = productsRes?.data?.total || (Array.isArray(productsRes?.data) ? productsRes.data.length : 0);
-    const pageCount = Math.ceil(totalItems / limit) || 1;
+    const meta = productsRes?.data?.meta || productsRes?.meta;
+    const totalItems = meta?.total || 0;
+    const stats = meta?.stats || { totalProducts: 0, activeProducts: 0, lowStockProducts: 0 };
+    const pageCount = meta?.totalPages || 1;
 
     const summary = useMemo(() => {
         return {
-            total: totalItems,
-            lowStock: products.filter((p: any) => p.stock > 0 && p.stock <= (p.reorderLevel || 10)).length,
-            active: products.filter((p: any) => p.isActive).length
+            total: stats.totalProducts,
+            lowStock: stats.lowStockProducts,
+            active: stats.activeProducts
         };
-    }, [products, totalItems]);
+    }, [stats]);
 
     const handleRefresh = () => {
         refetchProducts();

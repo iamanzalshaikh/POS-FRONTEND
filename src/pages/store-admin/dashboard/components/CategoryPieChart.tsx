@@ -17,6 +17,7 @@ export default function CategoryPieChart({ data }: CategoryPieChartProps) {
             outerRadius={85}
             paddingAngle={5}
             centerLabel={data.length}
+            showLabels={false}
         />
     );
 }

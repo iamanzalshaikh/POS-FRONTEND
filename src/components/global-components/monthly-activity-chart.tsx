@@ -100,6 +100,7 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
               tickLine={false} 
               tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
               tickMargin={10} 
+              minTickGap={25}
             />
             <YAxis 
               axisLine={false}
@@ -124,12 +125,13 @@ const MonthlyActivityChart: React.FC<MonthlyActivityChartProps> = ({
               }}
             />
             <Area
-              type="monotone"
+              type="basis"
               dataKey="activity"
               stroke="#4F46E5"
-              strokeWidth={4}
+              strokeWidth={5}
               fillOpacity={1}
               fill="url(#colorActivity)"
+              strokeLinecap="round"
               animationDuration={2000}
             />
           </AreaChart>

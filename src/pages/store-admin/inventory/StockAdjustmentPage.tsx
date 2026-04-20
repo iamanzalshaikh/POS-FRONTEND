@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import StockAdjustmentForm from '@/components/store-admin/StockAdjustmentForm';
 import StockAdjustmentTable from '@/components/store-admin/StockAdjustmentTable';
 import { fetchProducts } from '@/api/products.api';
@@ -8,6 +8,7 @@ import { getAuditLogs } from '@/api/reports.api';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const StockAdjustmentPage = () => {
+    const queryClient = useQueryClient();
     // 1. Pagination & Filtering State
     const [page, setPage] = useState(1);
     const pageSize = 10;
@@ -17,10 +18,15 @@ const StockAdjustmentPage = () => {
     const { 
         data: logsRes, 
         isLoading: logsLoading, 
-        refetch: refetchLogs 
+        refetch: refetchLogs,
+        isFetching: logsFetching
     } = useQuery({
-        queryKey: ['inventory-logs-adjustments', page],
-        queryFn: () => fetchInventoryLogs({ limit: pageSize, page }),
+        queryKey: ['inventory-logs-adjustments', page, 'ADJUSTMENT,DAMAGE,RETURN,OPENING_STOCK,PURCHASE'],
+        queryFn: () => fetchInventoryLogs({ 
+            limit: pageSize, 
+            page, 
+            changeType: 'ADJUSTMENT,DAMAGE,RETURN,OPENING_STOCK,PURCHASE' 
+        }),
         staleTime: 30000,
         placeholderData: (prev) => prev
     });
@@ -29,7 +35,8 @@ const StockAdjustmentPage = () => {
     // We use a separate key that can be shared across the app for caching.
     const { 
         data: productsRes, 
-        isLoading: productsLoading 
+        isLoading: productsLoading,
+        isFetching: productsFetching
     } = useQuery({
         queryKey: ['products-catalog-lite'], 
         queryFn: () => fetchProducts({ limit: 100 }), // Fetching a smaller subset/recent for the form
@@ -37,8 +44,8 @@ const StockAdjustmentPage = () => {
     });
 
     const products = productsRes?.data?.data || productsRes?.data || [];
-    const logsRaw = logsRes?.data?.data || logsRes?.data || [];
-    const totalItems = logsRes?.data?.total || 0;
+    const logsRaw = logsRes?.data?.logs || [];
+    const totalItems = logsRes?.data?.pagination?.total || 0;
 
     // 4. Enrichment (Matching names is now handled by the backend join mostly)
     const enrichedLogs = useMemo(() => {
@@ -51,10 +58,18 @@ const StockAdjustmentPage = () => {
 
     const handleSuccess = () => {
         setPage(1);
-        refetchLogs();
+        // Comprehensive invalidation to fix "not updating stock fastly"
+        queryClient.invalidateQueries({ queryKey: ['inventory-logs-adjustments'] });
+        queryClient.invalidateQueries({ queryKey: ['products-catalog-lite'] });
+    };
+
+    const handleRefresh = () => {
+        queryClient.invalidateQueries({ queryKey: ['inventory-logs-adjustments'] });
+        queryClient.invalidateQueries({ queryKey: ['products-catalog-lite'] });
     };
 
     const loading = logsLoading || productsLoading;
+    const isRefreshing = logsFetching || productsFetching;
 
     if (loading && !logsRes) {
         return (
@@ -102,6 +117,8 @@ const StockAdjustmentPage = () => {
                     pageIndex={page}
                     pageSize={pageSize}
                     onPageChange={setPage}
+                    onRefresh={handleRefresh}
+                    isRefreshing={isRefreshing}
                 />
             </div>
         </div>

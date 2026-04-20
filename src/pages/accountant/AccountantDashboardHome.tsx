@@ -42,10 +42,9 @@ function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string
     };
   }
   if (preset === 'week') {
+    // Return last 7 days (including today)
     const start = new Date(today);
-    const dow = start.getDay();
-    const daysFromMonday = dow === 0 ? 6 : dow - 1;
-    start.setDate(start.getDate() - daysFromMonday);
+    start.setDate(start.getDate() - 6);
     return { startDate: toLocalYMD(start), endDate };
   }
   const start = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -79,13 +78,24 @@ const AccountantDashboardHome: React.FC = () => {
 
   const dailyRevenue = useMemo(() => {
       if (salesData?.length) {
-          return salesData.map((r: any) => ({
-              label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-              }),
-              revenue: r.revenue,
-          }));
+          return salesData.map((r: any) => {
+              // If it's an hourly string (e.g., "14:00"), use as is
+              if (r.date.includes(':')) {
+                  return {
+                      label: r.date,
+                      revenue: r.revenue,
+                  };
+              }
+              
+              // Otherwise, format as date
+              return {
+                  label: new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                  }),
+                  revenue: r.revenue,
+              };
+          });
       }
       return [];
   }, [salesRes]);
@@ -262,6 +272,7 @@ const AccountantDashboardHome: React.FC = () => {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }}
+                  minTickGap={30}
                   dy={15}
                 />
                 <YAxis 
@@ -276,14 +287,14 @@ const AccountantDashboardHome: React.FC = () => {
                   cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }}
                 />
                 <Area 
-                  type="monotone" 
+                  type="basis" 
                   dataKey="revenue" 
                   stroke="#4f46e5" 
-                  strokeWidth={4} 
+                  strokeWidth={5} 
                   fillOpacity={1} 
                   strokeLinecap="round"
                   fill="url(#dashRev)" 
-                  dot={{ r: 6, fill: '#4f46e5', strokeWidth: 3, stroke: '#fff' }}
+                  dot={false}
                   activeDot={{ r: 8, fill: '#4f46e5', strokeWidth: 4, stroke: '#fff' }}
                 />
               </AreaChart>

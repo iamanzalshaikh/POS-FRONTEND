@@ -41,7 +41,7 @@ export default function ProductsHeader({ openOpeningModal, openMasterModal }: Pr
 
                 <button
                     onClick={() => openMasterModal ? openMasterModal() : navigate('/store-admin/inventory/products/add')}
-                    className="flex-1 sm:flex-none bg-blue-600 text-white px-6 py-4 rounded-2xl hover:bg-blue-700 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 transition-all active:scale-95 border border-blue-600/20"
+                    className="flex-1 sm:flex-none bg-indigo-600 text-white px-6 py-4 rounded-2xl hover:bg-blue-700 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20 transition-all active:scale-95 border border-blue-600/20"
                 >
                     <Plus size={16} strokeWidth={2.5} />
                     Add Product

@@ -37,6 +37,9 @@ interface ActivityLogsTableProps {
     isLoading: boolean;
     onRefresh?: () => void;
     onExport?: () => void;
+    onSearch?: (value: string) => void;
+    searchValue?: string;
+    onFilterColumns?: () => void;
     pagination: {
         page: number;
         total: number;
@@ -49,6 +52,9 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
     isLoading, 
     onRefresh, 
     onExport,
+    onSearch,
+    searchValue = '',
+    onFilterColumns,
     pagination 
 }) => {
     const getActionStyles = (action: string) => {
@@ -73,7 +79,7 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                 <div>
                     <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Activity Logs</h2>
                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">
-                        HISTORY - TRACK ACTIONS ACROSS ALL SCHOOLS
+                        HISTORY — TRACK SYSTEM ACTIONS AND SECURITY EVENTS
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -90,12 +96,15 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                     <input 
                         type="text" 
                         placeholder="Search by action..."
+                        value={searchValue}
+                        onChange={(e) => onSearch?.(e.target.value)}
                         className="w-full h-10 pl-11 pr-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all text-slate-900 dark:text-white"
                     />
                 </div>
                 <div className="flex items-center gap-2">
                     <button 
                         onClick={onRefresh}
+                        title="Refresh Logs"
                         className="w-10 h-10 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 transition-all active:scale-95 shadow-sm"
                     >
                         <RefreshCcw size={16} className={isLoading ? 'animate-spin' : ''} />
@@ -107,7 +116,10 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                         <Download size={16} />
                         Export
                     </button>
-                    <button className="flex items-center gap-2 px-5 h-10 bg-white dark:bg-slate-900 border border-[#1E1B4B]/20 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#1E1B4B] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm">
+                    <button 
+                        onClick={onFilterColumns}
+                        className="flex items-center gap-2 px-5 h-10 bg-white dark:bg-slate-900 border border-[#1E1B4B]/20 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#1E1B4B] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm"
+                    >
                         <Filter size={16} />
                         Columns
                     </button>

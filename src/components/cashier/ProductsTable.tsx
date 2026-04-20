@@ -78,7 +78,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
         cell: ({ row }) => {
           const product = row.original;
           return (
-            <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800/50">
+            <span className="inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800/50 whitespace-nowrap">
               {product.unitType || "PIECE"}
             </span>
           );
@@ -135,14 +135,14 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
             <button
               onClick={() => onAddToCart(product)}
               disabled={isOutOfStock}
-              className={`group flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 ${
+              className={`group flex items-center justify-center gap-2 w-full max-w-[100px] mx-auto py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.1em] transition-all duration-300 ${
                 isOutOfStock
                   ? "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-200 dark:border-slate-700"
                   : "bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-200 dark:shadow-none hover:shadow-blue-300 active:scale-95 border border-blue-500"
               }`}
             >
               <Plus size={14} className={isOutOfStock ? "" : "group-hover:rotate-90 transition-transform duration-300"} />
-              <span>{isOutOfStock ? "Limit" : "Add"}</span>
+              <span className="hidden sm:inline">{isOutOfStock ? "Limit" : "Add"}</span>
             </button>
           );
         },
@@ -183,8 +183,8 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
 
   return (
     <div className="p-4 w-full">
-      <div className="overflow-hidden rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
-        <table className="w-full border-collapse">
+      <div className="overflow-x-auto custom-scrollbar rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
+        <table className="w-full min-w-[600px] border-collapse">
           <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
@@ -208,7 +208,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                 {row.getVisibleCells().map((cell, index) => (
                   <td
                     key={cell.id}
-                    className={`px-6 py-5 align-middle ${
+                    className={`px-3 py-4 align-middle ${
                       index === 0 ? "text-left" : index === 4 ? "text-right" : "text-center"
                     }`}
                   >

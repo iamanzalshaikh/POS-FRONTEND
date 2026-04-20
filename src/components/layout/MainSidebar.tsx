@@ -61,9 +61,9 @@ export default function MainSidebar({ menuItems, roleName, brandIcon: BrandIcon 
                 {/* Brand */}
                 <div className={`p-6 border-b border-white/10 transition-all duration-300 ${collapsed ? 'px-4' : 'px-6'}`}>
                     <div className="flex items-center gap-3">
-                        <div className="min-w-10 w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20 overflow-hidden">
+                        <div className={`min-w-10 w-10 h-10 rounded-xl flex items-center justify-center border border-white/20 overflow-hidden ${user?.store?.logoUrl ? 'bg-white p-1' : 'bg-white/10'}`}>
                             {user?.store?.logoUrl ? (
-                                <img src={user.store.logoUrl} alt="Store Logo" className="w-full h-full object-cover" />
+                                <img src={user.store.logoUrl} alt="Store Logo" className="w-full h-full object-contain" />
                             ) : (
                                 <BrandIcon size={24} className="text-white" />
                             )}
