@@ -258,18 +258,25 @@ function DataTableComponent<TData, TValue>({
                                 {table
                                     .getAllColumns()
                                     .filter((column) => column.getCanHide())
-                                    .map((column) => (
-                                        <DropdownMenuCheckboxItem
-                                            key={column.id}
-                                            className="relative flex cursor-default select-none items-center rounded-xl py-3 px-3 text-[10px] font-black uppercase tracking-widest outline-none transition-colors focus:bg-slate-50 dark:focus:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer data-[state=checked]:text-blue-600"
-                                            checked={column.getIsVisible()}
-                                            onCheckedChange={(value) =>
-                                                column.toggleVisibility(!!value)
-                                            }
-                                        >
-                                            {column.id}
-                                        </DropdownMenuCheckboxItem>
-                                    ))}
+                                    .map((column) => {
+                                        const name = column.id
+                                            .split(/[._]/)
+                                            .map(word => word.charAt(0).toUpperCase() + word.slice(1).replace(/([A-Z])/g, ' $1').trim())
+                                            .join(' ');
+                                            
+                                        return (
+                                            <DropdownMenuCheckboxItem
+                                                key={column.id}
+                                                className="relative flex cursor-default select-none items-center rounded-xl py-3 pl-10 pr-4 text-[10px] font-black uppercase tracking-widest outline-none transition-colors focus:bg-slate-50 dark:focus:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer data-[state=checked]:text-slate-600"
+                                                checked={column.getIsVisible()}
+                                                onCheckedChange={(value) =>
+                                                    column.toggleVisibility(!!value)
+                                                }
+                                            >
+                                                {name}
+                                            </DropdownMenuCheckboxItem>
+                                        );
+                                    })}
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}

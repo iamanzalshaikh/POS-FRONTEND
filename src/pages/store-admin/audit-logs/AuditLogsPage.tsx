@@ -50,6 +50,30 @@ const AuditLogsPage: React.FC = () => {
         setPage(1);
     };
 
+    const handleExport = () => {
+        if (!logs.length) return;
+        const headers = ["Time", "Context", "Action", "Entity", "User"];
+        const rows = logs.map((log: any) => [
+            new Date(log.createdAt).toLocaleString(),
+            log.store?.name || 'Main System',
+            log.action,
+            log.entity,
+            log.user?.name || 'System'
+        ]);
+        
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + headers.join(",") + "\n"
+            + rows.map(e => e.join(",")).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
             {/* Header Area */}
@@ -59,16 +83,6 @@ const AuditLogsPage: React.FC = () => {
                     <p className="text-slate-500 dark:text-slate-500 font-bold uppercase tracking-widest text-[11px] mt-1">Real-time event tracking and security history</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                        <input
-                            type="text"
-                            placeholder="Universal search..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-12 pl-11 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[300px] shadow-sm"
-                        />
-                    </div>
                     {(entity || action || startDate || endDate || searchQuery) && (
                         <Button
                             variant="secondary"
@@ -76,7 +90,7 @@ const AuditLogsPage: React.FC = () => {
                             className="flex items-center gap-2 px-6 h-12 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-rose-100 dark:border-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all active:scale-95 shadow-sm"
                         >
                             <X size={14} />
-                            Reset
+                            Reset Filters
                         </Button>
                     )}
                 </div>
@@ -142,6 +156,9 @@ const AuditLogsPage: React.FC = () => {
                     data={logs}
                     isLoading={isLoading}
                     onRefresh={() => refetch()}
+                    onExport={handleExport}
+                    searchValue={searchQuery}
+                    onSearch={(val) => setSearchQuery(val)}
                     pagination={{
                         page: page,
                         total: totalPages,

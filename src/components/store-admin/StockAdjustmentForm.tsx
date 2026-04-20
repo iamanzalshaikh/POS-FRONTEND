@@ -34,6 +34,15 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
         if (changeType === 'DAMAGE' && quantity > 0) adjustedQuantity = -quantity;
         if (changeType === 'RETURN' && quantity > 0) adjustedQuantity = -quantity;
 
+        // Frontend validation for negative stock resulting from adjustment
+        const currentStock = selectedProduct.inventoryStock?.totalQuantity || 0;
+        if (currentStock + adjustedQuantity < 0) {
+            return toast.error(
+                `Insufficient stock for this adjustment. Current: ${currentStock}, adjustment: ${adjustedQuantity}`,
+                'Stock Conflict'
+            );
+        }
+
         try {
             setIsSubmitting(true);
             await adjustStock({
@@ -98,27 +107,45 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                             <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto animate-slide-up">
                                 {filteredProducts.length > 0 ? (
                                     filteredProducts.map(p => (
-                                        <button
+                                        <div
                                             key={p.id}
-                                            className="w-full px-5 py-3 text-left hover:bg-gray-50 flex items-center justify-between group transition-colors border-b border-gray-50 last:border-0"
+                                            role="button"
+                                            tabIndex={0}
+                                            className="w-full px-5 py-3 text-left hover:bg-gray-50 flex items-center justify-between group transition-colors border-b border-gray-50 last:border-0 cursor-pointer outline-none focus:bg-gray-50"
                                             onClick={() => {
                                                 setSelectedProduct(p);
                                                 setSearchQuery(p.name);
                                                 setIsDropdownOpen(false);
                                             }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    setSelectedProduct(p);
+                                                    setSearchQuery(p.name);
+                                                    setIsDropdownOpen(false);
+                                                }
+                                            }}
                                         >
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-gray-800">{p.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-gray-800">{p.name}</span>
+                                                    {p.inventoryStock && (
+                                                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                                                            p.inventoryStock.totalQuantity > (p.reorderLevel || 10) 
+                                                            ? 'bg-green-50 text-green-600' 
+                                                            : 'bg-rose-50 text-rose-600'
+                                                        }`}>
+                                                            {p.inventoryStock.totalQuantity} IN STOCK
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="text-[10px] text-gray-400 font-mono tracking-wider">{p.barcode || 'NO BARCODE'}</span>
                                             </div>
-                                            <Button 
-                                                variant="secondary" 
-                                                size="sm" 
-                                                className="h-7 text-[9px] font-black opacity-0 group-hover:opacity-100 transition-opacity"
+                                            <div 
+                                                className="h-7 px-3 flex items-center justify-center bg-slate-100 text-slate-900 rounded-lg text-[9px] font-black opacity-0 group-hover:opacity-100 transition-opacity"
                                             >
                                                 SELECT
-                                            </Button>
-                                        </button>
+                                            </div>
+                                        </div>
                                     ))
                                 ) : (
                                     <div className="p-5 text-center text-gray-400 text-xs font-bold">No products found</div>

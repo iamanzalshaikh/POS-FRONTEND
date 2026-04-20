@@ -39,14 +39,14 @@ const InventoryManagementPage = () => {
       page,
       limit,
       ...(debouncedSearch && { search: debouncedSearch }),
-      ...(typeFilter !== 'All Movements' && { changeType: typeFilter.toLowerCase() })
+      ...(typeFilter !== 'All Movements' && { changeType: typeFilter.toUpperCase() })
     }),
     placeholderData: (previousData) => previousData,
     staleTime: 30000,
   });
 
-  const movementsRaw = inventoryDataRes?.data?.data || inventoryDataRes?.data || (Array.isArray(inventoryDataRes) ? inventoryDataRes : []);
-  const totalItems = inventoryDataRes?.data?.total || (Array.isArray(inventoryDataRes?.data) ? inventoryDataRes.data.length : 0);
+  const movementsRaw = inventoryDataRes?.data?.logs || [];
+  const totalItems = inventoryDataRes?.data?.pagination?.total || 0;
   const pageCount = Math.ceil(totalItems / limit) || 1;
 
   const movements: InventoryMovement[] = useMemo(() => {

@@ -87,14 +87,20 @@ const ProfitLossReport: React.FC = () => {
       new Date(b + ', ' + new Date().getFullYear()).getTime()
     );
 
+    // Distribute salaries across all active weeks to align chart with P&L Card
+    const weekCount = sortedWeeks.length || 1;
+    const weeklySalary = (pnlRes.data.salaries || 0) / weekCount;
+
     const formatted = sortedWeeks.map(week => {
       const vals = weeklyMap.get(week)!;
       const weeklyCogs = vals.revenue * cogsRatio;
+      const totalWeeklyExpense = vals.expense + weeklyCogs + weeklySalary;
+      
       return {
         month: week,
         revenue: vals.revenue,
-        expense: vals.expense + weeklyCogs,
-        profit: vals.revenue - weeklyCogs - vals.expense
+        expense: totalWeeklyExpense,
+        profit: vals.revenue - totalWeeklyExpense
       };
     });
 

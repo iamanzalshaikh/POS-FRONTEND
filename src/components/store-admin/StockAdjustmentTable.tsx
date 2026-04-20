@@ -1,7 +1,8 @@
-import { History } from 'lucide-react';
+import { History, RefreshCw } from 'lucide-react';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { formatNumberShort, formatDate } from '@/utils/format';
+import { Button } from '@/components/ui/button';
 
 interface StockAdjustmentTableProps {
     adjustments: any[];
@@ -9,6 +10,8 @@ interface StockAdjustmentTableProps {
     pageIndex: number;
     pageSize: number;
     onPageChange: (page: number) => void;
+    onRefresh?: () => void;
+    isRefreshing?: boolean;
 }
 
 const StockAdjustmentTable = ({ 
@@ -16,7 +19,9 @@ const StockAdjustmentTable = ({
     totalItems, 
     pageIndex, 
     pageSize, 
-    onPageChange 
+    onPageChange,
+    onRefresh,
+    isRefreshing
 }: StockAdjustmentTableProps) => {
 
     const columns: ColumnDef<any>[] = [
@@ -113,9 +118,23 @@ const StockAdjustmentTable = ({
 
     return (
         <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden animate-fade-in p-6">
-            <div className="flex items-center gap-3 mb-6">
-                <History className="text-blue-500" size={20} />
-                <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Recent Adjustments</h3>
+            <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <History className="text-blue-500" size={20} />
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-widest">Recent Adjustments</h3>
+                </div>
+                {onRefresh && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={onRefresh}
+                        disabled={isRefreshing}
+                        className="text-slate-400 hover:text-blue-600 transition-colors"
+                    >
+                        <RefreshCw size={16} className={`${isRefreshing ? 'animate-spin' : ''}`} />
+                        <span className="ml-2 text-[10px] font-black uppercase tracking-widest">Refresh</span>
+                    </Button>
+                )}
             </div>
             
             <DataTable 

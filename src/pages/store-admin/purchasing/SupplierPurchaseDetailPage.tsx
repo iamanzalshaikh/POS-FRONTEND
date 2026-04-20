@@ -127,7 +127,7 @@ export default function SupplierPurchaseDetailPage() {
     const payments = (purchase.payments || []) as SupplierPurchasePayment[];
 
     return (
-        <div className="animate-fade-in space-y-10 max-w-6xl pb-10 mx-auto">
+        <div className="animate-fade-in space-y-10 max-w-[1600px] pb-10 mx-auto px-4 sm:px-6 lg:px-8">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-1">
@@ -164,7 +164,7 @@ export default function SupplierPurchaseDetailPage() {
             </div>
 
             {/* Financial Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
                 <MetricCard
                     title="Invoice Total"
                     value={num(purchase.totalAmount)}
@@ -189,8 +189,8 @@ export default function SupplierPurchaseDetailPage() {
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2 space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 2xl:grid-cols-4 gap-8 items-start">
+                <div className="lg:col-span-2 2xl:col-span-3 space-y-8">
                     {/* Items Table */}
                     <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800/50 shadow-sm">
                         <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 flex items-center gap-2 mb-8">

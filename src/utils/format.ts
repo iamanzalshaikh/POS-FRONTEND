@@ -60,7 +60,7 @@ export const formatDate = (dateString: string | Date): string => {
 export const formatNumberShort = (num: number | string): string => {
     const value = typeof num === 'string' ? parseFloat(num) : num;
     if (isNaN(value)) return "0";
-    if (value < 1000) return value.toString();
+    if (value < 100000) return value.toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     
     const format = (v: number, suffix: string) => {
         // Show 1 decimal place only if it's not .0
@@ -72,7 +72,7 @@ export const formatNumberShort = (num: number | string): string => {
     if (value >= 1e6) return format(value / 1e6, "M");
     if (value >= 1e3) return format(value / 1e3, "K");
     
-    return value.toString();
+    return value.toLocaleString('en-PK');
 };
 
 export const formatAmountShort = (amount: number | string): string => {

@@ -16,7 +16,7 @@ import CategoryPieChart from './components/CategoryPieChart';
 import ActiveDevicesPanel from './components/ActiveDevicesPanel';
 import TopProductsTable from './components/TopProductsTable';
 import MetricCard from '@/components/global-components/MetricCard';
-import { DashboardSkeleton } from '@/components/ui/skeletons/DashboardSkeleton';
+import { StoreAdminDashboardSkeleton } from '@/components/ui/skeletons/StoreAdminDashboardSkeleton';
 
 import { cn } from '@/lib/utils';
 import { toLocalYMD } from '@/utils/format';
@@ -145,11 +145,7 @@ export default function StoreAdminDashboard() {
   }, [raw, deviceData]);
 
   if (loading && !data) {
-    return (
-      <div className="p-6">
-        <DashboardSkeleton />
-      </div>
-    );
+    return <StoreAdminDashboardSkeleton />;
   }
 
   if (error && !data) {
@@ -187,7 +183,7 @@ export default function StoreAdminDashboard() {
               className={cn(
                 "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all h-auto",
                 dateRange === range
-                  ? "bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none"
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none"
                   : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
               )}
             >
@@ -256,10 +252,16 @@ export default function StoreAdminDashboard() {
                   const hour = i.toString().padStart(2, '0') + ':00';
                   points.push({ label: hour, dateStr: hour, activity: 0 });
                 }
-                // Map data (assuming backend gives hourly or we just sum into hours)
+                // Map data
                 data?.dailySales.forEach(d => {
-                    const date = new Date(d.date);
-                    const hour = date.getHours();
+                    let hour: number;
+                    if (d.date.includes(':')) {
+                        // "14:00" -> 14
+                        hour = parseInt(d.date.split(':')[0], 10);
+                    } else {
+                        const date = new Date(d.date);
+                        hour = date.getHours();
+                    }
                     if (points[hour]) points[hour].activity += d.sales;
                 });
               } else {
