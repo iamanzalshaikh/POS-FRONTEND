@@ -66,6 +66,8 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
             'UPDATE': { bg: 'bg-amber-50 dark:bg-amber-950/30', text: 'text-amber-600', border: 'border-amber-100 dark:border-amber-900/50' },
             'DELETE': { bg: 'bg-rose-50 dark:bg-rose-950/30', text: 'text-rose-600', border: 'border-rose-100 dark:border-rose-900/50' },
             'LOGIN': { bg: 'bg-indigo-50 dark:bg-indigo-950/30', text: 'text-indigo-600', border: 'border-indigo-100 dark:border-indigo-900/50' },
+            'STOCK': { bg: 'bg-orange-50 dark:bg-orange-950/30', text: 'text-orange-600', border: 'border-orange-100 dark:border-orange-900/50' },
+            'ADJUST': { bg: 'bg-orange-50 dark:bg-orange-950/30', text: 'text-orange-600', border: 'border-orange-100 dark:border-orange-900/50' },
         };
 
         const key = Object.keys(styles).find(k => action.includes(k)) || 'default';
