@@ -77,12 +77,12 @@ const SalesHistoryPage = () => {
     const summary = useMemo(() => {
         return {
             revenue: transactions
-                .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
+                .filter((t: any) => ['paid', 'completed', 'partially_refunded', 'refunded'].includes(String(t.paymentStatus).toLowerCase()))
                 .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0),
             salesCount: transactions
-                .filter((t: any) => ['paid', 'completed'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
+                .filter((t: any) => ['paid', 'completed', 'partially_refunded', 'refunded'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
                 .length,
-            discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discount || 0), 0),
+            discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discountAmount || t.discount || 0), 0),
             refunds: transactions
                 .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded' || t.isReversal)
                 .reduce((sum: number, t: any) => sum + Math.abs(getSaleGrandTotal(t)), 0)
