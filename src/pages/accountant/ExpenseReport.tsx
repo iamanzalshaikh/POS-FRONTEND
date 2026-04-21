@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, FileSpreadsheet, Calendar, Filter, TrendingUp } from 'lucide-react';
-import { getExpenses } from '../../api/expenses.api';
+import { getExpenses, getExpenseCategories } from '../../api/expenses.api';
 import type { Expense } from '../../utils/expense-utils';
-import { EXPENSE_CATEGORIES, formatCurrency, formatDate } from '../../utils/expense-utils';
+import { EXPENSE_CATEGORIES, formatCurrency, formatDate, getCategoryLabel } from '../../utils/expense-utils';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 
@@ -26,12 +26,26 @@ const ExpenseReport: React.FC = () => {
     enabled: fetched,
   });
 
+  const { data: categoriesRes } = useQuery({
+    queryKey: ['accountant-expense-categories-report'],
+    queryFn: () => getExpenseCategories(),
+  });
+
   const fetchReport = () => {
     setFetched(true);
     refetch();
   };
 
   const rawExpenses = expRes?.data || [];
+
+  const customCategories = useMemo(() => {
+    if (categoriesRes?.success) {
+      return (categoriesRes.data || []).filter(
+        (c) => !c.isDefault && c.name.toLowerCase() !== 'other'
+      );
+    }
+    return [];
+  }, [categoriesRes]);
 
   const expenses = useMemo(() => {
     if (!fetched) return [];
@@ -45,15 +59,22 @@ const ExpenseReport: React.FC = () => {
     });
 
     if (selectedCategory !== 'ALL') {
-      filtered = filtered.filter((expense: any) => expense.category === selectedCategory);
+      if (selectedCategory.startsWith('CUSTOM:')) {
+        const customId = selectedCategory.replace('CUSTOM:', '');
+        filtered = filtered.filter((expense: any) => expense.customCategoryId === customId);
+      } else {
+        filtered = filtered.filter((expense: any) => expense.category === selectedCategory);
+      }
     }
     return filtered;
   }, [rawExpenses, startDate, endDate, selectedCategory, fetched]);
 
   const calculateTotals = () => {
     const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const byCategory = EXPENSE_CATEGORIES.map(cat => {
-      const catExpenses = expenses.filter(e => e.category === cat.value);
+    
+    // Default categories
+    const byDefaultCategory = EXPENSE_CATEGORIES.map(cat => {
+      const catExpenses = expenses.filter(e => e.category === cat.value && !e.customCategoryId);
       return {
         category: cat.label,
         value: cat.value,
@@ -61,22 +82,40 @@ const ExpenseReport: React.FC = () => {
         count: catExpenses.length,
         percentage: total > 0 ? (catExpenses.reduce((sum, e) => sum + e.amount, 0) / total) * 100 : 0,
       };
-    }).filter(c => c.amount > 0);
+    });
 
-    return { total, byCategory };
+    // Custom categories
+    const byCustomCategory = customCategories.map(cat => {
+      const catExpenses = expenses.filter(e => e.customCategoryId === cat.id);
+      return {
+        category: cat.name,
+        value: `CUSTOM:${cat.id}`,
+        amount: catExpenses.reduce((sum, e) => sum + e.amount, 0),
+        count: catExpenses.length,
+        percentage: total > 0 ? (catExpenses.reduce((sum, e) => sum + e.amount, 0) / total) * 100 : 0,
+      };
+    });
+
+    const combined = [...byDefaultCategory, ...byCustomCategory].filter(c => c.count > 0);
+
+    return { total, byCategory: combined };
   };
 
   const handleExportCSV = () => {
     if (expenses.length === 0) return;
     const headers = ['ID', 'Category', 'Description', 'Amount', 'Date', 'Notes'];
-    const rows = expenses.map(e => [
-      e.id,
-      e.category,
-      `"${e.description.replace(/"/g, '""')}"`,
-      Number(e.amount).toFixed(2),
-      e.date,
-      `"${(e.notes || '').replace(/"/g, '""')}"`,
-    ]);
+    const rows = expenses.map(e => {
+      const customCat = customCategories.find(c => c.id === e.customCategoryId);
+      const catLabel = customCat ? customCat.name : getCategoryLabel(e.category);
+      return [
+        e.id,
+        catLabel,
+        `"${e.description.replace(/"/g, '""')}"`,
+        Number(e.amount).toFixed(2),
+        e.date,
+        `"${(e.notes || '').replace(/"/g, '""')}"`,
+      ];
+    });
     const csvContent = [
       headers.join(','),
       ...rows.map(row => row.join(',')),
@@ -140,6 +179,9 @@ const ExpenseReport: React.FC = () => {
               <option value="ALL">All Categories</option>
               {EXPENSE_CATEGORIES.map(cat => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
+              ))}
+              {customCategories.map(cat => (
+                <option key={cat.id} value={`CUSTOM:${cat.id}`}>{cat.name}</option>
               ))}
             </select>
           </div>
@@ -214,21 +256,26 @@ const ExpenseReport: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {expenses.map((expense) => (
-                      <tr key={expense.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                        <td className="px-8 py-5 text-center">
-                          <p className="text-xs font-black text-slate-900 dark:text-white">{formatDate(expense.date)}</p>
-                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">ID: {expense.id.slice(-6).toUpperCase()}</p>
-                        </td>
-                        <td className="px-8 py-5 text-center">
-                          <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{expense.description}</p>
-                          <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase rounded-md border border-slate-200 dark:border-slate-700">{expense.category}</span>
-                        </td>
-                        <td className="px-8 py-5 text-center">
-                          <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(expense.amount)}</p>
-                        </td>
-                      </tr>
-                    ))}
+                    {expenses.map((expense) => {
+                      const customCat = customCategories.find(c => c.id === expense.customCategoryId);
+                      return (
+                        <tr key={expense.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                          <td className="px-8 py-5 text-center">
+                            <p className="text-xs font-black text-slate-900 dark:text-white">{formatDate(expense.date)}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">ID: {expense.id.slice(-6).toUpperCase()}</p>
+                          </td>
+                          <td className="px-8 py-5 text-center">
+                            <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{expense.description}</p>
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase rounded-md border border-slate-200 dark:border-slate-700">
+                              {customCat ? customCat.name : getCategoryLabel(expense.category)}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5 text-center">
+                            <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(expense.amount)}</p>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

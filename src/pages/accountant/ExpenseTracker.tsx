@@ -7,6 +7,7 @@ import { getExpenses } from '../../api/expenses.api';
 import type { Expense as ExpenseType } from '../../utils/expense-utils';
 import { getSaleGrandTotal, getSaleTaxTotal } from '../../utils/saleAmounts';
 import { useDebounce } from '@/hooks';
+import { EXPENSE_CATEGORIES, getCategoryLabel } from '../../utils/expense-utils';
 
 interface Transaction {
   id: string;
@@ -18,6 +19,7 @@ interface Transaction {
   date: string;
   dateRaw: Date;
   type: 'Sale' | 'Refund' | 'Cancellation' | 'Inventory' | 'Business Expense';
+  category?: string;
   status: 'completed' | 'pending' | 'processed';
   paymentMethod?: string;
 }
@@ -31,6 +33,7 @@ const ExpenseTracker: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,11 +117,12 @@ const ExpenseTracker: React.FC = () => {
         const dateRaw = new Date(expense.date);
         transactionList.push({
           id: expense.id,
-          description: `${expense.category} - ${expense.description}`,
+          description: `${getCategoryLabel(expense.category)} - ${expense.description}`,
           amount: expense.amount,
           date: dateRaw.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           dateRaw,
           type: 'Business Expense',
+          category: expense.category,
           status: 'processed'
         });
       });
@@ -144,6 +148,11 @@ const ExpenseTracker: React.FC = () => {
     // Type filter
     if (filterType !== 'all') {
       result = result.filter(t => t.type === filterType);
+    }
+
+    // Category filter (only for Business Expense type)
+    if (filterCategory !== 'all') {
+      result = result.filter(t => t.category === filterCategory);
     }
 
     // Status filter
@@ -268,6 +277,16 @@ const ExpenseTracker: React.FC = () => {
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
             <option value="processed">Processed</option>
+          </select>
+          <select
+            value={filterCategory}
+            onChange={e => { setFilterCategory(e.target.value); setCurrentPage(1); }}
+            className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
+          >
+            <option value="all">All Categories</option>
+            {EXPENSE_CATEGORIES.map(cat => (
+              <option key={cat.value} value={cat.value}>{cat.label}</option>
+            ))}
           </select>
         </div>
       </div>
