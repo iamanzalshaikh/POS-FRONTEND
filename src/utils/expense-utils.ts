@@ -52,6 +52,7 @@ export const EXPENSE_CATEGORIES = [
   { value: 'MAINTENANCE', label: 'Maintenance' },
   { value: 'MARKETING', label: 'Marketing' },
   { value: 'TAXES', label: 'Taxes' },
+  { value: 'SUPPLIER_PURCHASE', label: 'Supplier Purchase' },
   { value: 'OTHER', label: 'Other' },
 ] as const;
 

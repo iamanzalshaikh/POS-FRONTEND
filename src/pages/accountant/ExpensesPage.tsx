@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2, Loader2 } from 'lucide-react';
 import {
   getExpenses,
+  getExpenseCategories,
   createExpense,
   updateExpense,
   deleteExpense,
@@ -13,6 +14,7 @@ import {
   getExpenseSummary,
   getCategoryLabel,
   formatDate,
+  EXPENSE_CATEGORIES,
 } from '../../utils/expense-utils';
 import { formatAmount } from '@/utils/format';
 import ExpenseModal, { type ExpenseFormData } from '../../components/accountant/ExpenseModal';
@@ -40,10 +42,24 @@ const ExpensesPage: React.FC = () => {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { data: categoriesRes } = useQuery({
+    queryKey: ['accountant-expense-categories'],
+    queryFn: () => getExpenseCategories(),
+  });
+
   const expenses = useMemo(() => {
     if (expensesRes?.success) return expensesRes.data || [];
     return [];
   }, [expensesRes]);
+
+  const customCategories = useMemo(() => {
+    if (categoriesRes?.success) {
+      return (categoriesRes.data || []).filter(
+        (c) => !c.isDefault && c.name.toLowerCase() !== 'other'
+      );
+    }
+    return [];
+  }, [categoriesRes]);
 
   const summary = useMemo(() => getExpenseSummary(expenses), [expenses]);
 
@@ -115,7 +131,16 @@ const ExpensesPage: React.FC = () => {
 
     const matchesSearch = e.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           e.category.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'ALL' || e.category === categoryFilter;
+    
+    let matchesCategory = categoryFilter === 'ALL';
+    if (!matchesCategory) {
+      if (categoryFilter.startsWith('CUSTOM:')) {
+        matchesCategory = e.customCategoryId === categoryFilter.replace('CUSTOM:', '');
+      } else {
+        matchesCategory = e.category === categoryFilter;
+      }
+    }
+
     return matchesSearch && matchesCategory;
   });
 
@@ -141,13 +166,16 @@ const ExpensesPage: React.FC = () => {
     
     {
       header: "Category",
-      cell: ({ row }) => (
-        <div className="flex justify-center">
-          <span className="px-3 py-1.5 bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-[2px]">
-            {getCategoryLabel(row.original.category)}
-          </span>
-        </div>
-      )
+      cell: ({ row }) => {
+        const customCat = customCategories.find(c => c.id === row.original.customCategoryId);
+        return (
+          <div className="flex justify-center">
+            <span className="px-3 py-1.5 bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-[2px]">
+              {customCat ? customCat.name : getCategoryLabel(row.original.category)}
+            </span>
+          </div>
+        );
+      }
     },
     {
       header: "Amount",
@@ -267,7 +295,16 @@ const ExpensesPage: React.FC = () => {
                 className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
               >
                 <option value="ALL">All Categories</option>
-                {/* Categories could be dynamically listed here if available */}
+                {EXPENSE_CATEGORIES.filter(c => c.value !== 'SALARIES').map((cat) => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+                {customCategories.map((cat) => (
+                  <option key={cat.id} value={`CUSTOM:${cat.id}`}>
+                    {cat.name}
+                  </option>
+                ))}
               </select>
             </div>
           }
@@ -284,7 +321,10 @@ const ExpensesPage: React.FC = () => {
       <CategoryModal
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
-        onCategoryCreated={() => queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] })}
+        onCategoryCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] });
+          queryClient.invalidateQueries({ queryKey: ['accountant-expense-categories'] });
+        }}
       />
     </div>
   );
