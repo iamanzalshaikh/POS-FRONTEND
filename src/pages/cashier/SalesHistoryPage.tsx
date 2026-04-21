@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { getSalesTransactions } from '@/api/sales.api';
-import { formatCurrency, toLocalYMD } from '@/utils/format';
+import { formatCurrency, toLocalYMD, formatInvoiceNumber } from '@/utils/format';
 import { cn } from '@/lib/utils';
 import PageHeader from '@/components/global-components/PageHeader';
 import { useQuery } from '@tanstack/react-query';
@@ -51,7 +51,7 @@ const SalesHistoryPage: React.FC = () => {
             accessorKey: "invoiceNumber",
             cell: ({ row }) => (
                 <div className="flex flex-col">
-                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">#{row.original.invoiceNumber || row.original.id?.slice(-8)}</span>
+                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">#{formatInvoiceNumber(row.original.invoiceNumber || row.original.id)}</span>
                 </div>
             )
         },
@@ -89,15 +89,17 @@ const SalesHistoryPage: React.FC = () => {
             cell: ({ row }) => {
                 const s = String(row.original.paymentStatus).toLowerCase();
                 const isRef = row.original.isReversal || s === 'refunded';
+                const isPartial = s === 'partially_refunded';
                 return (
                     <span className={cn(
                         "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border leading-tight",
                         isRef ? "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50" :
+                        isPartial ? "bg-orange-50 text-orange-600 border-orange-100 dark:bg-orange-950/30 dark:border-orange-900/50" :
                         s === 'completed' || s === 'paid' ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" :
                         s === 'pending' ? "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50" :
                         "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
                     )}>
-                        {isRef ? 'refunded' : s}
+                        {isRef ? 'refunded' : isPartial ? 'partial refund' : s}
                     </span>
                 );
             }

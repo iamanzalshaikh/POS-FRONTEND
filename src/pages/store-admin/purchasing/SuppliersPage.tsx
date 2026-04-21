@@ -33,7 +33,7 @@ import { useDebounce } from '@/hooks';
 
 export default function SuppliersPage() {
     const userAuth = useAuthStore((s) => s.user);
-    const readOnly = userAuth?.role === "ACCOUNTANT";
+    const readOnly = false; // Allow both Admin and Accountant to edit
     const base = usePurchasingBasePath();
     
     const [searchQuery, setSearchQuery] = useState('');
@@ -110,6 +110,22 @@ export default function SuppliersPage() {
                     {row.original.phone || "—"}
                 </div>
             )
+        },
+        {
+            header: "Outstanding Balance",
+            accessorKey: "totalBalance",
+            meta: { align: 'right' },
+            cell: ({ row }) => {
+                const balance = Number(row.original.totalBalance || 0);
+                return (
+                    <div className={cn(
+                        "font-black text-xs tabular-nums text-right",
+                        balance > 0 ? "text-rose-500" : "text-emerald-500"
+                    )}>
+                        ₨ {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </div>
+                );
+            }
         },
         {
             header: "Status",

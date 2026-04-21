@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Camera } from 'lucide-react';
+import { formatPakistanMobile } from '../../utils/validation';
 
 const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading: boolean; onChange: (updates: any) => void }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -37,8 +38,9 @@ const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading
 
         const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
             const { name, value } = e.target;
-            setFormState(prev => ({ ...prev, [name]: value }));
-            onChange({ [name]: value });
+            const finalValue = name === 'phone' ? formatPakistanMobile(value) : value;
+            setFormState(prev => ({ ...prev, [name]: finalValue }));
+            onChange({ [name]: finalValue });
         };
 
         const triggerUpload = () => {

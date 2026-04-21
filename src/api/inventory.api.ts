@@ -22,3 +22,17 @@ export const adjustStock = (data: {
   return api.post("/inventory/adjust", data).then(res => res.data);
 };
 
+export const recordOpeningStock = (data: {
+  items: Array<{
+    productId: string;
+    quantity: number;
+    purchasePrice: number;
+    sellingPrice?: number;
+    taxPercentage?: number;
+    discountPercentage?: number;
+  }>;
+  notes?: string;
+  purchaseDate?: string;
+}) => {
+  return api.post("/inventory/opening-stock", data).then(res => res.data);
+};

@@ -216,18 +216,7 @@ export default function ProductsManagementPage() {
             header: "Actions",
             cell: ({ row }) => (
                 <div className="flex justify-center items-center gap-2">
-                    <Button 
-                        variant="secondary"
-                        size="icon"
-                        onClick={() => {
-                            setSelectedProductForStock(row.original);
-                            setIsAddStockModalOpen(true);
-                        }}
-                        className="w-9 h-9 rounded-xl"
-                        title="Add Stock"
-                    >
-                        <Plus size={16} />
-                    </Button>
+                    
                     <Button 
                         variant="ghost"
                         size="icon"

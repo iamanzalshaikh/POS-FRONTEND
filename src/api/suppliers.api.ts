@@ -14,6 +14,7 @@ export interface Supplier {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  totalBalance?: number;
   _count?: { purchases: number };
 }
 
@@ -136,7 +137,7 @@ export const createSupplierPurchase = (body: {
   notes?: string;
 }) => api.post<{ success: boolean; data: SupplierPurchase }>("/supplier-purchases", body);
 
-export const getSupplierPurchases = (params?: { page?: number; limit?: number; supplierId?: string }) =>
+export const getSupplierPurchases = (params?: { page?: number; limit?: number; supplierId?: string; isOpeningStock?: boolean }) =>
   api.get<{
     success: boolean;
     data: { items: SupplierPurchase[]; total: number; page: number; limit: number };

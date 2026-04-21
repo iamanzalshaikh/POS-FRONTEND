@@ -7,7 +7,8 @@ import {
     Truck,
     Wallet,
     AlertCircle,
-    RefreshCw
+    RefreshCw,
+    Plus
 } from "lucide-react";
 import { 
     getSupplierPurchases, 
@@ -32,7 +33,7 @@ function num(v: string | number | undefined): number {
 
 export default function SupplierPurchasesListPage() {
     const userAuth = useAuthStore((s) => s.user);
-    const readOnly = userAuth?.role === "ACCOUNTANT";
+    const readOnly = false;
     const base = usePurchasingBasePath();
     const [searchParams] = useSearchParams();
     const filterSupplierId = searchParams.get("supplierId") || "";
@@ -203,6 +204,29 @@ export default function SupplierPurchasesListPage() {
                     <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Purchase Inventory</h1>
                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Receipts and procurement ledger</p>
                 </div>
+                {!readOnly && (
+                    <div className="flex items-center gap-4">
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="h-14 px-8 border-indigo-100 dark:border-indigo-900/50 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all active:scale-95 shadow-none"
+                        >
+                            <Link to="/store-admin/purchasing/opening-stock">
+                                <AlertCircle className="w-4 h-4 mr-2 text-amber-500" />
+                                Record Opening Stock
+                            </Link>
+                        </Button>
+                        <Button
+                            asChild
+                            className="h-14 px-8 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200/20 flex items-center gap-2"
+                        >
+                            <Link to="/store-admin/purchasing/purchases/new">
+                                <Plus className="w-4 h-4" />
+                                New Purchase Manifest
+                            </Link>
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">

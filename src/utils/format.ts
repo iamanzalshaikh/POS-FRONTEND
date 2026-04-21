@@ -103,3 +103,28 @@ export const toLocalYMD = (date: Date): string => {
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 };
+
+/**
+ * Formats an invoice number by removing the date prefix or store code.
+ * E.g., 20260421000006 -> 000006 or STORE-20240421-00001 -> 00001
+ * @param invoice - Raw invoice number string
+ * @returns Shortened invoice number
+ */
+export const formatInvoiceNumber = (invoice: string | null | undefined): string => {
+    if (!invoice) return 'N/A';
+    const str = String(invoice).trim();
+    
+    // If it has a dash, typically the last part is the sequence
+    if (str.includes('-')) {
+        const parts = str.split('-');
+        return parts[parts.length - 1];
+    }
+    
+    // If it's a long numeric string starting with a date (YYYYMMDD), strip the first 8 digits
+    // We check for at least 10 digits as some might be shorter sequence parts
+    if (/^\d{10,20}$/.test(str)) {
+        return str.slice(-6);
+    }
+    
+    return str;
+};

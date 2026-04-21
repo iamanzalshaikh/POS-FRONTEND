@@ -79,7 +79,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
           const product = row.original;
           return (
             <span className="inline-flex items-center px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-50 dark:bg-slate-800/50 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800/50 whitespace-nowrap">
-              {product.unitType || "PIECE"}
+            {product.unitQuantity} {product.unitType || "PIECE"} 
             </span>
           );
         },

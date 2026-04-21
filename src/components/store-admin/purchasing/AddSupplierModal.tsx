@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 import { createPortal } from 'react-dom';
 import type { Supplier } from '@/api/suppliers.api';
+import { validatePakistanMobile, formatPakistanMobile } from '@/utils/validation';
 
 interface AddSupplierModalProps {
     isOpen: boolean;
@@ -79,6 +80,11 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
 
         if (!formData.phone.trim()) {
             setError('Contact phone is required');
+            return;
+        }
+
+        if (!validatePakistanMobile(formData.phone)) {
+            setError('Invalid Pakistan mobile number (Required 11 digits starting with 03, e.g., 03XX-XXXXXXX)');
             return;
         }
 
@@ -183,9 +189,9 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
                                 <input
                                     required
                                     type="text"
-                                    placeholder="+92 XXX XXXXXXX"
+                                    placeholder="0323-3456789"
                                     value={formData.phone}
-                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                    onChange={e => setFormData({ ...formData, phone: formatPakistanMobile(e.target.value) })}
                                     className="w-full pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
                                 />
                             </div>

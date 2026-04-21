@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User, CheckCircle2 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import type { StaffMember, CreateStaffData } from '../../api/staff.api';
+import { validatePakistanMobile, formatPakistanMobile } from '../../utils/validation';
 
 interface StaffModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ const StaffModal: React.FC<StaffModalProps> = ({
   onSubmit,
   editingStaff,
 }) => {
-  const [formData, setFormData] = useState<CreateStaffData>({
+  const [formData, setFormData] = useState<any>({
     name: '',
     role: '',
     monthlySalary: 0,
@@ -55,15 +56,21 @@ const StaffModal: React.FC<StaffModalProps> = ({
     setLoading(true);
     setError(null);
 
+    if (formData.phone && !validatePakistanMobile(formData.phone)) {
+      setError('Invalid Pakistan mobile number (Required 11 digits starting with 03, e.g., 03XX-XXXXXXX)');
+      setLoading(false);
+      return;
+    }
+
     try {
       await onSubmit({
-        name: formData.name.trim(),
+        firstName: formData.name.trim(),
         role: formData.role.trim(),
-        monthlySalary: Number(formData.monthlySalary) || 0,
+        baseSalary: Number(formData.monthlySalary) || 0,
         joiningDate: formData.joiningDate,
         phone: formData.phone?.trim() || undefined,
         status: formData.status,
-      });
+      } as any);
       onClose();
     } catch (err: any) {
       setError(err.response?.data?.message || err.message || 'Failed to save staff member');
@@ -161,8 +168,8 @@ const StaffModal: React.FC<StaffModalProps> = ({
               <input
                 type="tel"
                 value={formData.phone || ''}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="e.g., +91 9876543210"
+                onChange={(e) => setFormData({ ...formData, phone: formatPakistanMobile(e.target.value) })}
+                placeholder="e.g., 0323-3456789"
                 className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white"
               />
             </div>

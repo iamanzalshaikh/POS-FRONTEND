@@ -6,7 +6,7 @@ import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummar
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
-import { formatCurrency, formatAmount, toLocalYMD } from "@/utils/format";
+import { formatCurrency, formatAmount, toLocalYMD, formatInvoiceNumber } from "@/utils/format";
 import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
 import { useDebounce } from '@/hooks';
 
@@ -129,7 +129,7 @@ const SalesHistoryPage = () => {
             meta: { align: 'left' },
             cell: ({ row }) => (
                 <div className="min-w-[100px]">
-                    <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">#{row.original.invoiceNumber || row.original.id?.slice(-8)}</p>
+                    <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">#{formatInvoiceNumber(row.original.invoiceNumber || row.original.id)}</p>
                 </div>
             )
         },

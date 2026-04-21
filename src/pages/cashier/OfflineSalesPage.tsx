@@ -16,6 +16,7 @@ import { offlineSync } from '../../services/offline-sync.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import PageHeader from '../../components/global-components/PageHeader';
 import MetricCard from '../../components/global-components/MetricCard';
+import { formatCurrency, formatInvoiceNumber } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
 const OfflineSalesPage: React.FC = () => {
@@ -222,7 +223,7 @@ const OfflineSaleCard: React.FC<{
           <span className={cn("px-3 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border", statusStyles)}>
             {sale.syncStatus}
           </span>
-          <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase mt-3">{sale.invoiceNumber}</h4>
+          <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase mt-3">{formatInvoiceNumber(sale.invoiceNumber)}</h4>
         </div>
         <div className="flex gap-2">
           <button onClick={onViewReceipt} className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-blue-600 rounded-xl transition-all"><ExternalLink size={14} /></button>
