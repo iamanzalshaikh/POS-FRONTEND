@@ -58,15 +58,20 @@ export interface InventoryLogsParams {
 
 export interface ProfitLossData {
   revenue: number;
+  totalTax: number;
   cogs: number;
   grossProfit: number;
   grossMargin: number;
   operatingExpenses: number;
   salaries: number;
   salariesSource: 'PAYROLL' | 'EXPENSES' | 'NONE';
+  totalExpenses: number;
   expenseRatio: number;
   netProfit: number;
   netMargin: number;
+  totalStockProcurement: number;
+  totalStockPaid: number;
+  outstandingPayables: number;
   expenseByCategory: Record<string, number>;
   period: {
     startDate: string;

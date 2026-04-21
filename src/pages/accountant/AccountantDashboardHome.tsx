@@ -108,7 +108,25 @@ const AccountantDashboardHome: React.FC = () => {
       { name: 'COGS', value: summary.cogs, color: '#2563eb' },
       { name: 'Operating', value: summary.operatingExpenses, color: '#10b981' },
       { name: 'Salaries', value: summary.salaries, color: '#f59e0b' },
+      { name: 'Sourcing Paid', value: summary.totalStockPaid, color: '#8b5cf6' },
     ].filter(r => r.value > 0);
+  }, [summary]);
+
+  const customCalculations = useMemo(() => {
+     if (!summary) return { totalExpenses: 0, netMarginAmount: 0, netMarginPercent: 0 };
+     
+     // Card 11 calculation: Operating + Staff Payroll + Supplier Cash Paid
+     const totalExpenses = (summary.operatingExpenses || 0) + 
+                          (summary.salaries || 0) + 
+                          (summary.totalStockPaid || 0);
+     
+     // Card 12 calculation: Total Revenue (Card 10) - Total Expense (Card 11)
+     const netMarginAmount = (summary.totalRevenue || 0) - totalExpenses;
+     const netMarginPercent = (summary.totalRevenue || 0) > 0 
+                                ? (netMarginAmount / summary.totalRevenue) * 100 
+                                : 0;
+     
+     return { totalExpenses, netMarginAmount, netMarginPercent };
   }, [summary]);
 
 
@@ -226,22 +244,32 @@ const AccountantDashboardHome: React.FC = () => {
           subtitle={(summary?.outstandingPayables ?? 0) > 0 ? "Pending Payment" : "All Settled"}
         />
         <MetricCard
-          title="Net Profit"
-          value={summary?.netProfit ?? 0}
+          title="Total Revenue"
+          value={summary?.totalRevenue ?? 0}
           isCurrency={true}
-          icon={TrendingUp}
-          change={summary?.profitChange}
-          isPositive={summary ? (summary.profitChange ?? 0) >= 0 : true}
+          icon={Activity}
           colorClass="bg-slate-900 text-white shadow-lg shadow-slate-200 dark:shadow-none"
         />
         <MetricCard
           title="Total Expenses"
-          value={summary?.totalExpenses ?? 0}
+          value={customCalculations.totalExpenses}
           isCurrency={true}
           icon={Scale}
-          change={summary?.expensesChange}
-          isPositive={summary ? (summary.expensesChange ?? 0) <= 0 : true}
-          colorClass="bg-slate-100 text-slate-900 border-slate-200 dark:bg-slate-200 dark:text-slate-900 dark:border-slate-300"
+          subtitle="Operating + Staff + Sourcing Paid"
+          colorClass="bg-red-50 text-red-600 border-red-100 dark:bg-rose-950/30 dark:border-rose-900/50"
+        />
+        <MetricCard
+          title="Net Margin"
+          value={customCalculations.netMarginAmount}
+          isCurrency={true}
+          icon={TrendingUp}
+          subtitle={`Margin: ${customCalculations.netMarginPercent.toFixed(1)}%`}
+          colorClass={cn(
+            "border-indigo-100 dark:border-indigo-900/50",
+            customCalculations.netMarginAmount >= 0 
+              ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/30" 
+              : "bg-rose-50 text-rose-600 dark:bg-rose-950/30"
+          )}
         />
       </div>
 

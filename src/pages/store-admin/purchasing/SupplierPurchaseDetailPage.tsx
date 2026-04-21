@@ -34,7 +34,7 @@ function num(v: string | number | undefined): number {
 
 export default function SupplierPurchaseDetailPage() {
     const userAuth = useAuthStore((s) => s.user);
-    const readOnly = userAuth?.role === "ACCOUNTANT";
+    const readOnly = false;
     const base = usePurchasingBasePath();
     const { id } = useParams<{ id: string }>();
     const [purchase, setPurchase] = useState<SupplierPurchase | null>(null);

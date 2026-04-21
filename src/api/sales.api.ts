@@ -38,6 +38,6 @@ export const cancelSale = (id: string, reason: string) => {
   return api.patch(`/sales/${id}/cancel`, { reason }).then(res => res.data);
 };
 
-export const refundSale = (id: string, reason: string) => {
-  return api.post(`/sales/${id}/refund`, { reason }).then(res => res.data);
+export const refundSale = (id: string, reason: string, items?: { productId: string, quantity: number }[]) => {
+  return api.post(`/sales/${id}/refund`, { reason, items }).then(res => res.data);
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Loader2, CheckCircle2, AlertCircle, User, Phone, Mail, Calendar, MapPin, DollarSign, Briefcase, Heart } from 'lucide-react';
 import EnhancedCalendar from '../global-components/Calendar/EnhancedCalendar';
+import { validatePakistanMobile, formatPakistanMobile } from '../../utils/validation';
 
 // ============================================================================
 // TYPES
@@ -243,7 +244,11 @@ const StaffForm: React.FC<StaffFormProps> = ({
   const updateLastName = useCallback((v: string) => setFormData((p) => ({ ...p, lastName: v })), []);
   const updateFatherName = useCallback((v: string) => setFormData((p) => ({ ...p, fatherName: v })), []);
   const updateEmail = useCallback((v: string) => setFormData((p) => ({ ...p, email: v })), []);
-  const updateMobile = useCallback((v: string) => setFormData((p) => ({ ...p, mobile: v })), []);
+  const updateMobile = useCallback((v: string) => {
+    // Basic formatting as user types
+    const formatted = formatPakistanMobile(v);
+    setFormData((p) => ({ ...p, mobile: formatted }));
+  }, []);
   const updateRole = useCallback((v: string) => setFormData((p) => ({ ...p, role: v })), []);
   const updateMaritalStatus = useCallback((v: string) => setFormData((p) => ({ ...p, maritalStatus: v as MaritalStatus })), []);
   const updateDob = useCallback((v: string) => setFormData((p) => ({ ...p, dob: v })), []);
@@ -267,7 +272,7 @@ const StaffForm: React.FC<StaffFormProps> = ({
     else if (formData.cnic.length !== 15) e.cnic = 'Invalid CNIC format';
 
     if (!formData.mobile.trim()) e.mobile = 'Mobile number is required';
-    else if (!/^[\d\s+\-()]+$/.test(formData.mobile)) e.mobile = 'Invalid mobile number format';
+    else if (!validatePakistanMobile(formData.mobile)) e.mobile = 'Invalid Pakistan mobile number (Required 11 digits starting with 03, e.g., 03XX-XXXXXXX)';
 
     if (!formData.role) e.role = 'Role is required';
     if (!formData.dob) e.dob = 'Date of birth is required';

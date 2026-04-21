@@ -27,7 +27,7 @@ import ProfitLossReport from './ProfitLossReport';
 import ExportData from './ExportData';
 import MonthlyCloseReport from './MonthlyCloseReport';
 import AllTransactions from './AllTransactions';
-import TransactionReceipt from './TransactionReceipt';
+import ReceiptPage from '../cashier/ReceiptPage';
 import StaffSalaryReceipt from './StaffSalaryReceipt';
 import StaffManagementPage from './StaffManagementPage';
 import StaffDetail from './StaffDetail';
@@ -36,6 +36,8 @@ import SuppliersPage from '@/pages/store-admin/purchasing/SuppliersPage';
 import SupplierPurchasesListPage from '@/pages/store-admin/purchasing/SupplierPurchasesListPage';
 import NewSupplierPurchasePage from '@/pages/store-admin/purchasing/NewSupplierPurchasePage';
 const SupplierPurchaseDetailPage = React.lazy(() => import('@/pages/store-admin/purchasing/SupplierPurchaseDetailPage'));
+const OpeningStockPage = React.lazy(() => import('@/pages/store-admin/purchasing/OpeningStockPage'));
+const OpeningStockHistoryPage = React.lazy(() => import('@/pages/store-admin/purchasing/OpeningStockHistoryPage'));
 const ProfilePage = React.lazy(() => import('@/pages/shared/ProfilePage'));
 
 /** Today = single day. Week = Monday–today (this week). Month = 1st of month–today. */
@@ -66,6 +68,8 @@ const AccountantDashboard: React.FC = () => {
       children: [
         { name: 'Suppliers', icon: Truck, path: '/accountant/purchasing/suppliers' },
         { name: 'Purchases', icon: ClipboardList, path: '/accountant/purchasing/purchases' },
+        { name: 'New Purchase', icon: ClipboardList, path: '/accountant/purchasing/purchases/new' },
+        { name: 'Opening Stock', icon: LayoutDashboard, path: '/accountant/purchasing/opening-stock' },
       ],
     },
     { name: 'Ledger', icon: ListOrdered, path: '/accountant/transactions' },
@@ -73,7 +77,6 @@ const AccountantDashboard: React.FC = () => {
     { name: 'Expense Report', icon: FileSpreadsheet, path: '/accountant/expense-report' },
     { name: 'Staff', icon: Users, path: '/accountant/staff' },
     { name: 'Payroll', icon: Wallet, path: '/accountant/payroll' },
-    { name: 'Tax', icon: FileText, path: '/accountant/tax' },
     { name: 'P&L', icon: PieChart, path: '/accountant/pl' },
     { name: 'Monthly Close', icon: FileText, path: '/accountant/monthly-close' },
     { name: 'Export', icon: Download, path: '/accountant/export' },
@@ -107,12 +110,14 @@ const AccountantDashboard: React.FC = () => {
         <Route path="staff/:id" element={<StaffDetail />} />
         <Route path="payroll" element={<PayrollManagementPage />} />
         <Route path="transactions" element={<AllTransactions />} />
-        <Route path="transaction/:transactionId" element={<TransactionReceipt />} />
+        <Route path="transaction/:saleId" element={<ReceiptPage />} />
         <Route path="payroll/receipt/:payrollId" element={<StaffSalaryReceipt />} />
         <Route path="purchasing/suppliers" element={<SuppliersPage />} />
         <Route path="purchasing/purchases/new" element={<NewSupplierPurchasePage />} />
         <Route path="purchasing/purchases/:id" element={<SupplierPurchaseDetailPage />} />
         <Route path="purchasing/purchases" element={<SupplierPurchasesListPage />} />
+        <Route path="purchasing/opening-stock" element={<OpeningStockHistoryPage />} />
+        <Route path="purchasing/opening-stock/new" element={<OpeningStockPage />} />
         <Route path="tax" element={<TaxManagement />} />
         <Route path="pl" element={<ProfitLossReport />} />
         <Route path="monthly-close" element={<MonthlyCloseReport />} />

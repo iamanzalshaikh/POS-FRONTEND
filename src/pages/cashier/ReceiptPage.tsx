@@ -7,6 +7,8 @@ import { offlineSync } from '../../services/offline-sync.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatCurrency } from '../../utils/expense-utils';
+import { formatInvoiceNumber } from '../../utils/format';
+import { cn } from '@/lib/utils';
 
 /**
  * THERMAL POS RECEIPT STANDARDS (80mm)
@@ -403,9 +405,13 @@ const ReceiptPage: React.FC = () => {
   React.useEffect(() => {
     if (!hasPrinted) return;
 
-    console.log('🔙 [ReceiptPage] Print completed, navigating back to POS...');
+    console.log('🔙 [ReceiptPage] Print completed, navigating based on role...');
     const navigateTimer = setTimeout(() => {
-      navigate('/cashier/terminal', { replace: true });
+      if (user?.role === 'CASHIER') {
+        navigate('/cashier/terminal', { replace: true });
+      } else if (user?.role === 'ACCOUNTANT') {
+        navigate('/accountant/transactions', { replace: true });
+      }
     }, 1500);
 
     return () => clearTimeout(navigateTimer);
@@ -498,11 +504,11 @@ const ReceiptPage: React.FC = () => {
               </p>
             </div>
             <button
-              onClick={() => navigate('/cashier/terminal')}
+              onClick={() => navigate(user?.role === 'ACCOUNTANT' ? '/accountant/transactions' : '/cashier/terminal')}
               className="mt-4 inline-flex items-center space-x-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black uppercase tracking-widest text-white hover:bg-emerald-700 transition-all"
             >
               <ArrowLeft size={16} />
-              <span>Back to POS</span>
+              <span>Back to {user?.role === 'ACCOUNTANT' ? 'Transactions' : 'POS'}</span>
             </button>
           </div>
         </div>
@@ -518,15 +524,34 @@ const ReceiptPage: React.FC = () => {
     <div className="min-h-[520px] flex flex-col bg-white border border-slate-200 rounded-3xl overflow-hidden print:bg-white print:border-0 print:rounded-none">
       <style>{thermalPrintStyles}</style>
       <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50/80 print:hidden">
-        <div>
-          <h1 className="text-xl font-extrabold text-slate-900">
-            Sale Receipt
-          </h1>
-          <p className="text-xs font-medium text-slate-500">
-            Thank you for your purchase.
-          </p>
+        <div className="flex items-center gap-4">
+          {user?.role === 'ACCOUNTANT' && (
+            <button
+              onClick={() => navigate('/accountant/transactions')}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors group"
+            >
+              <ArrowLeft size={20} className="text-slate-400 group-hover:text-blue-600" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900">
+              Sale Receipt
+            </h1>
+            <p className="text-xs font-medium text-slate-500">
+              {user?.role === 'ACCOUNTANT' ? 'Viewing transaction details' : 'Thank you for your purchase.'}
+            </p>
+          </div>
         </div>
         <div className="flex items-center space-x-3">
+          {user?.role === 'ACCOUNTANT' && (
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center space-x-1 rounded-lg bg-slate-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-200 transition-all"
+            >
+              <Printer size={14} />
+              <span>Print Receipt</span>
+            </button>
+          )}
           <div
             className={`inline-flex items-center space-x-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${
               status === 'COMPLETED'
@@ -635,7 +660,7 @@ const ReceiptPage: React.FC = () => {
           <div className="mb-4 flex items-center justify-between text-[10px] font-bold text-slate-600 uppercase tracking-widest print:text-[6.5pt]">
             <div>
               <div className="font-black text-slate-900">
-                Invoice #{invoiceNumber}
+                Invoice #{formatInvoiceNumber(invoiceNumber)}
               </div>
               <div className="mt-0.5 tracking-tight font-medium">{createdAt.toLocaleString()}</div>
             </div>
@@ -707,18 +732,27 @@ const ReceiptPage: React.FC = () => {
                     const taxRate =
                       subtotal > 0 ? gst / subtotal : 0;
 
+                    const itemDiscount = Number(item.discountAmount || 0);
+                    
                     totalSubtotal += subtotal;
                     totalGST += gst;
 
-                    return { productName, unitPrice, quantity, subtotal, gst, taxRate };
+                    return { productName, unitPrice, quantity, subtotal, gst, taxRate, itemDiscount };
                   });
 
-                  // Distribute discount proportionally
-                  const discountPercentage = totalSubtotal > 0 ? (totalDiscount / totalSubtotal) : 0;
+                  // Only use pro-rata if NO line items have recorded discounts but header has one
+                  // (Handles legacy sales)
+                  const hasLineDiscounts = itemDetails.some(d => d.itemDiscount > 0);
+                  const discountPercentage = (!hasLineDiscounts && totalSubtotal > 0) 
+                    ? (totalDiscount / totalSubtotal) 
+                    : 0;
 
                   return itemDetails.map((details: any, idx: number) => {
-                    const itemDiscount = details.subtotal * discountPercentage;
-                    const lineTotal = details.subtotal - itemDiscount;
+                    const finalItemDiscount = hasLineDiscounts 
+                        ? details.itemDiscount 
+                        : (details.subtotal * discountPercentage);
+                    
+                    const discountedUnitPrice = details.unitPrice - (finalItemDiscount / details.quantity);
 
                     return (
                       <tr
@@ -736,9 +770,22 @@ const ReceiptPage: React.FC = () => {
                             </span>
                           </td>
                           <td className="px-3 py-2.5 text-right col-price">
-                            <span className="text-[11px] font-black text-slate-800 dark:text-slate-300 print:text-[6.5pt] tabular-nums">
-                              {formatNumber(details.unitPrice)}
-                            </span>
+                            <div className="flex flex-col items-end">
+                                {finalItemDiscount > 0 && (
+                                    <span className="text-[8px] font-black text-slate-400 uppercase line-through decoration-slate-300 print:text-[5pt] print:text-black">
+                                        {formatNumber(details.unitPrice)}
+                                    </span>
+                                )}
+                                <div className="flex items-center gap-1">
+                                    <span className={cn(
+                                        "text-[11px] font-black tabular-nums print:text-[6.5pt]",
+                                        finalItemDiscount > 0 ? "text-emerald-600 font-extrabold" : "text-slate-800 dark:text-slate-300"
+                                    )}>
+                                        {formatNumber(discountedUnitPrice)}
+                                    </span>
+                                  
+                                </div>
+                            </div>
                           </td>
                           <td className="px-3 py-2.5 text-right col-gst">
                             <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 print:text-[6pt] tabular-nums">
@@ -747,7 +794,7 @@ const ReceiptPage: React.FC = () => {
                           </td>
                           <td className="px-3 py-2.5 text-right col-total">
                             <span className="text-[11px] font-black text-slate-900 dark:text-white print:text-[7pt] tabular-nums">
-                              {formatNumber(details.subtotal)}
+                              {formatNumber(details.subtotal - finalItemDiscount)}
                             </span>
                           </td>
                       </tr>
@@ -906,11 +953,11 @@ const ReceiptPage: React.FC = () => {
 
             <button
               type="button"
-              onClick={() => navigate('/cashier/terminal')}
+              onClick={() => navigate(user?.role === 'ACCOUNTANT' ? '/accountant/transactions' : '/cashier/terminal')}
               className="inline-flex items-center justify-center space-x-2 rounded-xl border border-blue-500 bg-blue-50 px-4 py-3 text-xs font-black uppercase tracking-widest text-blue-800 hover:bg-blue-100"
             >
               <ArrowLeft size={14} />
-              <span>New Sale</span>
+              <span>{user?.role === 'ACCOUNTANT' ? 'Back to Ledger' : 'New Sale'}</span>
             </button>
           </div>
         </div>

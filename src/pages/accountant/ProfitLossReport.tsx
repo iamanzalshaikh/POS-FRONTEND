@@ -10,14 +10,39 @@ import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 import { ProfitLossChart } from '../../components/charts/ProfitLossChart';
 import type { ProfitLossData as ChartData } from '../../components/charts/ProfitLossChart';
+import { cn } from '@/lib/utils';
 
 const ProfitLossReport: React.FC = () => {
-  const endDate = useMemo(() => new Date(), []);
-  const startDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 90);
-    return d;
-  }, []);
+  const [periodPreset, setPeriodPreset] = useState<'today' | 'week' | 'month' | 'custom'>('month');
+  
+  const { startDate, endDate } = useMemo(() => {
+    const today = new Date();
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    
+    if (periodPreset === 'today') {
+        const start = new Date(today);
+        start.setHours(0, 0, 0, 0);
+        return { startDate: start, endDate: end };
+    }
+    if (periodPreset === 'week') {
+        const start = new Date(today);
+        start.setDate(start.getDate() - 6);
+        start.setHours(0, 0, 0, 0);
+        return { startDate: start, endDate: end };
+    }
+    if (periodPreset === 'month') {
+        const start = new Date(today.getFullYear(), today.getMonth(), 1);
+        start.setHours(0, 0, 0, 0);
+        return { startDate: start, endDate: end };
+    }
+    
+    // Default 90 days for custom/old behavior
+    const start = new Date(today);
+    start.setDate(start.getDate() - 89);
+    start.setHours(0, 0, 0, 0);
+    return { startDate: start, endDate: end };
+  }, [periodPreset]);
 
   const sDateStr = startDate.toISOString().split('T')[0];
   const eDateStr = endDate.toISOString().split('T')[0];
@@ -71,7 +96,8 @@ const ProfitLossReport: React.FC = () => {
 
     if (expensesList) {
       expensesList.forEach(exp => {
-        if (exp.category === 'SUPPLIER_PURCHASE' || exp.category === 'SALARIES') return;
+        // Now including SUPPLIER_PURCHASE for the user's custom "Total Expense" view
+        if (exp.category === 'SALARIES') return;
         const expDate = new Date(exp.date);
         if (expDate >= startDate && expDate <= endDate) {
           const weekKey = getWeekKey(exp.date);
@@ -87,7 +113,6 @@ const ProfitLossReport: React.FC = () => {
       new Date(b + ', ' + new Date().getFullYear()).getTime()
     );
 
-    // Distribute salaries across all active weeks to align chart with P&L Card
     const weekCount = sortedWeeks.length || 1;
     const weeklySalary = (pnlRes.data.salaries || 0) / weekCount;
 
@@ -113,6 +138,15 @@ const ProfitLossReport: React.FC = () => {
     return formatted.length === 0 ? [{ month: 'No Data', revenue: 0, expense: 0, profit: 0 }, { month: 'Today', revenue: 0, expense: 0, profit: 0 }] : formatted;
   }, [pnlRes, salesRes, expRes, startDate, endDate]);
 
+  const customMetrics = useMemo(() => {
+    if (!data) return null;
+    const rev = data.revenue;
+    const exps = data.operatingExpenses + data.salaries + (data.totalStockPaid || 0);
+    const profit = rev - exps;
+    const margin = rev > 0 ? (profit / rev) * 100 : 0;
+    return { rev, exps, profit, margin };
+  }, [data]);
+
   if (loading) return <ProfitLossSkeleton />;
   if (error) return <ErrorState message={error} />;
   if (!data) return null;
@@ -127,20 +161,43 @@ const ProfitLossReport: React.FC = () => {
         description="Real-time performance metrics"
         icon={PieChart}
       >
-        <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-fit">
-          <Calendar size={18} className="text-slate-400" />
-          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-            {formatDate(data.period.startDate)} — {formatDate(data.period.endDate)}
-          </span>
+        <div className="flex items-center gap-4">
+           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+            {(['today', 'week', 'month'] as const).map((preset) => (
+              <button
+                key={preset}
+                onClick={() => setPeriodPreset(preset)}
+                className={cn(
+                  'px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all rounded-lg',
+                  periodPreset === preset
+                    ? 'bg-slate-900 text-white shadow-lg shadow-slate-200 dark:shadow-none'
+                    : 'text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700'
+                )}
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-fit">
+            <Calendar size={18} className="text-slate-400" />
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest tabular-nums">
+              {formatDate(sDateStr)} — {formatDate(eDateStr)}
+            </span>
+          </div>
         </div>
       </PageHeader>
 
       {/* Metric Grid - High Density Responsive */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-        <MetricCard title="Gross Profit" value={formatCurrency(data.grossProfit)} icon={DollarSign} colorClass="bg-emerald-50 text-emerald-600 border-emerald-100" />
-        <MetricCard title="Operating Expenses" value={formatCurrency(data.operatingExpenses)} icon={ArrowDownRight} colorClass="bg-red-50 text-red-600 border-red-100" />
-        <MetricCard title="Net Profit" value={formatCurrency(data.netProfit)} icon={TrendingUp} colorClass="bg-blue-50 text-blue-600 border-blue-100" />
-        <MetricCard title="Net Margin" value={`${data.netMargin.toFixed(1)}%`} icon={PieChart} colorClass="bg-indigo-50 text-indigo-600 border-indigo-100" />
+        <MetricCard title="Total Revenue" value={formatCurrency(customMetrics?.rev ?? 0)} icon={DollarSign} colorClass="bg-blue-50 text-blue-600 border-blue-100" />
+        <MetricCard title="Total Expenses" value={formatCurrency(customMetrics?.exps ?? 0)} icon={ArrowDownRight} subtitle="Opex + Staff + Sourcing Paid" colorClass="bg-red-50 text-red-600 border-red-100" />
+        <MetricCard title="Net Profit" value={formatCurrency(customMetrics?.profit ?? 0)} icon={TrendingUp} colorClass={cn(
+            "border-emerald-100 dark:border-emerald-900/50",
+            (customMetrics?.profit ?? 0) >= 0 
+              ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30" 
+              : "bg-rose-50 text-rose-600 dark:bg-rose-950/30"
+          )} />
+        <MetricCard title="Net Margin" value={`${customMetrics?.margin.toFixed(1)}%`} icon={PieChart} colorClass="bg-indigo-50 text-indigo-600 border-indigo-100" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -159,8 +216,12 @@ const ProfitLossReport: React.FC = () => {
                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Revenue</span>
                  </div>
                  <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-red-500" />
+                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Expenses</span>
+                 </div>
+                 <div className="flex items-center gap-2">
                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Profit</span>
+                   <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Net Profit</span>
                  </div>
               </div>
             </div>
@@ -169,10 +230,18 @@ const ProfitLossReport: React.FC = () => {
 
           {/* Secondary Stats Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-            <InfoBox title="Margin Efficiency">
-              <InfoRow label="Gross Margin" value={`${data.grossMargin.toFixed(1)}%`} valueClass="text-emerald-600" />
-              <InfoRow label="Opex Ratio" value={`${data.expenseRatio.toFixed(1)}%`} valueClass="text-red-600" />
-              <InfoRow label="Net Margin" value={`${data.netMargin.toFixed(1)}%`} valueClass="text-blue-600" />
+            <InfoBox title="Performance Summary">
+              <InfoRow label="Total Revenue" value={`${formatCurrency(customMetrics?.rev ?? 0)} (100%)`} valueClass="text-blue-600" />
+              <InfoRow 
+                label="Total Expenses" 
+                value={`${formatCurrency(customMetrics?.exps ?? 0)} (${customMetrics?.rev ? ((customMetrics.exps / customMetrics.rev) * 100).toFixed(1) : 0}%)`} 
+                valueClass="text-rose-600" 
+              />
+              <InfoRow 
+                label="Net Profit" 
+                value={`${formatCurrency(customMetrics?.profit ?? 0)} (${customMetrics?.margin.toFixed(1)}%)`} 
+                valueClass="text-emerald-600" 
+              />
             </InfoBox>
             
             <InfoBox title="Volume Indicators">
@@ -190,46 +259,59 @@ const ProfitLossReport: React.FC = () => {
               <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">Statement Breakdown</h2>
             </div>
             
-            <div className="p-8 flex-grow space-y-10 custom-scrollbar overflow-y-auto max-h-[700px]">
-              <StatementSection title="Gross Revenue" amount={data.revenue} color="text-emerald-600" symbol="+" />
-              
-              <StatementSection 
-                title="Cost of Goods (COGS)" 
-                amount={data.cogs} 
-                color="text-red-500" 
-                symbol="-" 
-                subtext="Direct unit cost formula"
-              />
+            <div className="p-8 flex-grow space-y-8 custom-scrollbar overflow-y-auto max-h-[750px]">
+              {/* 1. Core Revenue Section */}
+              <div className="space-y-6">
+                <BreakdownRow title="1. Total Sales (Net)" value={data.revenue} color="text-emerald-500" symbol="+" />
+                <BreakdownRow title="2. Cost of Sales (COGS)" value={data.cogs} color="text-rose-500" symbol="-" />
+                <BreakdownRow title="3. Gross Profit" value={data.revenue - data.cogs} color="text-emerald-600" symbol="=" />
+              </div>
 
-              <StatementSection title="Operating Overhead" amount={data.operatingExpenses + data.salaries} color="text-red-500" symbol="-" isList>
-                <div className="space-y-3 mt-4">
-                  <div className="flex justify-between text-xs items-center">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[9px]">Opex (Excl. Salaries)</span>
-                    <span className="font-black text-slate-800 dark:text-white">{formatCurrency(data.operatingExpenses)}</span>
-                  </div>
-                  <div className="flex justify-between text-xs items-center">
-                    <span className="text-slate-500 font-bold uppercase tracking-widest text-[9px]">Salaries ({data.salariesSource})</span>
-                    <span className="font-black text-slate-800 dark:text-white">{formatCurrency(data.salaries)}</span>
+              <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+              {/* 2. Operations Section */}
+              <div className="space-y-6">
+                <BreakdownRow title="4. Operating Expenses" value={data.operatingExpenses} color="text-rose-500" symbol="-" />
+                <BreakdownRow title="5. Staff Payroll" value={data.salaries} color="text-rose-500" symbol="-" />
+                <BreakdownRow title="6. Tax Liability" value={data.totalTax} color="text-rose-500" symbol="-" />
+              </div>
+
+              <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+              {/* 3. Sourcing & Supply Section */}
+              <div className="space-y-6">
+                <BreakdownRow title="7. Inventory Sourcing" value={data.totalStockProcurement} color="text-slate-400" symbol="" />
+                <BreakdownRow title="8. Supplier Cash Paid" value={data.totalStockPaid} color="text-rose-500" symbol="-" />
+                <BreakdownRow title="9. Supplier Payables" value={data.outstandingPayables} color="text-orange-500" symbol="!" />
+              </div>
+
+              <div className="h-px bg-slate-100 dark:bg-slate-800" />
+
+              {/* 4. Final Totals Section */}
+              <div className="space-y-6">
+                <BreakdownRow title="10. Total Revenue" value={customMetrics?.rev ?? 0} color="text-blue-600" symbol="" isBold />
+                <BreakdownRow title="11. Total Expenses" value={customMetrics?.exps ?? 0} color="text-rose-600" symbol="" isBold />
+                
+                {/* 12. Net Margin Widget */}
+                <div className="pt-4">
+                  <div className={cn(
+                    "p-6 rounded-[2rem] shadow-xl relative overflow-hidden group transition-all duration-500",
+                    (customMetrics?.profit ?? 0) >= 0 ? "bg-slate-900 shadow-emerald-900/10" : "bg-indigo-900 shadow-indigo-900/10"
+                  )}>
+                    <TrendingUp className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10 group-hover:scale-110 transition-transform duration-700" />
+                    <div className="relative z-10 text-center sm:text-left">
+                       <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/50 mb-1">Net Margin</p>
+                       <div className="flex flex-col gap-1">
+                          <span className="text-2xl font-black text-white tabular-nums tracking-tighter">
+                            {formatCurrency(customMetrics?.profit ?? 0)}
+                          </span>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${(customMetrics?.margin ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-300'}`}>
+                            {customMetrics?.margin.toFixed(1)}% Return
+                          </span>
+                       </div>
+                    </div>
                   </div>
                 </div>
-              </StatementSection>
-
-              {/* Bottom Total Widget */}
-              <div className="pt-10">
-                 <div className="bg-slate-900 dark:bg-blue-600 p-8 rounded-[2rem] shadow-2xl relative overflow-hidden group">
-                    <TrendingUp className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10 group-hover:scale-110 transition-transform duration-700" />
-                    <div className="relative z-10">
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-300 mb-2">Calculated Net Profit</p>
-                      <div className="flex flex-col gap-1">
-                        <span className="text-3xl font-black text-white tabular-nums tracking-tighter">{formatCurrency(data.netProfit)}</span>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest ${data.netMargin > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                            {data.netMargin > 0 ? '+' : ''}{data.netMargin.toFixed(1)}% Efficiency
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                 </div>
               </div>
             </div>
           </div>
@@ -241,22 +323,19 @@ const ProfitLossReport: React.FC = () => {
 
 /* --- Refined Internal Components --- */
 
-const StatementSection = ({ title, amount, color, symbol, subtext, children, isList }: any) => (
-  <div className="space-y-4">
-    <div className="flex justify-between items-start">
-      <div className="max-w-[180px]">
-        <h4 className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-1">{title}</h4>
-        {subtext && <p className="text-[9px] text-slate-400 italic leading-tight">{subtext}</p>}
-      </div>
-      <span className={`text-sm font-black ${color} tabular-nums`}>{symbol}{formatCurrency(amount)}</span>
-    </div>
-    <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800">
-      {!isList ? (
-        <div className="flex justify-between items-center text-[11px]">
-          <span className="text-slate-600 dark:text-slate-400 font-bold uppercase tracking-widest">Aggregate Total</span>
-          <span className="font-black text-slate-900 dark:text-white">{formatCurrency(amount)}</span>
-        </div>
-      ) : children}
+const BreakdownRow = ({ title, value, color, symbol, isBold }: any) => (
+  <div className="flex justify-between items-center group/row">
+    <span className={cn(
+      "text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/row:text-slate-600 transition-colors",
+      isBold && "text-slate-900 dark:text-white"
+    )}>{title}</span>
+    <div className="flex items-center gap-2">
+       <span className={cn("text-[10px] font-black opacity-40 px-1", color)}>{symbol}</span>
+       <span className={cn(
+         "text-[11px] font-black tabular-nums tracking-tight",
+         color,
+         isBold && "text-sm",
+       )}>{formatCurrency(value || 0)}</span>
     </div>
   </div>
 );

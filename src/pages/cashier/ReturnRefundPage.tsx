@@ -10,7 +10,7 @@ import {
 import { getSaleByInvoiceNumber } from '../../api/sales.api';
 import { refundSale } from '../../api/sales.api';
 import PageHeader from '../../components/global-components/PageHeader';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatInvoiceNumber } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
 type SaleItem = {
@@ -18,6 +18,8 @@ type SaleItem = {
   productId: string;
   quantity: number;
   price: number;
+  discountPercentage: number;
+  discountAmount: number;
   subtotal: number;
   product: {
     name: string;
@@ -59,6 +61,8 @@ type ReturnItem = {
   productName: string;
   purchasedQuantity: number;
   unitPrice: number;
+  discountAmount: number;
+  discountPercentage: number;
   returnQuantity: number;
   maxReturnQuantity: number;
 };
@@ -122,15 +126,23 @@ const ReturnRefundPage: React.FC = () => {
       setSale(saleData);
 
       // Initialize return items
-      const items: ReturnItem[] = saleData.saleItems.map((item) => ({
-        saleItemId: item.id,
-        productId: item.productId,
-        productName: item.product.name,
-        purchasedQuantity: item.quantity,
-        unitPrice: item.price,
-        returnQuantity: item.quantity,
-        maxReturnQuantity: item.quantity,
-      }));
+      const items: ReturnItem[] = saleData.saleItems.map((item) => {
+        const up = Number(item.price || 0);
+        const pq = Number(item.quantity || 0);
+        const da = Number(item.discountAmount || 0);
+        
+        return {
+          saleItemId: item.id,
+          productId: item.productId,
+          productName: item.product.name,
+          purchasedQuantity: pq,
+          unitPrice: up,
+          discountAmount: da,
+          discountPercentage: Number(item.discountPercentage || 0),
+          returnQuantity: pq,
+          maxReturnQuantity: pq,
+        };
+      });
       setReturnItems(items);
     } catch (error: any) {
       setSearchError(error.response?.data?.message || 'Sale not found');
@@ -151,14 +163,25 @@ const ReturnRefundPage: React.FC = () => {
     );
   };
 
-  const totalReturnSubtotal = returnItems.reduce((sum, item) => sum + item.returnQuantity * item.unitPrice, 0);
+  const totalReturnSubtotal = returnItems.reduce((sum, item) => sum + (Number(item.returnQuantity) * Number(item.unitPrice)), 0);
   
-  // Calculate proportional refund based on what was actually paid
-  // This accounts for global discounts and taxes applied to the original sale
-  const refundProportion = sale ? (sale.subtotal > 0 ? totalReturnSubtotal / sale.subtotal : 0) : 0;
-  const totalReturnAmount = sale ? (refundProportion * sale.totalAmount) : 0;
-  const refundDiscountAdjustment = sale ? (sale.discountAmount * refundProportion) : 0;
-  const refundTaxAdjustment = sale ? (sale.totalTax * refundProportion) : 0;
+  // Decide if we use Line-Item or Pro-rata logic
+  const hasLineDiscounts = returnItems.some(item => Number(item.discountAmount) > 0);
+  const globalDiscountRatio = (!hasLineDiscounts && sale && Number(sale.subtotal) > 0) 
+    ? (Number(sale.discountAmount) / Number(sale.subtotal)) 
+    : 0;
+
+  const totalReturnDiscount = hasLineDiscounts 
+    ? returnItems.reduce((sum, item) => {
+        if (item.maxReturnQuantity <= 0) return sum;
+        const perUnitDiscount = Number(item.discountAmount) / Number(item.maxReturnQuantity);
+        return sum + (perUnitDiscount * Number(item.returnQuantity));
+      }, 0)
+    : (totalReturnSubtotal * globalDiscountRatio);
+
+  const totalReturnAmount = Math.max(0, totalReturnSubtotal - totalReturnDiscount);
+  const refundDiscountAdjustment = totalReturnDiscount;
+  const refundTaxAdjustment = sale ? (Number(sale.totalTax) * (Number(sale.subtotal) > 0 ? totalReturnSubtotal / Number(sale.subtotal) : 0)) : 0;
 
   const hasSelectedItems = returnItems.some((item) => item.returnQuantity > 0);
 
@@ -166,7 +189,14 @@ const ReturnRefundPage: React.FC = () => {
     if (!sale) return;
     setIsProcessing(true);
     try {
-      await refundSale(sale.id, refundReason);
+      const itemsToRefund = returnItems
+        .filter(item => item.returnQuantity > 0)
+        .map(item => ({
+          productId: item.productId,
+          quantity: item.returnQuantity
+        }));
+
+      await refundSale(sale.id, refundReason, itemsToRefund);
       setRefundSuccess(true);
       setShowConfirmModal(false);
       setTimeout(() => {
@@ -232,7 +262,7 @@ const ReturnRefundPage: React.FC = () => {
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Select items for return</p>
                 </div>
                 <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">INV# {sale.invoiceNumber}</span>
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">INV# {formatInvoiceNumber(sale.invoiceNumber)}</span>
                 </div>
               </div>
               <div className="overflow-x-auto">
@@ -246,16 +276,28 @@ const ReturnRefundPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {returnItems.map((item) => {
-                      const itemDiscountRatio = sale && sale.subtotal > 0 ? sale.discountAmount / sale.subtotal : 0;
-                      const itemNetTotal = item.returnQuantity * item.unitPrice * (1 - itemDiscountRatio);
+                      const perUnitDiscount = hasLineDiscounts 
+                        ? (item.maxReturnQuantity > 0 ? Number(item.discountAmount) / item.maxReturnQuantity : 0)
+                        : (Number(item.unitPrice) * globalDiscountRatio);
+
+                      const discountedUnitPrice = Number(item.unitPrice) - perUnitDiscount;
+                      const itemNetTotal = Number(item.returnQuantity) * discountedUnitPrice;
                       
                       return (
                         <tr key={item.saleItemId} className={cn("transition-colors", item.returnQuantity > 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50")}>
                           <td className="px-8 py-5">
                             <p className="text-xs font-black text-slate-900 dark:text-white uppercase">{item.productName}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[9px] font-black text-slate-400 uppercase line-through">{formatCurrency(item.unitPrice)}</span>
-                                <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">{formatCurrency(item.unitPrice * (1 - itemDiscountRatio))} / unit</span>
+                            <div className="flex items-center gap-3 mt-1.5">
+                                {perUnitDiscount > 0 ? (
+                                    <>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase line-through decoration-slate-300 decoration-2">{formatCurrency(item.unitPrice)}</span>
+                                        <span className="text-[10px] font-black text-pink-500 uppercase tracking-widest bg-pink-50 dark:bg-pink-950/30 px-2 py-0.5 rounded-md border border-pink-100 dark:border-pink-900/40">
+                                            {formatCurrency(discountedUnitPrice)} / unit
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{formatCurrency(item.unitPrice)} / unit</span>
+                                )}
                             </div>
                           </td>
                           <td className="px-8 py-5">

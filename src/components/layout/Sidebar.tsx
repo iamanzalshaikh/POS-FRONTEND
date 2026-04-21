@@ -25,11 +25,15 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
 
     // State to manage the Inventory dropdown
     const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+    const [isPurchasingOpen, setIsPurchasingOpen] = useState(false);
 
-    // Auto-expand Inventory if we are on an inventory-related page
+    // Auto-expand sections if we are on related pages
     useEffect(() => {
         if (location.pathname.startsWith('/store-admin/inventory') || location.pathname.startsWith('/store-admin/categories')) {
             setIsInventoryOpen(true);
+        }
+        if (location.pathname.startsWith('/store-admin/purchasing')) {
+            setIsPurchasingOpen(true);
         }
     }, [location.pathname]);
 
@@ -45,6 +49,13 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
         { name: "Categories", path: "/store-admin/categories" },
         { name: "Adjustments", path: "/store-admin/inventory/adjustments" },
     ];
+    
+    const purchasingItems = [
+        { name: "SUPPLIERS", path: "/store-admin/purchasing/suppliers" },
+        { name: "PURCHASES", path: "/store-admin/purchasing/purchases" },
+        { name: "NEW PURCHASE", path: "/store-admin/purchasing/purchases/new" },
+        { name: "OPENING STOCK", path: "/store-admin/purchasing/opening-stock" },
+    ];
 
     const lowerButtons = [
         { name: "Sales", icon: ShoppingCart, path: "/store-admin/sales" },
@@ -52,7 +63,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
         { name: "Reports", icon: BarChart3, path: "/store-admin/reports" },
         { name: "Audit Logs", icon: History, path: "/store-admin/audit-logs" },
         { name: "Store Settings", icon: Settings, path: "/store-admin/settings" },
-    ];
+    ].filter(b => b.name !== "Sales" || user?.role !== "ACCOUNTANT"); // Accountant has own sales portal usually?
 
     return (
         <aside
@@ -116,6 +127,45 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
                     {!collapsed && isInventoryOpen && (
                         <div className="pl-12 space-y-1 animate-in slide-in-from-top-1 duration-200">
                             {inventoryItems.map((sub) => (
+                                <NavLink
+                                    key={sub.path}
+                                    to={sub.path}
+                                    className={({ isActive }) =>
+                                        `block py-2 text-[13px] font-bold transition-all ${
+                                            isActive
+                                                ? "text-indigo-400"
+                                                : "text-slate-500 hover:text-white"
+                                        }`
+                                    }
+                                >
+                                    {sub.name}
+                                </NavLink>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-1">
+                    <button
+                        onClick={() => !collapsed && setIsPurchasingOpen(!isPurchasingOpen)}
+                        className={`w-full flex items-center justify-between rounded-xl transition-all duration-200 px-4 py-3 group ${
+                            (isPurchasingOpen || location.pathname.includes('/purchasing')) && !collapsed
+                                ? "text-white bg-indigo-500/5"
+                                : "text-slate-400 hover:bg-[#2A2760] hover:text-white"
+                        }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <ShoppingCart size={20} className="shrink-0" />
+                            {!collapsed && <span className="font-bold text-[13px] tracking-tight">Purchasing</span>}
+                        </div>
+                        {!collapsed && (
+                            isPurchasingOpen ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />
+                        )}
+                    </button>
+
+                    {!collapsed && isPurchasingOpen && (
+                        <div className="pl-12 space-y-1 animate-in slide-in-from-top-1 duration-200">
+                            {purchasingItems.map((sub) => (
                                 <NavLink
                                     key={sub.path}
                                     to={sub.path}

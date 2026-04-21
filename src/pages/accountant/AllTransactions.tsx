@@ -15,7 +15,7 @@ import {
   getRecentTransactions,
   type RecentFinanceTransaction,
 } from '../../api/finance.api';
-import { formatCurrency, formatAmount } from '@/utils/format';
+import { formatCurrency, formatAmount, formatInvoiceNumber } from '@/utils/format';
 import { getSaleGrandTotal } from '@/utils/saleAmounts';
 import { DataTable } from '../../components/global-components/data-table-2';
 import MetricCard from '../../components/global-components/MetricCard';
@@ -123,7 +123,7 @@ const AllTransactions: React.FC = () => {
     {
       header: "Transaction",
       cell: ({ row }) => (
-        <div className="flex items-start justify-center gap-3">
+        <div className="flex items-center justify-center gap-3">
           <div className="w-8 h-8 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-900 dark:text-white font-black text-sm border border-slate-200 dark:border-slate-700 mt-0.5">
             {row.original.type === 'REFUND' ? (
               <RotateCcw size={16} className="text-blue-500" />
@@ -131,12 +131,24 @@ const AllTransactions: React.FC = () => {
               <ShoppingCart size={16} className="text-emerald-600" />
             )}
           </div>
-          <div className="text-left">
+          <div className="text-center">
             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
               {row.original.type}
             </p>
+           
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: "Invoice Number",
+      cell: ({ row }) => (
+        <div className="flex items-start justify-center gap-3">
+         
+          <div className="text-left">
+            
             <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-0.5">
-              #{row.original.invoiceNumber}
+              #{formatInvoiceNumber(row.original.invoiceNumber)}
             </p>
           </div>
         </div>
@@ -260,23 +272,17 @@ const AllTransactions: React.FC = () => {
           amountLabel: row.amountLabel,
           dateLabel: row.dateLabel,
         }))
-      : filteredRecentItems.map((t) => {
-          const shortInvoice = t.invoiceNumber.includes('-')
-            ? t.invoiceNumber.substring(t.invoiceNumber.lastIndexOf('-') + 1)
-            : t.invoiceNumber;
-
-          return {
+      : filteredRecentItems.map((t) => ({
             id: t.id,
             type: t.transactionType,
-            invoiceNumber: shortInvoice,
+            invoiceNumber: t.invoiceNumber,
             paymentMethod: t.paymentMethod,
             lineItemCount: t.lineItemCount,
             totalTax: Number(t.totalTax),
             cashier: t.cashier?.name,
             createdAt: t.createdAt,
             total: getSaleGrandTotal(t),
-          };
-        });
+          }));
 
   return (
     <div className="animate-fade-in space-y-8">

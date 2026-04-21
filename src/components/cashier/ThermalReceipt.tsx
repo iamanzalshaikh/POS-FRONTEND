@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, MapPin, Phone, Building2, Globe } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { formatCurrency } from '../../utils/expense-utils';
+import { formatInvoiceNumber } from '../../utils/format';
 
 /**
  * THERMAL POS RECEIPT STANDARDS (80mm)
@@ -202,7 +203,7 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ sale }) => {
         <div className="mb-4 flex items-center justify-between text-[10px] font-bold text-slate-600 uppercase tracking-widest" style={{ fontSize: '6.5pt' }}>
           <div>
             <div className="font-black text-slate-900">
-              Invoice #{invoiceNumber}
+              Invoice #{formatInvoiceNumber(invoiceNumber)}
             </div>
             <div className="mt-0.5 tracking-tight font-medium">{createdAt.toLocaleString()}</div>
           </div>

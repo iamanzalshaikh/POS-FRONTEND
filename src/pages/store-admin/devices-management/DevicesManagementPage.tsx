@@ -10,6 +10,7 @@ import { Monitor, Wifi, WifiOff, Trash2, Shield, User, Clock, Search, Link2, Lap
 
 import * as deviceApi from "@/api/devices.api";
 import type { Device } from "./types/device.types"
+import ConfirmationModal from "@/components/shared/ConfirmationModal";
 
 export default function DevicesManagementPage() {
     const [terminalModalOpen, setTerminalModalOpen] = useState(false)
@@ -21,6 +22,8 @@ export default function DevicesManagementPage() {
     const [terminalsDataRes, setTerminalsDataRes] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<any>(null);
+    const [deletingDevice, setDeletingDevice] = useState<Device | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const refetchTerminals = async () => {
         setLoading(true);
@@ -68,14 +71,17 @@ export default function DevicesManagementPage() {
         };
     });
 
-    const handleDelete = async (id: string): Promise<boolean> => {
+    const handleDeleteConfirm = async () => {
+        if (!deletingDevice) return;
+        setIsDeleting(true);
         try {
-            await deviceApi.updateDevice(id, { isActive: false });
+            await deviceApi.deleteDevice(deletingDevice.id);
             await refetchTerminals();
-            return true
+            setDeletingDevice(null);
         } catch (error) {
-            console.error("Failed to deactivate terminal:", error)
-            return false
+            console.error("Failed to delete terminal:", error)
+        } finally {
+            setIsDeleting(false);
         }
     }
 
@@ -187,9 +193,9 @@ export default function DevicesManagementPage() {
             cell: ({ row }) => (
                 <div className="flex justify-center items-center gap-2">
                     <button 
-                        onClick={() => handleDelete(row.original.id)}
+                        onClick={() => setDeletingDevice(row.original)}
                         className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90 border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50 shadow-sm"
-                        title="Deactivate Device"
+                        title="Delete Device Permanently"
                     >
                         <Trash2 size={16} />
                     </button>
@@ -288,6 +294,17 @@ export default function DevicesManagementPage() {
                 isOpen={terminalModalOpen}
                 onClose={() => setTerminalModalOpen(false)}
                 onSuccess={() => { refetchTerminals(); setTerminalModalOpen(false); }}
+            />
+
+            <ConfirmationModal 
+                isOpen={!!deletingDevice}
+                onClose={() => setDeletingDevice(null)}
+                onConfirm={handleDeleteConfirm}
+                title="Wipe Device Record"
+                message={`Are you sure you want to permanently delete the device "${deletingDevice?.name}"? All associations for this hardware will be permanently removed from the system. This action is irreversible.`}
+                confirmText="Delete Record"
+                cancelText="Keep Device"
+                isLoading={isDeleting}
             />
         </div>
     )
