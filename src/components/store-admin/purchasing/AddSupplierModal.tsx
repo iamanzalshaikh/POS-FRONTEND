@@ -5,6 +5,7 @@ import { toast } from '@/lib/toast';
 import { createPortal } from 'react-dom';
 import type { Supplier } from '@/api/suppliers.api';
 import { validatePakistanMobile, formatPakistanMobile } from '@/utils/validation';
+import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '@/components/global-components/pakistan-geography';
 
 interface AddSupplierModalProps {
     isOpen: boolean;
@@ -213,27 +214,44 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
                             </div>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <input
-                                type="text"
-                                placeholder="City"
-                                value={formData.city}
-                                onChange={e => setFormData({ ...formData, city: e.target.value })}
-                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                            />
-                            <input
-                                type="text"
-                                placeholder="State"
-                                value={formData.state}
-                                onChange={e => setFormData({ ...formData, state: e.target.value })}
-                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                            />
-                            <input
-                                type="text"
-                                placeholder="Country"
-                                value={formData.country}
-                                onChange={e => setFormData({ ...formData, country: e.target.value })}
-                                className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
-                            />
+                            <div className="space-y-1">
+                                <label className="text-[9px] text-slate-500 lowercase">Country</label>
+                                <select
+                                    value={formData.country}
+                                    onChange={e => setFormData({ ...formData, country: e.target.value })}
+                                    className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white appearance-none cursor-pointer"
+                                >
+                                    <option value="Pakistan">Pakistan</option>
+                                    <option value="International">International</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] text-slate-500 lowercase">State / Province</label>
+                                <select
+                                    value={formData.state}
+                                    onChange={e => setFormData({ ...formData, state: e.target.value, city: '' })}
+                                    className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white appearance-none cursor-pointer"
+                                >
+                                    <option value="">Select State</option>
+                                    {PAKISTAN_PROVINCES.map(province => (
+                                        <option key={province} value={province}>{province}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[9px] text-slate-500 lowercase">City</label>
+                                <select
+                                    disabled={!formData.state || !PAKISTAN_CITIES[formData.state as keyof typeof PAKISTAN_CITIES]}
+                                    value={formData.city}
+                                    onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                    className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white appearance-none cursor-pointer disabled:opacity-50 disabled:bg-slate-50"
+                                >
+                                    <option value="">Select City</option>
+                                    {formData.state && PAKISTAN_CITIES[formData.state as keyof typeof PAKISTAN_CITIES]?.map(city => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                     </div>
 

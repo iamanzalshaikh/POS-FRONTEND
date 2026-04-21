@@ -7,6 +7,8 @@ import { useStoreStore } from '../../store/useStoreStore';
 import { useUserStore } from '../../store/useUserStore';
 import FormWrapper from '../../components/shared/admin/FormWrapper';
 import InputField from '../../components/shared/admin/InputField';
+import SelectField from '../../components/shared/admin/SelectField';
+import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '../../components/global-components/pakistan-geography';
 import PasswordInput from '../../components/shared/admin/PasswordInput';
 import SubmitButton from '../../components/shared/admin/SubmitButton';
 import ToggleSwitch from '../../components/shared/admin/ToggleSwitch';
@@ -72,10 +74,14 @@ const StoreDetailsPage: React.FC = () => {
         register: regStore,
         handleSubmit: handleSubmitStore,
         reset: resetStore,
+        watch: watchStore,
+        setValue: setStoreValue,
         formState: { errors: storeErrors, isSubmitting: isStoreSubmitting },
     } = useForm({
         resolver: yupResolver(storeUpdateSchema)
     });
+
+    const selectedState = watchStore('state');
 
     useEffect(() => {
         if (currentStore) {
@@ -266,15 +272,24 @@ const StoreDetailsPage: React.FC = () => {
                                             error={storeErrors.address?.message} 
                                         />
                                         <div className="grid grid-cols-2 gap-4">
-                                            <InputField 
-                                                label="City" 
-                                                registration={regStore('city')} 
-                                                error={(storeErrors as any).city?.message}
-                                            />
-                                            <InputField 
+                                            <SelectField 
                                                 label="State" 
                                                 registration={regStore('state')} 
                                                 error={(storeErrors as any).state?.message}
+                                                placeholder="Select State"
+                                                options={PAKISTAN_PROVINCES.map(p => ({ value: p, label: p }))}
+                                                onChange={(e) => {
+                                                    regStore('state').onChange(e);
+                                                    setStoreValue('city', '');
+                                                }}
+                                            />
+                                            <SelectField 
+                                                label="City" 
+                                                registration={regStore('city')} 
+                                                error={(storeErrors as any).city?.message}
+                                                placeholder="Select City"
+                                                disabled={!selectedState}
+                                                options={(PAKISTAN_CITIES[selectedState as keyof typeof PAKISTAN_CITIES] || []).map(c => ({ value: c, label: c }))}
                                             />
                                         </div>
                                     </div>

@@ -115,8 +115,12 @@ export const formatInvoiceNumber = (invoice: string | null | undefined): string 
     const str = String(invoice).trim();
     
     // If it has a dash, typically the last part is the sequence
+    // EXCEPT for OFF- prefix which we want to keep
     if (str.includes('-')) {
         const parts = str.split('-');
+        if (parts[0].toUpperCase() === 'OFF') {
+            return `OFF-${parts[parts.length - 1]}`;
+        }
         return parts[parts.length - 1];
     }
     

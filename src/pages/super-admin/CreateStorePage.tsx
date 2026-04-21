@@ -97,17 +97,24 @@ const CreateStorePage: React.FC = () => {
                             error={errors.address?.message}
                         />
                         <div className="grid grid-cols-3 gap-6">
-                            <InputField
-                                label="City"
-                                placeholder="City name"
-                                registration={register('city')}
-                                error={errors.city?.message}
-                            />
-                            <InputField
-                                label="State / Region"
-                                placeholder="Province/State"
+                            <SelectField
+                                label="State / Province"
                                 registration={register('state')}
                                 error={errors.state?.message}
+                                placeholder="Select State"
+                                options={PAKISTAN_PROVINCES.map(p => ({ value: p, label: p }))}
+                                onChange={(e) => {
+                                    register('state').onChange(e);
+                                    setValue('city', ''); // Reset city on state change
+                                }}
+                            />
+                            <SelectField
+                                label="City"
+                                registration={register('city')}
+                                error={errors.city?.message}
+                                placeholder="Select City"
+                                disabled={!selectedState}
+                                options={(PAKISTAN_CITIES[selectedState as keyof typeof PAKISTAN_CITIES] || []).map(c => ({ value: c, label: c }))}
                             />
                             <InputField
                                 label="Zip Code"

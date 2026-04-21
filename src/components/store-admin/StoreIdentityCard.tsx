@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Camera } from 'lucide-react';
 import { formatPakistanMobile } from '../../utils/validation';
+import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '../global-components/pakistan-geography';
 
 const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading: boolean; onChange: (updates: any) => void }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -10,6 +11,8 @@ const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading
         email: "",
         phone: "",
         address: "",
+        city: "",
+        state: "",
     });
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,6 +35,8 @@ const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading
                     email: data.email || "",
                     phone: data.phone || "",
                     address: data.address || "",
+                    city: data.city || "",
+                    state: data.state || "",
                 });
             }
         }, [data]);
@@ -39,8 +44,15 @@ const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading
         const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
             const { name, value } = e.target;
             const finalValue = name === 'phone' ? formatPakistanMobile(value) : value;
-            setFormState(prev => ({ ...prev, [name]: finalValue }));
+            
+            setFormState(prev => {
+                const next = { ...prev, [name]: finalValue };
+                if (name === 'state') next.city = '';
+                return next;
+            });
+            
             onChange({ [name]: finalValue });
+            if (name === 'state') onChange({ [name]: finalValue, city: '' });
         };
 
         const triggerUpload = () => {
@@ -92,7 +104,7 @@ const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading
                                     />
                                 </div>
                                 <div className="space-y-2 md:col-span-1">
-                                    <label className="text-[11px] font-medium uppercase tracking-[2px] text-slate-500 dark:text-slate-400 ml-1">Address</label>
+                                    <label className="text-[11px] font-medium uppercase tracking-[2px] text-slate-500 dark:text-slate-400 ml-1">Street Address</label>
                                     <textarea 
                                         name="address"
                                         rows={1}
@@ -100,6 +112,34 @@ const StoreIdentityCard = ({ data, isLoading, onChange }: { data: any; isLoading
                                         onChange={handleInputChange}
                                         className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-medium text-slate-600 dark:text-slate-300 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500/30 outline-none transition-all resize-none overflow-hidden"
                                     />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-medium uppercase tracking-[2px] text-slate-500 dark:text-slate-400 ml-1">State / Province</label>
+                                    <select 
+                                        name="state"
+                                        value={formState.state}
+                                        onChange={handleInputChange}
+                                        className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-medium text-slate-600 dark:text-slate-300 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500/30 outline-none transition-all appearance-none cursor-pointer"
+                                    >
+                                        <option value="">Select State</option>
+                                        {PAKISTAN_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[11px] font-medium uppercase tracking-[2px] text-slate-500 dark:text-slate-400 ml-1">City</label>
+                                    <select 
+                                        name="city"
+                                        value={formState.city}
+                                        onChange={handleInputChange}
+                                        disabled={!formState.state}
+                                        className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-medium text-slate-600 dark:text-slate-300 focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500/30 outline-none transition-all appearance-none cursor-pointer disabled:opacity-50"
+                                    >
+                                        <option value="">Select City</option>
+                                        {(PAKISTAN_CITIES[formState.state as keyof typeof PAKISTAN_CITIES] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
                                 </div>
                             </div>
                         </div>

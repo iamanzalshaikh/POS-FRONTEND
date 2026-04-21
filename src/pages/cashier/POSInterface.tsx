@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState,  } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -19,10 +19,10 @@ import {
   AlertCircle,
   Search,
   CheckCircle,
-  IndianRupee,
+  
 } from 'lucide-react';
 import { fetchProducts, getProductByBarcode } from '../../api/products.api';
-import { createSale } from '../../api/sales.api';
+import { createSale, getSalesTransactions } from '../../api/sales.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { formatCurrency, formatAmount } from '../../utils/expense-utils';
@@ -140,6 +140,40 @@ const POSInterface: React.FC = () => {
   const [receivedAmount, setReceivedAmount] = useState<string>('');
   const [lastSaleForReceipt, setLastSaleForReceipt] = useState<any | null>(null);
 
+  const [lastSequence, setLastSequence] = useState<number>(() => {
+    return Number(localStorage.getItem('pos-last-sequence')) || 0;
+  });
+  const [offlineSyncCount, setOfflineSyncCount] = useState<number>(0);
+
+  // Extract fetchLastSeq to a memoized function so we can refresh it after online sales
+  const refreshSequence = useCallback(async () => {
+    if (!isOnline) return;
+    try {
+      const res = await getSalesTransactions({ limit: 1 });
+      const lastSale = res?.[0] || res?.data?.[0];
+      if (lastSale?.invoiceNumber) {
+        const seqStr = lastSale.invoiceNumber.slice(-6);
+        const seq = parseInt(seqStr, 10);
+        if (!isNaN(seq)) {
+          console.log('🔄 [POSInterface] Sequence refreshed:', seq);
+          setLastSequence(seq);
+          localStorage.setItem('pos-last-sequence', seq.toString());
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ [POSInterface] Sequence refresh failed:', err);
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    refreshSequence();
+  }, [refreshSequence]);
+
+  // Rest of effects ...
+
+  // Inside handleCompleteSale, after successful online submission:
+  // refreshSequence();
+
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000 * 30);
     return () => clearInterval(timer);
@@ -152,9 +186,24 @@ const POSInterface: React.FC = () => {
     refetch: refetchProducts 
   } = useQuery({
     queryKey: ['pos-products'],
-    queryFn: () => fetchProducts(),
+    queryFn: async () => {
+        if (!isOnline) {
+            console.log('📶 [POSInterface] Offline: Fetching products from local cache...');
+            const cached = await offlineStorage.getProducts();
+            return { success: true, data: cached };
+        }
+        
+        try {
+            const data = await fetchProducts();
+            return data;
+        } catch (err) {
+            console.warn('⚠️ [POSInterface] API failed, trying local cache...', err);
+            const cached = await offlineStorage.getProducts();
+            return { success: true, data: cached };
+        }
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: 1000 * 60 * 5,
+    refetchInterval: isOnline ? 1000 * 60 * 5 : false,
   });
 
   const productsError = pQueryError ? (pQueryError as any).message : null;
@@ -175,6 +224,14 @@ const POSInterface: React.FC = () => {
     // Filter active products
     return products.filter((p: any) => p.isActive !== false);
   }, [productsRes]);
+
+  // Persistent Cache Sync: Save products to local storage whenever they are successfully fetched online
+  useEffect(() => {
+    if (isOnline && allProducts.length > 0) {
+        offlineStorage.saveProducts(allProducts)
+            .catch(err => console.error('❌ [POSInterface] Failed to cache products:', err));
+    }
+  }, [allProducts, isOnline]);
 
   // Totals
   const subtotal = useMemo(
@@ -248,7 +305,7 @@ const POSInterface: React.FC = () => {
   const hasChange = receivedAmount && receivedAmountNum > total;
 
   const canCompleteSale = cart.length > 0 && !!paymentMethod && !!deviceId && (
-    paymentMethod !== 'CASH' || (receivedAmount !== '' && receivedAmountNum >= total)
+    paymentMethod !== 'CASH' || (receivedAmount !== '' && Number(receivedAmount) >= total)
   );
 
   const handleAddProductToCart = (product: Product) => {
@@ -321,19 +378,36 @@ const POSInterface: React.FC = () => {
 
     // If it looks like a barcode, try to fetch by barcode
     try {
-      const res = await getProductByBarcode(value, deviceId);
-      if (res.data?.success && res.data.data) {
-        const product = res.data.data as Product;
+      let product: Product | null = null;
+
+      if (!isOnline) {
+        console.log('📶 [POSInterface] Offline: Checking local product cache for barcode:', value);
+        product = await offlineStorage.getProductByBarcode(value);
+      } else {
+        const res = await getProductByBarcode(value, deviceId);
+        if (res.data?.success && res.data.data) {
+          product = res.data.data as Product;
+        } else {
+            // Fallback to local if API says not found but we are online (maybe recently synced)
+            product = await offlineStorage.getProductByBarcode(value);
+        }
+      }
+
+      if (product) {
         handleAddProductToCart(product);
         setBarcodeInput('');
       } else {
-        setError(res.data?.message || 'Product not found');
+        setError('Product not found in system or cache.');
       }
     } catch (err: any) {
-      if (err.response?.status === 404) {
-        setError('Product not found');
+      console.error('❌ [POSInterface] Barcode fetch error:', err);
+      // Final attempt: check local storage anyway on error
+      const cachedProduct = await offlineStorage.getProductByBarcode(value);
+      if (cachedProduct) {
+        handleAddProductToCart(cachedProduct);
+        setBarcodeInput('');
       } else {
-        setError(err.response?.data?.message || 'Unable to fetch product');
+        setError('Product lookup failed. Please try manual search.');
       }
     }
   };
@@ -601,10 +675,11 @@ const POSInterface: React.FC = () => {
           // Trigger direct print by updating state
           console.log('🖨️ [POSInterface] Preparing direct print...');
           setLastSaleForReceipt(saleData);
-          // 1. OPTIMISTIC UPDATE: Update local products cache immediately for instant UI feedback
+          // 1. OPTIMISTIC UPDATE: Update products cache immediately
           try {
-            const queryKey = ['pos-products'];
-            queryClient.setQueryData(queryKey, (oldData: any) => {
+            // Force a sequence refresh so we are ready for the next sale (even if offline next)
+            refreshSequence();
+            queryClient.setQueryData(['products', { isActive: true, limit: 1000 }], (oldData: any) => {
               if (!oldData) return oldData;
               
               // Handle different API response structures
@@ -648,8 +723,15 @@ const POSInterface: React.FC = () => {
         // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
         console.log('🔴 [POSInterface] OFFLINE MODE - Saving sale locally...');
 
+        const nextSeq = lastSequence + offlineSyncCount + 1;
+        setOfflineSyncCount(prev => prev + 1);
+        
         const tempId = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        const invoiceNumber = `OFF-${Date.now()}`;
+        const invoiceNumber = `OFF-${String(nextSeq).padStart(6, '0')}`;
+
+        // Capture payment values IMMEDIATELY to prevent zeroing out
+        const finalReceived = Number(receivedAmount) || 0;
+        const finalChange = Math.max(0, finalReceived - total);
 
         const offlineSale: OfflineSale = {
           tempId,
@@ -658,8 +740,8 @@ const POSInterface: React.FC = () => {
           paymentMethod,
           discountAmount: numericDiscountAmount,
           notes: notes || undefined,
-          receivedAmount: paymentMethod === 'CASH' ? receivedAmountNum : undefined,
-          changeAmount: paymentMethod === 'CASH' ? changeAmount : undefined,
+          receivedAmount: paymentMethod === 'CASH' ? finalReceived : undefined,
+          changeAmount: paymentMethod === 'CASH' ? finalChange : undefined,
           items: payload.items,
           totals: { subtotal, tax, total },
           createdAt: new Date().toISOString(),
@@ -723,6 +805,8 @@ const POSInterface: React.FC = () => {
         setLastSaleForReceipt({
           ...offlineSale,
           id: tempId,
+          receivedAmount: finalReceived,
+          changeAmount: finalChange,
           saleItems: offlineSale.items.map((item: any) => ({
             productName: item.productName,
             quantity: item.quantity,
