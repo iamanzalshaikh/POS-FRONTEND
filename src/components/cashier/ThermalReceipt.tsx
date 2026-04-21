@@ -339,11 +339,11 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ sale }) => {
                   <div className="mt-4 pt-3 border-t border-black/5 space-y-2">
                     <div className="flex justify-between items-center text-[10px] uppercase tracking-widest font-black text-slate-400" style={{ fontSize: '7pt' }}>
                       <span>Amount Paid</span>
-                      <span className="text-slate-900 tabular-nums">{formatCurrency(toFiniteNumber(sale?.receivedAmount) || 0)}</span>
+                      <span className="text-slate-900 tabular-nums">RS {formatNumber(toFiniteNumber(sale?.receivedAmount) ?? 0)}</span>
                     </div>
                     <div className="flex justify-between items-center text-[11px] uppercase tracking-widest font-extrabold text-slate-900" style={{ fontSize: '8pt' }}>
                       <span>Change</span>
-                      <span className="tabular-nums">{formatCurrency(toFiniteNumber(sale?.changeAmount) || 0)}</span>
+                      <span className="tabular-nums">RS {formatNumber(toFiniteNumber(sale?.changeAmount) ?? 0)}</span>
                     </div>
                   </div>
                 )}

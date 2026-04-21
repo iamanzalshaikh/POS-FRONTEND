@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Store, User, MapPin, Settings2, Loader2, AlertCircle } from 'lucide-react';
 import { storesApi } from '../../service/api';
+import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '../../components/global-components/pakistan-geography';
 
 interface CreateStoreModalProps {
   isOpen: boolean;
@@ -29,10 +30,14 @@ const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onClose, on
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
+    setFormData(prev => {
+        const next = {
+            ...prev,
+            [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+        };
+        if (name === 'state') next.city = '';
+        return next;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,12 +138,29 @@ const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onClose, on
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">City</label>
-                  <input name="city" value={formData.city} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 outline-none transition-all placeholder:text-slate-400 font-medium" placeholder="New York" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">State/Region</label>
+                  <select 
+                    name="state" 
+                    value={formData.state} 
+                    onChange={handleChange} 
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 outline-none transition-all font-medium appearance-none cursor-pointer"
+                  >
+                    <option value="">Select State</option>
+                    {PAKISTAN_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">State/Region</label>
-                  <input name="state" value={formData.state} onChange={handleChange} className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 outline-none transition-all placeholder:text-slate-400 font-medium" placeholder="NY" />
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">City</label>
+                  <select 
+                    name="city" 
+                    value={formData.city} 
+                    onChange={handleChange} 
+                    disabled={!formData.state}
+                    className="w-full bg-slate-50 border border-slate-200 text-slate-900 px-4 py-3 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-100 outline-none transition-all font-medium appearance-none cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="">Select City</option>
+                    {(PAKISTAN_CITIES[formData.state as keyof typeof PAKISTAN_CITIES] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Zip/Postal Code</label>

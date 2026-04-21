@@ -96,7 +96,7 @@ const ProfitLossReport: React.FC = () => {
 
     if (expensesList) {
       expensesList.forEach(exp => {
-        // Now including SUPPLIER_PURCHASE for the user's custom "Total Expense" view
+        // Skip SALARIES because it is handled separately below (weeklySalary)
         if (exp.category === 'SALARIES') return;
         const expDate = new Date(exp.date);
         if (expDate >= startDate && expDate <= endDate) {
@@ -107,7 +107,6 @@ const ProfitLossReport: React.FC = () => {
       });
     }
 
-    const cogsRatio = pnlRes.data.revenue > 0 ? pnlRes.data.cogs / pnlRes.data.revenue : 0;
     const sortedWeeks = Array.from(weeklyMap.keys()).sort((a, b) => 
       new Date(a + ', ' + new Date().getFullYear()).getTime() - 
       new Date(b + ', ' + new Date().getFullYear()).getTime()
@@ -118,14 +117,13 @@ const ProfitLossReport: React.FC = () => {
 
     const formatted = sortedWeeks.map(week => {
       const vals = weeklyMap.get(week)!;
-      const weeklyCogs = vals.revenue * cogsRatio;
-      const totalWeeklyExpense = vals.expense + weeklyCogs + weeklySalary;
+      const totalWeeklyPaid = vals.expense + weeklySalary;
       
       return {
         month: week,
         revenue: vals.revenue,
-        expense: totalWeeklyExpense,
-        profit: vals.revenue - totalWeeklyExpense
+        expense: totalWeeklyPaid,
+        profit: vals.revenue - totalWeeklyPaid
       };
     });
 

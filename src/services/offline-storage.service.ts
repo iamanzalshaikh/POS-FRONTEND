@@ -8,6 +8,8 @@ export type OfflineSale = {
   invoiceNumber: string;
   deviceId: string;
   paymentMethod: string;
+  receivedAmount?: number;
+  changeAmount?: number;
   discountAmount: number;
   notes?: string;
   receivedAmount?: number;
@@ -33,8 +35,9 @@ export type OfflineSale = {
 };
 
 const DB_NAME = 'pos-offline-sales';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented version for new store
 const STORE_NAME = 'offlineSales';
+const PRODUCT_STORE = 'products';
 
 class OfflineStorageService {
   private db: IDBDatabase | null = null;
@@ -57,24 +60,91 @@ class OfflineStorageService {
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('✅ [OfflineStorage] Database opened successfully');
+        console.log('✅ [OfflineStorage] Database opened successfully (v' + DB_VERSION + ')');
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         
+        // Offline Sales Store
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           const store = db.createObjectStore(STORE_NAME, { keyPath: 'tempId' });
           store.createIndex('syncStatus', 'syncStatus', { unique: false });
           store.createIndex('createdAt', 'createdAt', { unique: false });
           store.createIndex('retryCount', 'retryCount', { unique: false });
-          console.log('✅ [OfflineStorage] Object store created');
+          console.log('✅ [OfflineStorage] Sales store created');
+        }
+
+        // Product Cache Store
+        if (!db.objectStoreNames.contains(PRODUCT_STORE)) {
+          const productStore = db.createObjectStore(PRODUCT_STORE, { keyPath: 'id' });
+          productStore.createIndex('barcode', 'barcode', { unique: false });
+          productStore.createIndex('name', 'name', { unique: false });
+          console.log('✅ [OfflineStorage] Product store created');
         }
       };
     });
 
     return this.initPromise;
+  }
+
+  /**
+   * Cache products for offline use
+   */
+  async saveProducts(products: any[]): Promise<void> {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      if (!this.db) return reject(new Error('DB not init'));
+
+      const transaction = this.db.transaction([PRODUCT_STORE], 'readwrite');
+      const store = transaction.objectStore(PRODUCT_STORE);
+      
+      // Clear old cache before saving new products
+      store.clear();
+
+      products.forEach(product => {
+        store.put(product);
+      });
+
+      transaction.oncomplete = () => {
+        console.log(`✅ [OfflineStorage] Cached ${products.length} products`);
+        resolve();
+      };
+
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Get all cached products
+   */
+  async getProducts(): Promise<any[]> {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      if (!this.db) return reject(new Error('DB not init'));
+      const transaction = this.db.transaction([PRODUCT_STORE], 'readonly');
+      const store = transaction.objectStore(PRODUCT_STORE);
+      const request = store.getAll();
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Find a single product by barcode (Offline Scan)
+   */
+  async getProductByBarcode(barcode: string): Promise<any | null> {
+    await this.init();
+    return new Promise((resolve, reject) => {
+      if (!this.db) return reject(new Error('DB not init'));
+      const transaction = this.db.transaction([PRODUCT_STORE], 'readonly');
+      const store = transaction.objectStore(PRODUCT_STORE);
+      const index = store.index('barcode');
+      const request = index.get(barcode);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
   }
 
   /**

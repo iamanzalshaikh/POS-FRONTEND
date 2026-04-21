@@ -130,14 +130,14 @@ const SalesHistoryPage: React.FC = () => {
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
                     <button 
-                        onClick={() => navigate(`/cashier/receipt/${row.original.id}`)}
+                        onClick={() => navigate(`/cashier/receipt/${row.original.id}`, { state: { sale: row.original } })}
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl transition-all border border-transparent hover:border-blue-100 dark:hover:border-blue-900/50"
                         title="View Receipt"
                     >
                         <Eye size={16} />
                     </button>
                     <button 
-                        onClick={() => navigate(`/cashier/receipt/${row.original.id}`, { state: { autoPrint: true } })}
+                        onClick={() => navigate(`/cashier/receipt/${row.original.id}`, { state: { sale: row.original, autoPrint: true } })}
                         className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-xl transition-all border border-transparent hover:border-emerald-100 dark:hover:border-emerald-900/50"
                         title="Print Receipt"
                     >
