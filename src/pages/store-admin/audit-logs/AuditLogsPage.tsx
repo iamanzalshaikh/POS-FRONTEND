@@ -7,6 +7,30 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useDebounce } from '@/hooks';
 
+const ENTITY_OPTIONS = [
+    { label: 'Inventory / Stock', value: 'inventory_logs' },
+    { label: 'Sales', value: 'sales' },
+    { label: 'Products', value: 'products' },
+    { label: 'Users', value: 'users' },
+    { label: 'Suppliers', value: 'suppliers' },
+    { label: 'Purchases', value: 'supplier_purchases' },
+    { label: 'Expenses', value: 'expenses' },
+    { label: 'Devices', value: 'devices' },
+    { label: 'Stores', value: 'stores' },
+];
+
+const ACTION_OPTIONS = [
+    { label: 'Stock Adjustment', value: 'ADJUST_STOCK' },
+    { label: 'Damage Stock', value: 'DAMAGE_STOCK' },
+    { label: 'Opening Stock', value: 'OPENING_STOCK' },
+    { label: 'Create Sale', value: 'CREATE_SALE' },
+    { label: 'Create Product', value: 'CREATE_PRODUCT' },
+    { label: 'Create User', value: 'CREATE_USER' },
+    { label: 'Login', value: 'LOGIN' },
+    { label: 'Logout', value: 'LOGOUT' },
+    { label: 'Refund Sale', value: 'REFUND_SALE' },
+];
+
 const AuditLogsPage: React.FC = () => {
     // 1. Filter & Pagination State
     const [page, setPage] = useState(1);
@@ -109,7 +133,7 @@ const AuditLogsPage: React.FC = () => {
                         className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/40 outline-none transition-all cursor-pointer appearance-none shadow-sm"
                     >
                         <option value="">All Domains</option>
-                        {['USER', 'PRODUCT', 'DEVICE', 'SALE', 'CATEGORY', 'STOCK', 'SUPPLIER', 'PURCHASE'].map(e => <option key={e} value={e}>{e}</option>)}
+                        {ENTITY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                 </div>
 
@@ -124,7 +148,7 @@ const AuditLogsPage: React.FC = () => {
                         className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500/40 outline-none transition-all cursor-pointer appearance-none shadow-sm"
                     >
                         <option value="">All Actions</option>
-                        {['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'STOCK_ADJUSTMENT'].map(a => <option key={a} value={a}>{a.replace(/_/g, ' ')}</option>)}
+                        {ACTION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                     </select>
                 </div>
 
