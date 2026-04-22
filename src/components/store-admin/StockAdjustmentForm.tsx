@@ -36,9 +36,11 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
 
         // Frontend validation for negative stock resulting from adjustment
         const currentStock = selectedProduct.inventoryStock?.totalQuantity || 0;
-        if (currentStock + adjustedQuantity < 0) {
+        const projectedStock = currentStock + adjustedQuantity;
+
+        if (projectedStock < 0) {
             return toast.error(
-                `Insufficient stock for this adjustment. Current: ${currentStock}, adjustment: ${adjustedQuantity}`,
+                `Insufficient stock for this deduction. Current: ${currentStock}, adjustment: ${adjustedQuantity}. You cannot have negative stock.`,
                 'Stock Conflict'
             );
         }
@@ -209,6 +211,42 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                                 <Plus size={24} strokeWidth={3} />
                             </Button>
                         </div>
+
+                        {/* Projected Stock Preview */}
+                        {selectedProduct && (
+                            <div className="mt-6 flex flex-col items-center">
+                                <div className={`px-6 py-2 rounded-2xl border-2 flex items-center gap-3 transition-all ${
+                                    (selectedProduct.inventoryStock?.totalQuantity || 0) + (
+                                        (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
+                                    ) < 0 
+                                    ? 'bg-rose-50 border-rose-200 text-rose-600' 
+                                    : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                                }`}>
+                                    <div className="text-left">
+                                        <div className="text-[8px] font-black uppercase tracking-widest opacity-60">Projected Result</div>
+                                        <div className="text-xs font-black tracking-tighter">
+                                            {(selectedProduct.inventoryStock?.totalQuantity || 0)} 
+                                            <span className="mx-1">→</span>
+                                            {(selectedProduct.inventoryStock?.totalQuantity || 0) + (
+                                                (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
+                                            )}
+                                        </div>
+                                    </div>
+                                    {(selectedProduct.inventoryStock?.totalQuantity || 0) + (
+                                        (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
+                                    ) < 0 && (
+                                        <div className="p-1.5 bg-rose-600 text-white rounded-lg animate-pulse">
+                                            <Minus size={10} strokeWidth={4} />
+                                        </div>
+                                    )}
+                                </div>
+                                {(selectedProduct.inventoryStock?.totalQuantity || 0) + (
+                                    (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
+                                ) < 0 && (
+                                    <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-2">Cannot satisfy deduction from current stock</p>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -224,7 +262,13 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
 
                     <Button 
                         onClick={handleSubmit}
-                        disabled={isSubmitting || !selectedProduct}
+                        disabled={
+                            isSubmitting || 
+                            !selectedProduct || 
+                            ((selectedProduct.inventoryStock?.totalQuantity || 0) + (
+                                (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
+                            ) < 0)
+                        }
                         className="w-full h-14 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-[2px] shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
                     >
                         {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle size={18} className="group-hover:rotate-12 transition-transform" />}

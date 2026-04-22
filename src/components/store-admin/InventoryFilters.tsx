@@ -64,11 +64,6 @@ const InventoryFilters = ({
                 </div>
             </div>
             
-            <div className="flex items-center gap-2 ml-auto">
-                <button className="flex items-center gap-2 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-indigo-600/30 hover:text-indigo-600 text-slate-400 transition-all active:scale-95 shadow-sm group">
-                    <Download className="w-4 h-4 text-slate-300 group-hover:text-indigo-600" /> Export
-                </button>
-            </div>
         </div>
     )
 }

@@ -8,6 +8,8 @@ import FormWrapper from '../../components/shared/admin/FormWrapper';
 import InputField from '../../components/shared/admin/InputField';
 import PasswordInput from '../../components/shared/admin/PasswordInput';
 import SubmitButton from '../../components/shared/admin/SubmitButton';
+import SelectField from '../../components/shared/admin/SelectField';
+import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '../../components/global-components/pakistan-geography';
 import { Store, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -41,10 +43,14 @@ const CreateStorePage: React.FC = () => {
     const {
         register,
         handleSubmit,
+        watch,
+        setValue,
         formState: { errors, isSubmitting },
     } = useForm({
         resolver: yupResolver(createStoreSchema)
     });
+
+    const selectedState = watch('state');
 
     const onSubmit = async (data: any) => {
         const success = await createStore(data);

@@ -16,10 +16,6 @@ export default function DevicesHeader({ onAddTerminal, terminalCount = 0 }: Devi
             </div>
 
             <div className="flex items-center gap-4">
-                <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-600 font-black uppercase tracking-widest text-[10px] hover:bg-slate-50 hover:border-[#2563EB]/30 hover:text-[#2563EB] transition-all active:scale-95 shadow-sm group">
-                    <Download className="w-4 h-4 text-slate-400 group-hover:text-[#2563EB]" />
-                    Export Hardware Log
-                </button>
                 {onAddTerminal && (
                     <button
                         onClick={onAddTerminal}
