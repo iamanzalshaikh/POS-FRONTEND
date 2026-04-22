@@ -26,10 +26,6 @@ export default function ProductsHeader({ openOpeningModal, openMasterModal }: Pr
 
             <div className="flex gap-3 w-full sm:w-auto">
 
-                <button className="flex-1 sm:flex-none border border-slate-200 bg-white px-5 py-3 rounded-2xl hover:bg-slate-50 hover:border-indigo-600/30 hover:text-indigo-600 text-slate-600 font-bold uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm group">
-                    <Download size={14} className="text-slate-400 group-hover:text-indigo-600" />
-                    Export CSV
-                </button>
 
                 <button
                     onClick={() => openOpeningModal ? openOpeningModal() : navigate('/store-admin/inventory/products/add')}

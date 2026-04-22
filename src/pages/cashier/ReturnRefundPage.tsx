@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -69,6 +70,7 @@ type ReturnItem = {
 
 const ReturnRefundPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   // Search state
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -197,6 +199,11 @@ const ReturnRefundPage: React.FC = () => {
         }));
 
       await refundSale(sale.id, refundReason, itemsToRefund);
+      
+      // Invalidate products cache so the Terminal/POS sees the restored FIFO prices immediately
+      queryClient.invalidateQueries({ queryKey: ['pos-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+
       setRefundSuccess(true);
       setShowConfirmModal(false);
       setTimeout(() => {

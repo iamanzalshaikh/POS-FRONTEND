@@ -30,9 +30,6 @@ const SalesHeader: React.FC<Props> = ({ onDateRangeChange }) => {
         <p className="text-sm text-gray-500 mt-1">Manage and monitor your recent store sales and order history accurately.</p>
       </div>
       <div className="flex items-center gap-4">
-        <button className="flex items-center gap-2 px-4 py-2.5 text-xs border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-[#2563EB]/30 hover:text-[#2563EB] text-slate-600 font-bold transition-all group">
-          <Download className="w-4 h-4 text-slate-400 group-hover:text-[#2563EB]" /> Export CSV
-        </button>
         <select 
           onChange={handleDateSelect}
           className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold outline-none focus:ring-4 focus:ring-[#2563EB]/5 focus:border-[#2563EB]/30 bg-white text-slate-600 cursor-pointer appearance-none pr-8 transition-all"

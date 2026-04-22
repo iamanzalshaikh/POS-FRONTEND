@@ -41,10 +41,13 @@ type CartItem = {
   /** Matches product tax; backend uses batch % then product % — cart uses product for preview. */
   taxPercentage?: number;
   discountPercentage?: number;
-  latestDiscountPercentage?: number;
-  latestSellingPrice?: number;
-  oldestBatchRemaining?: number;
-  oldestBatchDiscount?: number;
+  activeBatches?: Array<{
+    id: string;
+    sellingPrice: number;
+    quantityRemaining: number;
+    discountPercentage: number;
+    taxPercentage: number;
+  }>;
   totalStock?: number;
 };
 
@@ -69,6 +72,13 @@ type Product = {
   latestDiscountPercentage?: number;
   oldestBatchRemaining?: number;
   oldestBatchDiscount?: number;
+  activeBatches?: Array<{
+    id: string;
+    sellingPrice: number;
+    quantityRemaining: number;
+    discountPercentage: number;
+    taxPercentage: number;
+  }>;
   category?: any;
   inventoryStock?: { totalQuantity?: number };
 };
@@ -182,6 +192,7 @@ const POSInterface: React.FC = () => {
   const { 
     data: productsRes, 
     isLoading: productsLoading, 
+    isFetching: productsFetching,
     error: pQueryError,
     refetch: refetchProducts 
   } = useQuery({
@@ -234,43 +245,62 @@ const POSInterface: React.FC = () => {
   }, [allProducts, isOnline]);
 
   // Totals
-  const subtotal = useMemo(
-    () => cart.reduce((sum, item) => {
-      const oldestQty = item.oldestBatchRemaining || 0;
-      const oldestPrice = item.price || 0;
-      const latestPrice = item.latestSellingPrice ?? oldestPrice;
+  const calculateLineDetails = useCallback((item: CartItem) => {
+    let remainingToFulfill = item.quantity;
+    let lineSubtotal = 0;
+    let lineDiscount = 0;
+    let lineTax = 0;
 
-      if (item.quantity <= oldestQty) {
-        return sum + (oldestPrice * item.quantity);
-      } else {
-        const oldestPart = oldestPrice * oldestQty;
-        const latestPart = latestPrice * (item.quantity - oldestQty);
-        return sum + oldestPart + latestPart;
+    const batches = item.activeBatches || [];
+    
+    if (batches.length > 0) {
+      for (const batch of batches) {
+        if (remainingToFulfill <= 0) break;
+        
+        const take = Math.min(batch.quantityRemaining, remainingToFulfill);
+        const price = batch.sellingPrice;
+        const discPct = batch.discountPercentage || 0;
+        const taxPct = batch.taxPercentage || item.taxPercentage || 0;
+        
+        const batchBase = price * take;
+        lineSubtotal += batchBase;
+        lineDiscount += (batchBase * discPct) / 100;
+        lineTax += (batchBase * taxPct) / 100;
+        
+        remainingToFulfill -= take;
       }
-    }, 0),
-    [cart]
-  );
+    }
+    
+    // Fallback for overselling (CASH/CARD bypass) or if no batches exist
+    if (remainingToFulfill > 0) {
+      const fallbackPrice = item.price;
+      const fallbackDisc = item.discountPercentage || 0;
+      const fallbackTax = item.taxPercentage || 0;
+      
+      const fallbackBase = fallbackPrice * remainingToFulfill;
+      lineSubtotal += fallbackBase;
+      lineDiscount += (fallbackBase * fallbackDisc) / 100;
+      lineTax += (fallbackBase * fallbackTax) / 100;
+    }
 
-  const automaticDiscount = useMemo(
-    () => cart.reduce((sum, item) => {
-      const oldestQty = item.oldestBatchRemaining || 0;
-      const oldestDisc = item.oldestBatchDiscount || 0;
-      const standardDisc = item.discountPercentage || 0;
+    return { subtotal: lineSubtotal, discount: lineDiscount, tax: lineTax };
+  }, []);
 
-      if (item.quantity <= oldestQty) {
-        // Entirely within the oldest batch
-        return sum + (item.price * oldestDisc / 100) * item.quantity;
-      } else {
-        // Spans multiple batches: use oldest rate for available units, latest rate for others
-        const discountedPart = (item.price * oldestDisc / 100) * oldestQty;
-        const latestRate = item.latestDiscountPercentage || 0;
-        const remainderPart = (item.price * latestRate / 100) * (item.quantity - oldestQty);
-        return sum + discountedPart + remainderPart;
-      }
-    }, 0),
-    [cart]
-  );
-  
+  const { subtotal, automaticDiscount, tax } = useMemo(() => {
+    let s = 0;
+    let d = 0;
+    let t = 0;
+    
+    for (const item of cart) {
+      const details = calculateLineDetails(item);
+      s += details.subtotal;
+      d += details.discount;
+      t += details.tax;
+    }
+    
+    return { subtotal: s, automaticDiscount: d, tax: t };
+  }, [cart, calculateLineDetails]);
+
   const discountAmount = useMemo(() => {
     let manual = 0;
     if (discountValue) {
@@ -279,19 +309,6 @@ const POSInterface: React.FC = () => {
     }
     return Math.min(manual + automaticDiscount, subtotal);
   }, [discountMode, discountValue, subtotal, automaticDiscount]);
-
-  // Per-line tax from product % (aligns with server when batch tax is 0). Server: totalAmount = subtotal + totalTax - discount.
-  // Tax is already included in the selling price per user requirement.
-  // Calculated as a straight percentage of the subtotal (e.g. 1000 * 18% = 180).
-  const tax = useMemo(
-    () =>
-      cart.reduce((sum, item) => {
-        const lineSub = item.price * item.quantity;
-        const pct = Number(item.taxPercentage ?? 0);
-        return sum + lineSub * (Number.isFinite(pct) ? pct / 100 : 0);
-      }, 0),
-    [cart]
-  );
 
   // TAX INCLUSIVE: Total is just Subtotal - Discount. 
   // The tax amount (21.60) is shown as a breakdown but is NOT added to the price.
@@ -349,11 +366,8 @@ const POSInterface: React.FC = () => {
           quantity: 1,
           taxPercentage: parseProductTaxPct(product),
           discountPercentage: product.discountPercentage || 0,
-          latestDiscountPercentage: (product as any).latestDiscountPercentage || 0,
-          latestSellingPrice: (product as any).latestSellingPrice,
-          oldestBatchRemaining: (product as any).oldestBatchRemaining || 0,
-          oldestBatchDiscount: (product as any).oldestBatchDiscount || 0,
-          totalStock: totalStock, // Store it for validation in other handlers
+          activeBatches: (product as any).activeBatches || [],
+          totalStock: totalStock,
         },
       ];
     });
@@ -690,11 +704,24 @@ const POSInterface: React.FC = () => {
                 const cartItem = cart.find(item => item.id === p.id);
                 if (cartItem) {
                   const currentQty = p.inventoryStock?.totalQuantity || 0;
+                  const newTotalQty = Math.max(0, currentQty - cartItem.quantity);
+                  
+                  // Optimistically update activeBatches too so the price jumps
+                  let remainingToDeduct = cartItem.quantity;
+                  const newBatches = (p.activeBatches || []).map((b: any) => {
+                    if (remainingToDeduct <= 0) return b;
+                    const take = Math.min(b.quantityRemaining, remainingToDeduct);
+                    remainingToDeduct -= take;
+                    return { ...b, quantityRemaining: b.quantityRemaining - take };
+                  }).filter((b: any) => b.quantityRemaining > 0);
+
                   return {
                     ...p,
+                    activeBatches: newBatches,
+                    sellingPrice: newBatches[0]?.sellingPrice ?? p.sellingPrice,
                     inventoryStock: {
                       ...p.inventoryStock,
-                      totalQuantity: Math.max(0, currentQty - cartItem.quantity)
+                      totalQuantity: newTotalQty
                     }
                   };
                 }
@@ -727,7 +754,7 @@ const POSInterface: React.FC = () => {
         setOfflineSyncCount(prev => prev + 1);
         
         const tempId = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-        const invoiceNumber = `OFF-${String(nextSeq).padStart(6, '0')}`;
+        const invoiceNumber = String(nextSeq).padStart(6, '0');
 
         // Capture payment values IMMEDIATELY to prevent zeroing out
         const finalReceived = Number(receivedAmount) || 0;
@@ -763,20 +790,32 @@ const POSInterface: React.FC = () => {
             const products = oldData.data?.data || oldData.data || oldData;
             if (!Array.isArray(products)) return oldData;
             
-            const updatedProducts = products.map((p: any) => {
-              const cartItem = cart.find(item => item.id === p.id);
-              if (cartItem) {
-                const currentQty = p.inventoryStock?.totalQuantity || 0;
-                return {
-                  ...p,
-                  inventoryStock: {
-                    ...p.inventoryStock,
-                    totalQuantity: Math.max(0, currentQty - cartItem.quantity)
-                  }
-                };
-              }
-              return p;
-            });
+              const updatedProducts = products.map((p: any) => {
+                const cartItem = cart.find(item => item.id === p.id);
+                if (cartItem) {
+                  const currentQty = p.inventoryStock?.totalQuantity || 0;
+                  const newTotalQty = Math.max(0, currentQty - cartItem.quantity);
+                  
+                  let remainingToDeduct = cartItem.quantity;
+                  const newBatches = (p.activeBatches || []).map((b: any) => {
+                    if (remainingToDeduct <= 0) return b;
+                    const take = Math.min(b.quantityRemaining, remainingToDeduct);
+                    remainingToDeduct -= take;
+                    return { ...b, quantityRemaining: b.quantityRemaining - take };
+                  }).filter((b: any) => b.quantityRemaining > 0);
+
+                  return {
+                    ...p,
+                    activeBatches: newBatches,
+                    sellingPrice: newBatches[0]?.sellingPrice ?? p.sellingPrice,
+                    inventoryStock: {
+                      ...p.inventoryStock,
+                      totalQuantity: newTotalQty
+                    }
+                  };
+                }
+                return p;
+              });
             
             // Re-wrap in original structure
             if (oldData.data?.data) return { ...oldData, data: { ...oldData.data, data: updatedProducts } };
@@ -1012,7 +1051,7 @@ const POSInterface: React.FC = () => {
                   categories={categories}
                   onReset={handleResetFilters}
                   onRefresh={() => refetchProducts()}
-                  isRefreshing={productsLoading}
+                  isRefreshing={productsFetching}
                 />
               </div>
 
@@ -1132,6 +1171,11 @@ const POSInterface: React.FC = () => {
                           </td>
                           <td className="px-2 py-3 align-top text-center font-black text-[11px] text-slate-600 dark:text-slate-400 tabular-nums">
                             {formatAmount(item.price)}
+                            {(item.activeBatches?.length || 0) > 1 && item.quantity > (item.activeBatches?.[0].quantityRemaining || 0) && (
+                                <div className="text-[7px] text-blue-500 uppercase mt-0.5 leading-none">
+                                    Multi-Batch<br/>Pricing Applied
+                                </div>
+                            )}
                           </td>
                           <td className="px-2 py-3 align-top text-center">
                             <div className="flex flex-col items-center gap-1">
@@ -1161,7 +1205,7 @@ const POSInterface: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-2 py-3 align-top text-right font-black text-[12px] text-blue-600 dark:text-blue-400 tabular-nums">
-                            {formatAmount(item.price * item.quantity)}
+                            {formatAmount(calculateLineDetails(item).subtotal)}
                           </td>
                           <td className="px-3 py-3 align-top text-right">
                             <button

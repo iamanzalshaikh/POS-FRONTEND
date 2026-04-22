@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react"
-import { useQuery } from '@tanstack/react-query';
+import { createPortal } from "react-dom"
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import ProductsHeader from "@/components/store-admin/ProductsHeader"
 import AddProductModal from "@/components/store-admin/AddProductModal"
 import MetricCard from "@/components/global-components/MetricCard";
@@ -13,7 +14,7 @@ import AddStockModal from "@/components/store-admin/AddStockModal";
 import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
 import { useDebounce } from '@/hooks';
 
-import { fetchProducts } from "@/api/products.api";
+import { fetchProducts, deleteProduct } from "@/api/products.api";
 import { fetchFullInventory } from "@/api/inventory.api";
 import { getCategories } from "@/api/category.api"
 
@@ -30,6 +31,12 @@ export default function ProductsManagementPage() {
     const [isActiveFilter, setIsActiveFilter] = useState<string>('all')
     const [page, setPage] = useState(1);
     const [limit] = useState(25);
+    const queryClient = useQueryClient();
+
+    // Delete state
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<any>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Reset page when filters change
     useEffect(() => {
@@ -86,6 +93,28 @@ export default function ProductsManagementPage() {
     const handleRefresh = () => {
         refetchProducts();
     }
+
+    const confirmDelete = (product: any) => {
+        setProductToDelete(product);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!productToDelete) return;
+        setIsDeleting(true);
+        try {
+            await deleteProduct(productToDelete.id);
+            setIsDeleteModalOpen(false);
+            setProductToDelete(null);
+            handleRefresh();
+            // Invalidate POS products too
+            queryClient.invalidateQueries({ queryKey: ['pos-products'] });
+        } catch (error) {
+            console.error("Failed to delete product:", error);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const columns: ColumnDef<any>[] = useMemo(() => [
         {
@@ -220,6 +249,7 @@ export default function ProductsManagementPage() {
                     <Button 
                         variant="ghost"
                         size="icon"
+                        onClick={() => confirmDelete(row.original)}
                         className="w-9 h-9 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 rounded-xl"
                     >
                         <Trash size={16} />
@@ -337,6 +367,50 @@ export default function ProductsManagementPage() {
                 onSuccess={() => handleRefresh()}
                 mode="master"
             />
+
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && createPortal(
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+                    <div 
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" 
+                        onClick={() => !isDeleting && setIsDeleteModalOpen(false)} 
+                    />
+                    
+                    <div className="relative z-10 w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-600 dark:text-rose-400 mx-auto mb-4">
+                                <Trash size={20} />
+                            </div>
+                            <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">Delete Product?</h3>
+                            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-relaxed">
+                                Are you sure you want to delete <span className="text-rose-500">"{productToDelete?.name}"</span>? This action cannot be undone.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3 p-6 pt-0">
+                            <button
+                                onClick={() => setIsDeleteModalOpen(false)}
+                                disabled={isDeleting}
+                                className="flex-1 py-3 px-4 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50"
+                            >
+                                No, Keep it
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={isDeleting}
+                                className="flex-1 py-3 px-4 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/20 disabled:opacity-50 flex items-center justify-center"
+                            >
+                                {isDeleting ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    "Yes, Delete"
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
     )
 }
