@@ -5,24 +5,19 @@ import {
   DollarSign, 
   TrendingUp, 
   FileText, 
-  CheckCircle, 
   AlertCircle, 
   PieChart, 
   Download, 
   Search, 
-  Loader2, 
   ArrowDownRight,
-  ArrowRight,
   Package,
-  ShoppingCart,
   Receipt,
   Layers,
   Percent,
   Scale,
-  Wallet,
   Activity
 } from 'lucide-react';
-import { getMonthlyCloseReport, getFinanceSummary, type MonthlyCloseData } from '../../api/finance.api';
+import { getMonthlyCloseReport, getFinanceSummary } from '../../api/finance.api';
 import { formatCurrency, getCategoryLabel } from '../../utils/expense-utils';
 import { toLocalYMD } from '../../utils/format';
 import MetricCard from '../../components/global-components/MetricCard';
@@ -31,6 +26,7 @@ import { DataTable } from '../../components/global-components/data-table-2';
 import { MonthPicker } from '../../components/global-components/Calendar/MonthPicker';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
+import { exportToExcel } from '../../utils/excel-export';
 
 const MonthlyCloseReport: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(toLocalYMD(new Date()).slice(0, 7));
@@ -261,19 +257,15 @@ const MonthlyCloseReport: React.FC = () => {
 
   const handleExport = () => {
     if (!summary) return;
-    const headers = ['Ledger Item', 'Category', 'Amount', 'Percentage'];
-    const rows = tableRows.map(r => [
-      r.item,
-      r.category,
-      r.amount.toFixed(2),
-      r.percentage.toFixed(1) + '%'
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Monthly-Close-${selectedMonth}.csv`;
-    link.click();
+    const rows = tableRows.map(r => ({
+      'Ledger Item': r.item,
+      'Category': r.category,
+      'Amount (PKR)': Number(r.amount),
+      'Revenue Share': r.percentage.toFixed(1) + '%',
+      'Impact': r.status.toUpperCase()
+    }));
+    
+    exportToExcel(rows, `Monthly-Close-${selectedMonth}`, 'Audit Statement');
   };
 
   const loading = summaryLoading || closeLoading;
@@ -288,7 +280,7 @@ const MonthlyCloseReport: React.FC = () => {
         title={`${getMonthName(selectedMonth)} Closing`}
         description="Comprehensive audit and final monthly statement"
         primaryAction={{
-          label: "Export CSV",
+          label: "Export XLS",
           icon: Download,
           onClick: handleExport
         }}
