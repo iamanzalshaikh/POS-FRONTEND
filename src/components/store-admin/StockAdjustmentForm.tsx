@@ -3,9 +3,10 @@ import { Search, Plus, Minus, CheckCircle, Package, Loader2 } from 'lucide-react
 import { adjustStock } from '@/api/inventory.api';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 
 const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], onSuccess?: () => void }) => {
-    const [quantity, setQuantity] = useState(1);
+    const [quantity, setQuantity] = useState(0);
     const [searchQuery, setSearchQuery] = useState('');
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
@@ -20,29 +21,25 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
             p.barcode?.includes(searchQuery)
         );
     }, [products, searchQuery]);
-
     const handleSubmit = async () => {
         if (!selectedProduct) return toast.error('Please select a product', 'Missing Data');
-        if (quantity === 0) return toast.error('Quantity cannot be zero', 'Invalid Input');
-        
-        // Smart Quantity Logic:
-        // Adjustments from the UI are often intended as "magnitudes".
-        // Damage/Return (to supplier) should be negative.
-        // Purchase/Opening Stock should be positive.
-        // General Adjustment keeps its current sign set by +/- buttons.
-        let adjustedQuantity = quantity;
-        if (changeType === 'DAMAGE' && quantity > 0) adjustedQuantity = -quantity;
-        if (changeType === 'RETURN' && quantity > 0) adjustedQuantity = -quantity;
-
-        // Frontend validation for negative stock resulting from adjustment
         const currentStock = selectedProduct.inventoryStock?.totalQuantity || 0;
-        const projectedStock = currentStock + adjustedQuantity;
+        
+        // Calculate the difference between the target quantity and current stock
+        let adjustedQuantity = quantity - currentStock;
+
+        // Validation for negative stock
+        const projectedStock = quantity;
 
         if (projectedStock < 0) {
             return toast.error(
-                `Insufficient stock for this deduction. Current: ${currentStock}, adjustment: ${adjustedQuantity}. You cannot have negative stock.`,
+                `Stock cannot be negative. Current: ${currentStock}, adjustment: ${adjustedQuantity}.`,
                 'Stock Conflict'
             );
+        }
+
+        if (adjustedQuantity === 0) {
+            return toast.error('No change detected in stock quantity.', 'Invalid Input');
         }
 
         try {
@@ -56,7 +53,7 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
             });
             
             // Reset form
-            setQuantity(1);
+            setQuantity(0);
             setSearchQuery('');
             setSelectedProduct(null);
             setNotes('');
@@ -118,12 +115,14 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                                                 setSelectedProduct(p);
                                                 setSearchQuery(p.name);
                                                 setIsDropdownOpen(false);
+                                                setQuantity(p.inventoryStock?.totalQuantity || 0);
                                             }}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' || e.key === ' ') {
                                                     setSelectedProduct(p);
                                                     setSearchQuery(p.name);
                                                     setIsDropdownOpen(false);
+                                                    setQuantity(p.inventoryStock?.totalQuantity || 0);
                                                 }
                                             }}
                                         >
@@ -187,11 +186,12 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                         />
                     </div>
                 </div>
-
-                {/* Adjustment Details */}
-                <div className="space-y-6">
-                    <div className="space-y-2 text-center">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Quantity Adjustment</label>
+                
+                {/* Adjustment Details Column */}
+                <div className="space-y-8">
+                    <div className="space-y-6 text-center bg-slate-50/50 dark:bg-slate-800/30 p-6 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Stock Level Adjustment</label>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest -mt-2">Set target quantity</p>
                         <div className="flex items-center justify-center gap-6 mt-4">
                             <Button 
                                 variant="outline"
@@ -200,8 +200,14 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                             >
                                 <Minus size={24} strokeWidth={3} />
                             </Button>
-                            <div className="w-24 text-center">
-                                <span className="text-5xl font-black text-gray-900 tracking-tighter tabular-nums">{quantity}</span>
+                            <div className="w-32 text-center flex flex-col items-center justify-center">
+                                <span className={cn(
+                                    "text-5xl font-black tracking-tighter tabular-nums leading-none",
+                                    selectedProduct ? "text-blue-600 animate-pulse" : "text-gray-300"
+                                )}>
+                                    {quantity}
+                                </span>
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-2">New Total</span>
                             </div>
                             <Button 
                                 variant="outline"
@@ -212,39 +218,24 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                             </Button>
                         </div>
 
-                        {/* Projected Stock Preview */}
                         {selectedProduct && (
-                            <div className="mt-6 flex flex-col items-center">
-                                <div className={`px-6 py-2 rounded-2xl border-2 flex items-center gap-3 transition-all ${
-                                    (selectedProduct.inventoryStock?.totalQuantity || 0) + (
-                                        (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
-                                    ) < 0 
-                                    ? 'bg-rose-50 border-rose-200 text-rose-600' 
-                                    : 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                                }`}>
-                                    <div className="text-left">
-                                        <div className="text-[8px] font-black uppercase tracking-widest opacity-60">Projected Result</div>
-                                        <div className="text-xs font-black tracking-tighter">
-                                            {(selectedProduct.inventoryStock?.totalQuantity || 0)} 
-                                            <span className="mx-1">→</span>
-                                            {(selectedProduct.inventoryStock?.totalQuantity || 0) + (
-                                                (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
-                                            )}
+                            <div className="mt-4 flex flex-col items-center">
+                                <div className={cn(
+                                    "px-6 py-3 rounded-2xl border-2 flex items-center gap-4 transition-all",
+                                    (quantity - (selectedProduct.inventoryStock?.totalQuantity || 0)) < 0 
+                                    ? 'bg-rose-50 border-rose-100 text-rose-600' 
+                                    : (quantity - (selectedProduct.inventoryStock?.totalQuantity || 0)) > 0
+                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                                    : 'bg-slate-50 border-slate-100 text-slate-400'
+                                )}>
+                                    <div className="flex flex-col items-center">
+                                        <div className="text-[8px] font-black uppercase tracking-widest opacity-60">Adjustment Delta</div>
+                                        <div className="text-sm font-black tracking-tighter">
+                                            {quantity - (selectedProduct.inventoryStock?.totalQuantity || 0) > 0 ? '+' : ''}
+                                            {quantity - (selectedProduct.inventoryStock?.totalQuantity || 0)} Units
                                         </div>
                                     </div>
-                                    {(selectedProduct.inventoryStock?.totalQuantity || 0) + (
-                                        (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
-                                    ) < 0 && (
-                                        <div className="p-1.5 bg-rose-600 text-white rounded-lg animate-pulse">
-                                            <Minus size={10} strokeWidth={4} />
-                                        </div>
-                                    )}
                                 </div>
-                                {(selectedProduct.inventoryStock?.totalQuantity || 0) + (
-                                    (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
-                                ) < 0 && (
-                                    <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mt-2">Cannot satisfy deduction from current stock</p>
-                                )}
                             </div>
                         )}
                     </div>
@@ -265,9 +256,8 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                         disabled={
                             isSubmitting || 
                             !selectedProduct || 
-                            ((selectedProduct.inventoryStock?.totalQuantity || 0) + (
-                                (changeType === 'DAMAGE' || changeType === 'RETURN') ? -quantity : quantity
-                            ) < 0)
+                            quantity < 0 ||
+                            quantity === (selectedProduct.inventoryStock?.totalQuantity || 0)
                         }
                         className="w-full h-14 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-[2px] shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
                     >

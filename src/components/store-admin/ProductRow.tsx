@@ -1,8 +1,8 @@
 import ProductStockBadge from "./ProductStockBadge"
-import { Trash, Plus, Box } from "lucide-react"
+import { Trash, Plus, Box, Edit } from "lucide-react"
 import { formatCurrency } from "@/utils/format"
 
-export default function ProductRow({ product, index }: any) {
+export default function ProductRow({ product, index, onEdit }: any) {
 
     return (
         <tr className="border-b-2 border-black last:border-0 hover:bg-slate-50 transition-all duration-300 group cursor-pointer">
@@ -81,6 +81,13 @@ export default function ProductRow({ product, index }: any) {
                     >
                         <Plus size={16} />
                         <span className="text-[10px] font-black uppercase text-indigo-600">Stock</span>
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onEdit?.(product); }}
+                        className="p-2 text-indigo-600 hover:bg-white border border-transparent hover:border-indigo-100 rounded-xl transition-all active:scale-90 flex items-center gap-1.5 shadow-sm"
+                        title="Edit Product"
+                    >
+                        <Edit size={16} />
                     </button>
                     <button className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all active:scale-90">
                         <Trash size={16} />

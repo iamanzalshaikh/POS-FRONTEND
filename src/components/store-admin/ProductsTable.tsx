@@ -3,7 +3,7 @@ import ProductRow from "./ProductRow"
 import AddStockModal from "./AddStockModal"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
-export default function ProductsTable({ data, onRefresh }: any) {
+export default function ProductsTable({ data, onRefresh, onEdit }: any) {
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
@@ -48,6 +48,7 @@ export default function ProductsTable({ data, onRefresh }: any) {
                                         key={p.id} 
                                         product={{...p, onAddStock: handleAddStock}} 
                                         index={startIndex + i + 1} 
+                                        onEdit={onEdit}
                                     />
                                 ))
                             ) : (

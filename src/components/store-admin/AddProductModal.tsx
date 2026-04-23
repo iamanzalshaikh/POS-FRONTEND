@@ -2,7 +2,7 @@ import { X, Package, Tag, Archive, UploadCloud, Info, DollarSign, CheckCircle2, 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { createPortal } from 'react-dom';
-import { createProduct } from '@/api/products.api';
+import { createProduct, updateProduct } from '@/api/products.api';
 import { getCategories } from '@/api/category.api';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
@@ -23,9 +23,10 @@ interface AddProductModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   mode?: "opening" | "master";
+  product?: any;
 }
 
-export default function AddProductModal({ open, onClose, onSuccess, mode = "opening" }: AddProductModalProps) {
+export default function AddProductModal({ open, onClose, onSuccess, mode = "opening", product }: AddProductModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -46,6 +47,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const isMasterOnly = mode === "master";
+  const isEdit = !!product;
 
   const getCategoryCode = (id: string) => {
     const cat = categories.find((c) => c.id === id);
@@ -64,13 +66,33 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     if (open) {
       document.body.style.overflow = 'hidden';
       void fetchCategories();
+      
+      if (product) {
+        setName(product.name || '');
+        setSku(product.sku || '');
+        setBarcode(product.barcode || '');
+        setCategoryId(product.categoryId || '');
+        setDescription(product.description || '');
+        setPurchasePrice(String(product.purchasePrice || '0'));
+        setSellingPrice(String(product.sellingPrice || '0'));
+        setTaxPercentage(String(product.taxPercentage || '18'));
+        setDiscountPercentage(String(product.discountPercentage || '0'));
+        setReorderLevel(String(product.reorderLevel || '10'));
+        setUnitType(product.unitType || 'PIECE');
+        setUnitQuantity(product.unitQuantity ? String(product.unitQuantity) : '');
+        if (product.image) {
+          setImagePreview(`http://localhost:3005${product.image}`);
+        }
+      } else {
+        resetForm();
+      }
     } else {
       document.body.style.overflow = 'unset';
     }
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [open]);
+  }, [open, product]);
 
   const fetchCategories = async () => {
     try {
@@ -127,12 +149,12 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     formData.append('sku', sku.trim());
     formData.append('barcode', barcode.trim());
     formData.append('categoryId', categoryId);
-    formData.append('purchasePrice', isMasterOnly ? '0' : purchasePrice);
-    formData.append('sellingPrice', isMasterOnly ? '0' : sellingPrice);
+    formData.append('purchasePrice', (isMasterOnly && !isEdit) ? '0' : purchasePrice);
+    formData.append('sellingPrice', (isMasterOnly && !isEdit) ? '0' : sellingPrice);
     formData.append('taxPercentage', taxPercentage);
     formData.append('discountPercentage', discountPercentage);
-    formData.append('initialStock', isMasterOnly ? '0' : initialStock);
-    formData.append('reorderLevel', isMasterOnly ? '0' : reorderLevel);
+    formData.append('initialStock', (isMasterOnly && !isEdit) ? '0' : initialStock);
+    formData.append('reorderLevel', (isMasterOnly && !isEdit) ? '0' : reorderLevel);
     formData.append('unitType', unitType);
     if (description.trim()) formData.append('description', description.trim());
     const uq = unitQuantity.trim();
@@ -141,8 +163,13 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     if (imageFile) formData.append('image', imageFile);
 
     try {
-      await createProduct(formData);
-      toast.success('Product created successfully', "Inventory Updated");
+      if (isEdit) {
+        await updateProduct(product.id, formData);
+        toast.success('Product updated successfully', "Catalog Synchronized");
+      } else {
+        await createProduct(formData);
+        toast.success('Product created successfully', "Inventory Updated");
+      }
       onSuccess?.();
       handleClose();
       resetForm();
@@ -178,7 +205,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               <Package size={20} />
             </div>
             <h2 className="text-sm font-black text-[#1e293b] dark:text-white uppercase tracking-widest">
-              {isMasterOnly ? "Add Product" : "Add Opening Product"}
+              {isEdit ? "Edit Product Info" : isMasterOnly ? "Add Product" : "Add Opening Product"}
             </h2>
           </div>
           <button
@@ -292,7 +319,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {!isMasterOnly && (
+            {true && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <DollarSign size={14} />
@@ -426,7 +453,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {!isMasterOnly && (
+            {true && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <Archive size={14} />
@@ -503,7 +530,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               ) : (
                 <>
                   <CheckCircle2 size={18} />
-                  <span>Save product</span>
+                  <span>{isEdit ? "Update details" : "Save product"}</span>
                 </>
               )}
             </Button>

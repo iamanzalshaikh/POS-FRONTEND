@@ -210,10 +210,7 @@ const StockLevelsPage = () => {
                     <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Stock Levels</h1>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-600 dark:text-slate-400 font-bold text-sm shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-[#2563EB]/30 hover:text-[#2563EB] transition-all">
-                        <Download size={18} />
-                        Export CSV
-                    </button>
+
                     <button 
                         onClick={() => navigate('/store-admin/inventory/adjustments')}
                         className="flex items-center gap-2 px-4 py-2.5 bg-[#1E1B4B] dark:bg-blue-600 rounded-xl text-white font-bold text-sm shadow-lg shadow-[#1E1B4B]/20 dark:shadow-blue-500/20 hover:bg-[#2563EB] dark:hover:bg-blue-700 transition-all border border-[#1E1B4B]/20 dark:border-blue-500"

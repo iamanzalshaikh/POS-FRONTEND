@@ -193,7 +193,7 @@ const ReportsPage = () => {
                     <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed px-4">{error}</p>
                     <Button
                         onClick={() => window.location.reload()}
-                        className="w-full h-14 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+                        className="w-full h-14 bg-[#1E1B4B] text-white rounded-3xl font-black uppercase tracking-widest hover:bg-opacity-90 shadow-xl shadow-indigo-950/20 active:scale-95 transition-all"
                     >
                         Try Again
                     </Button>

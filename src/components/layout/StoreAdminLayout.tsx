@@ -56,6 +56,8 @@ export default function StoreAdminLayout() {
                     <Outlet />
                 </main>
             </div>
+
+            <div id="admin-toasts" className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] flex flex-col gap-4 pointer-events-none" />
         </div>
     );
 }

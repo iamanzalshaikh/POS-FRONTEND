@@ -13,13 +13,13 @@ const ReportsHeader: React.FC<ReportsHeaderProps> = ({ activeTab, onTabChange, d
       <div className="flex space-x-4">
         <button 
           onClick={() => onTabChange('sales')}
-          className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'sales' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border'}`}
+          className={`px-4 py-2 font-bold rounded-lg transition-all ${activeTab === 'sales' ? 'bg-[#1E1B4B] text-white shadow-lg shadow-indigo-950/20' : 'bg-white text-slate-600 border'}`}
         >
           Sales Report
         </button>
         <button 
           onClick={() => onTabChange('inventory')}
-          className={`px-4 py-2 font-bold rounded-lg ${activeTab === 'inventory' ? 'bg-blue-600 text-white' : 'bg-white text-slate-600 border'}`}
+          className={`px-4 py-2 font-bold rounded-lg transition-all ${activeTab === 'inventory' ? 'bg-[#1E1B4B] text-white shadow-lg shadow-indigo-950/20' : 'bg-white text-slate-600 border'}`}
         >
           Inventory Report
         </button>
