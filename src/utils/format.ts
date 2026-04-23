@@ -114,18 +114,21 @@ export const formatInvoiceNumber = (invoice: string | null | undefined): string 
     if (!invoice) return 'N/A';
     const str = String(invoice).trim();
     
-    // If it has a dash, typically the last part is the sequence
-    // EXCEPT for OFF- prefix which we want to keep
+    // If it has a dash, check for REF prefix
     if (str.includes('-')) {
         const parts = str.split('-');
-        if (parts[0].toUpperCase() === 'OFF') {
-            return `OFF-${parts[parts.length - 1]}`;
+        const prefix = parts[0].toUpperCase();
+        
+        // Always preserve REF prefix
+        if (prefix === 'REF') {
+            return `REF-${parts[parts.length - 1]}`;
         }
+        
+        // For other dashed formats (like legacy or specific ids), return the last part
         return parts[parts.length - 1];
     }
     
     // If it's a long numeric string starting with a date (YYYYMMDD), strip the first 8 digits
-    // We check for at least 10 digits as some might be shorter sequence parts
     if (/^\d{10,20}$/.test(str)) {
         return str.slice(-6);
     }

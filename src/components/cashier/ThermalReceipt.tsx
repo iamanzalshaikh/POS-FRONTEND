@@ -128,6 +128,57 @@ function lineItemGst(item: any, subtotal: number): number {
   return 0;
 }
 
+/**
+ * WEIGHTED AVERAGE LOGIC: Aggregates items by product for receipt display
+ */
+function aggregateReceiptItems(items: any[]): any[] {
+  if (!items || items.length <= 1) return items;
+  
+  const grouped = new Map<string, any>();
+
+  items.forEach((item) => {
+    // Group by product identification
+    const productId = item.productId || item.product?.id || item.productName || item.name || 'unknown';
+    
+    if (!grouped.has(productId)) {
+      grouped.set(productId, {
+        ...item,
+        quantity: 0,
+        subtotal: 0,
+        tax: 0,
+        discountAmount: 0,
+        // We'll store the raw revenue (price * qty) to compute the weighted average later
+        _revenueForAveraging: 0,
+      });
+    }
+
+    const g = grouped.get(productId);
+    const qty = Number(item.quantity || 0);
+    const unitPrice = Number(item.price || item.unitPrice || 0);
+    const discount = Number(item.discountAmount || 0);
+    const tax = Number(item.tax || 0);
+    // Explicit subtotal or derived
+    const subtotal = Number(item.subtotal || (qty * unitPrice));
+
+    g.quantity += qty;
+    g.subtotal += subtotal;
+    g.tax += tax;
+    g.discountAmount += discount;
+    g._revenueForAveraging += (qty * unitPrice);
+  });
+
+  return Array.from(grouped.values()).map(g => {
+    // Calculate the weighted average price
+    const averagePrice = g.quantity > 0 ? g._revenueForAveraging / g.quantity : 0;
+    
+    return {
+      ...g,
+      price: averagePrice,
+      unitPrice: averagePrice,
+    };
+  });
+}
+
 interface ThermalReceiptProps {
   sale: any;
 }
@@ -240,7 +291,7 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ sale }) => {
             </tr>
           </thead>
           <tbody>
-            {items.map((item: any, idx: number) => {
+            {aggregateReceiptItems(items).map((item: any, idx: number) => {
               const productName = item.productName || item.product?.name || item.name || 'Unknown Product';
               const unitPrice = Number(item.price || item.unitPrice || 0);
               const quantity = Number(item.quantity || 1);

@@ -80,17 +80,31 @@ const DeviceSelection: React.FC = () => {
    * - Navigate to POS Terminal
    */
   const handleUseDevice = async (device: Device) => {
+    // 🔀 INTERLEAVING LOGIC: Determine this terminal's 'lane' among all active terminals.
+    // We sort by ID to ensure stable lane numbers across all cashier logins.
+    const activeDevices = devices.filter(d => d.isActive);
+    const sortedDevices = [...activeDevices].sort((a, b) => a.id.localeCompare(b.id));
+    const laneIndex = sortedDevices.findIndex(d => d.id === device.id);
+    
+    // Lane is 1-based (Terminal 1, Terminal 2, etc.)
+    const terminalLane = laneIndex !== -1 ? laneIndex + 1 : 1;
+    const totalLanes = Math.max(1, sortedDevices.length);
+
+    console.log(`📡 [DeviceSelection] Attaching to Lane ${terminalLane} of ${totalLanes} (Total Terminals)`);
+
     setSelectingId(device.id);
     setError(null);
     try {
       // Heartbeat to attach cashier to terminal
       await devicesApi.heartbeat(device.id);
 
-      // Save device to persistent store
+      // Save device to persistent store with lane info
       setDevice({
         deviceId: device.id,
         deviceName: device.deviceName || 'POS Terminal',
         lastHeartbeatAt: new Date().toISOString(),
+        terminalLane,
+        totalLanes,
       });
 
       // Navigate to POS Terminal
