@@ -313,7 +313,7 @@ const MonthlyCloseReport: React.FC = () => {
           isCurrency={true}
           icon={DollarSign}
           colorClass="bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/30 dark:border-blue-900/50"
-          description={`Net Sales Revenue`}
+          subtitle={`Net Sales Revenue`}
         />
         <MetricCard
           title="Gross Profit"

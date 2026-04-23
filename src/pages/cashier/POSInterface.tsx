@@ -938,8 +938,8 @@ const POSInterface: React.FC = () => {
 
   return (
     <div className="w-full overflow-hidden">
-      <div className="flex flex-col h-screen max-h-screen bg-slate-100 dark:bg-slate-950">
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 shadow-sm transition-colors duration-500 m-0">
+      <div className="flex flex-col h-screen max-h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm transition-colors duration-500 m-0">
       {/* Offline Banner */}
       {isOnline === false && (
         <div className="flex items-center justify-between px-6 py-3 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm font-medium">
@@ -1022,10 +1022,9 @@ const POSInterface: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
           {/* Left: Product Selection */}
-          <section className="flex-[1.2] flex flex-col lg:min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-transparent">
+          <section className="flex-[1.2] flex flex-col min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-white dark:bg-slate-900">
             {/* Barcode Scanner */}
             <form onSubmit={handleScanSubmit} className="flex-shrink-0">
               <div className="relative">
@@ -1059,7 +1058,7 @@ const POSInterface: React.FC = () => {
               </div>
 
               {/* Table (Scrollable area) */}
-              <div className="flex-1 overflow-auto px-2 py-1 custom-scrollbar">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-2 py-1">
                 <ProductsTable
                   products={filteredProducts}
                   loading={productsLoading}
@@ -1130,7 +1129,7 @@ const POSInterface: React.FC = () => {
     </section>
 
     {/* Right: Added Products & Active Checkout Stack */}
-    <aside className="flex-1 min-w-[380px] max-w-[450px] flex flex-col bg-white overflow-hidden flex-shrink-0 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] z-20">
+    <aside className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] z-20">
       <div className="flex-1 flex flex-col overflow-hidden border-b border-slate-200">
         <div className="px-5 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
                 <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
@@ -1505,7 +1504,7 @@ const POSInterface: React.FC = () => {
         </div>
       </div>
       </div>
-      </div>
+      
       
       {/* Hidden Receipt for direct thermal printing */}
       <ThermalReceipt sale={lastSaleForReceipt} />

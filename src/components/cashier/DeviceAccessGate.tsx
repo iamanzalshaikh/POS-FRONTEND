@@ -325,7 +325,7 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
               </div>
               <button
                 onClick={handleLogout}
-                disabled={isSelecting || isLoading}
+                disabled={isSelecting}
                 className="flex items-center gap-2 py-3 px-6 bg-white dark:bg-slate-800 border-2 border-rose-100 dark:border-rose-900/30 text-rose-600 dark:text-rose-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all active:scale-95"
               >
                 <LogOut size={14} />

@@ -19,3 +19,11 @@ export const getSuperAdminOverview = (params?: { startDate: string; endDate: str
 export const getAuditLogs = (params?: any) => {
     return api.get("/reports/audit-logs", { params }).then(res => res.data);
 };
+
+export const getCashierAuditLogs = (params?: any) => {
+    return api.get("/reports/audit-logs/supermarket/cashier", { params }).then(res => res.data);
+};
+
+export const getFinanceAuditLogs = (params?: any) => {
+    return api.get("/reports/audit-logs/supermarket/finance", { params }).then(res => res.data);
+};
