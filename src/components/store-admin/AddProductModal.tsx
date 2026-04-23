@@ -319,7 +319,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {true && (
+            {(!isMasterOnly || isEdit) && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <DollarSign size={14} />
@@ -453,7 +453,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {true && (
+            {(!isMasterOnly || isEdit) && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <Archive size={14} />
