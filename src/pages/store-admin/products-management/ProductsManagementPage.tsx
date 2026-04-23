@@ -7,7 +7,7 @@ import MetricCard from "@/components/global-components/MetricCard";
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
-import { Plus, Trash, Box, Search, ShoppingCart, PackageOpen, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Plus, Trash, Edit, Box, Search, ShoppingCart, PackageOpen, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { formatCurrencyShort, formatAmountShort, formatNumberShort } from "@/utils/format";
 import AddStockModal from "@/components/store-admin/AddStockModal";
@@ -33,9 +33,10 @@ export default function ProductsManagementPage() {
     const [limit] = useState(25);
     const queryClient = useQueryClient();
 
-    // Delete state
+    // Delete and Edit state
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [productToDelete, setProductToDelete] = useState<any>(null);
+    const [productToEdit, setProductToEdit] = useState<any>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Reset page when filters change
@@ -245,7 +246,14 @@ export default function ProductsManagementPage() {
             header: "Actions",
             cell: ({ row }) => (
                 <div className="flex justify-center items-center gap-2">
-                    
+                    <Button 
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setProductToEdit(row.original)}
+                        className="w-9 h-9 text-slate-300 dark:text-slate-700 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 rounded-xl"
+                    >
+                        <Edit size={16} />
+                    </Button>
                     <Button 
                         variant="ghost"
                         size="icon"
@@ -365,6 +373,14 @@ export default function ProductsManagementPage() {
                 open={openMasterModal}
                 onClose={() => setOpenMasterModal(false)}
                 onSuccess={() => handleRefresh()}
+                mode="master"
+            />
+
+            <AddProductModal
+                open={!!productToEdit}
+                onClose={() => setProductToEdit(null)}
+                onSuccess={() => handleRefresh()}
+                product={productToEdit}
                 mode="master"
             />
 
