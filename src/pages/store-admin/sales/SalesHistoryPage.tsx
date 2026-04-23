@@ -73,21 +73,16 @@ const SalesHistoryPage = () => {
 
     const reportData = dashboardDataRes?.data || dashboardDataRes;
 
-    // Calculate metrics locally from transaction ledger
+    // Use server-side aggregated metrics instead of local paginated calculation
     const summary = useMemo(() => {
+        const s = reportData?.summary;
         return {
-            revenue: transactions
-                .filter((t: any) => ['paid', 'completed', 'partially_refunded', 'refunded'].includes(String(t.paymentStatus).toLowerCase()))
-                .reduce((sum: number, t: any) => sum + getSaleGrandTotal(t), 0),
-            salesCount: transactions
-                .filter((t: any) => ['paid', 'completed', 'partially_refunded', 'refunded'].includes(String(t.paymentStatus).toLowerCase()) && !t.isReversal)
-                .length,
-            discount: transactions.reduce((sum: number, t: any) => sum + Number(t.discountAmount || t.discount || 0), 0),
-            refunds: transactions
-                .filter((t: any) => String(t.paymentStatus).toLowerCase() === 'refunded' || t.isReversal)
-                .reduce((sum: number, t: any) => sum + Math.abs(getSaleGrandTotal(t)), 0)
+            revenue: Number(s?.totalRevenue ?? 0),
+            salesCount: Number(s?.totalTransactions ?? 0),
+            discount: Number(s?.totalDiscount ?? 0),
+            refunds: Number(s?.totalRefunds ?? 0)
         };
-    }, [transactions]);
+    }, [reportData]);
 
     // Generate full timeline for the chart (fills missing dates with 0)
     const chartsData = useMemo(() => {
@@ -127,11 +122,17 @@ const SalesHistoryPage = () => {
             header: "Invoice",
             accessorKey: "invoiceNumber",
             meta: { align: 'left' },
-            cell: ({ row }) => (
-                <div className="min-w-[100px]">
-                    <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">#{formatInvoiceNumber(row.original.invoiceNumber || row.original.id)}</p>
-                </div>
-            )
+            cell: ({ row }) => {
+                const inv = formatInvoiceNumber(row.original.invoiceNumber || row.original.id);
+                const isSpecial = inv.startsWith('REF') || inv.startsWith('OFF');
+                return (
+                    <div className="min-w-[100px]">
+                        <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                            {isSpecial ? inv : `#${inv}`}
+                        </p>
+                    </div>
+                );
+            }
         },
         {
             id: "saleDate",
