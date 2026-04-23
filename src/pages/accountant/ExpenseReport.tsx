@@ -2,10 +2,12 @@ import React, { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, FileSpreadsheet, Calendar, Filter, TrendingUp } from 'lucide-react';
 import { getExpenses, getExpenseCategories } from '../../api/expenses.api';
-import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES, formatCurrency, formatDate, getCategoryLabel } from '../../utils/expense-utils';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
+
+
+import { exportToExcel } from '../../utils/excel-export';
 
 
 const ExpenseReport: React.FC = () => {
@@ -50,11 +52,17 @@ const ExpenseReport: React.FC = () => {
   const expenses = useMemo(() => {
     if (!fetched) return [];
     let filtered = rawExpenses;
+    
+    // Normalize user selected dates to midnight
     const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Include the entire end day
     
     filtered = filtered.filter((expense: any) => {
       const expenseDate = new Date(expense.date);
+      // We don't normalize expenseDate to midnight because we have end at 23:59:59
+      // This allows entries with timestamps on the same day to be included.
       return expenseDate >= start && expenseDate <= end;
     });
 
@@ -63,7 +71,10 @@ const ExpenseReport: React.FC = () => {
         const customId = selectedCategory.replace('CUSTOM:', '');
         filtered = filtered.filter((expense: any) => expense.customCategoryId === customId);
       } else {
-        filtered = filtered.filter((expense: any) => expense.category === selectedCategory);
+        // Case-insensitive match just in case
+        filtered = filtered.filter((expense: any) => 
+          expense.category.toUpperCase() === selectedCategory.toUpperCase()
+        );
       }
     }
     return filtered;
@@ -101,32 +112,23 @@ const ExpenseReport: React.FC = () => {
     return { total, byCategory: combined };
   };
 
-  const handleExportCSV = () => {
+  const handleExportXLSX = () => {
     if (expenses.length === 0) return;
-    const headers = ['ID', 'Category', 'Description', 'Amount', 'Date', 'Notes'];
+    
     const rows = expenses.map(e => {
       const customCat = customCategories.find(c => c.id === e.customCategoryId);
       const catLabel = customCat ? customCat.name : getCategoryLabel(e.category);
-      return [
-        e.id,
-        catLabel,
-        `"${e.description.replace(/"/g, '""')}"`,
-        Number(e.amount).toFixed(2),
-        e.date,
-        `"${(e.notes || '').replace(/"/g, '""')}"`,
-      ];
+      return {
+        'Ref ID': e.id.slice(-8).toUpperCase(),
+        'Date': e.date,
+        'Category': catLabel,
+        'Description': e.description,
+        'Amount': Number(e.amount),
+        'Notes': e.notes || '—'
+      };
     });
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(',')),
-    ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.body.appendChild(document.createElement('a'));
-    link.href = URL.createObjectURL(blob);
-    link.download = `expense-report-${startDate}-to-${endDate}.csv`;
-    link.click();
-    document.body.removeChild(link);
+    exportToExcel(rows, `Expense-Report-${startDate}-to-${endDate}`, 'Expenses');
   };
 
   const totals = calculateTotals();
@@ -137,9 +139,9 @@ const ExpenseReport: React.FC = () => {
         title="Expense Report"
         description="Generate and export detailed expense summaries"
         primaryAction={{
-          label: "Export CSV",
+          label: "Export XLS",
           icon: Download,
-          onClick: handleExportCSV
+          onClick: handleExportXLSX
         }}
       />
 
@@ -285,10 +287,55 @@ const ExpenseReport: React.FC = () => {
       )}
 
       {fetched && expenses.length === 0 && (
-        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-20 text-center border border-slate-100 dark:border-slate-800">
+        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-20 text-center border-2 border-dashed border-slate-100 dark:border-slate-800">
           <FileSpreadsheet className="w-16 h-16 mx-auto mb-6 text-slate-200" />
-          <h3 className="text-lg font-black text-slate-400 uppercase tracking-widest">No data found</h3>
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-2 text-center mx-auto">Try adjusting your filters to see more results</p>
+          <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">No Reports Found</h3>
+          
+          <div className="max-w-sm mx-auto mb-8 space-y-4">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+              No expenses were found for <span className="font-black text-slate-900 dark:text-white">{selectedCategory === 'ALL' ? 'all categories' : getCategoryLabel(selectedCategory.replace('CUSTOM:', ''))}</span> within the selected date range.
+            </p>
+            
+            {(rawExpenses.length > 0) && (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 text-left">
+                <div className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">System Diagnostics</div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-slate-500">Total records in database:</span>
+                    <span className="font-black text-slate-900 dark:text-white">{rawExpenses.length}</span>
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-slate-500">Category matches found:</span>
+                    <span className="font-black text-slate-900 dark:text-white">
+                      {rawExpenses.filter(e => {
+                        if (selectedCategory === 'ALL') return true;
+                        if (selectedCategory.startsWith('CUSTOM:')) return e.customCategoryId === selectedCategory.replace('CUSTOM:', '');
+                        return e.category.toUpperCase() === selectedCategory.toUpperCase();
+                      }).length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-center gap-4">
+            <button 
+              onClick={() => {
+                setStartDate('2023-01-01');
+                setEndDate(new Date().toISOString().split('T')[0]);
+              }}
+              className="px-6 py-3 bg-slate-50 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-100 transition-all border border-slate-100 dark:border-slate-700"
+            >
+              Show All Time
+            </button>
+            <button 
+              onClick={() => setSelectedCategory('ALL')}
+              className="px-6 py-3 bg-slate-900 dark:bg-slate-800 text-[10px] font-black uppercase tracking-widest text-white rounded-xl hover:bg-slate-800 transition-all shadow-lg"
+            >
+              Reset Category
+            </button>
+          </div>
         </div>
       )}
     </div>

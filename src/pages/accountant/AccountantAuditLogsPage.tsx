@@ -6,6 +6,7 @@ import ActivityLogsTable from '@/components/shared/ActivityLogsTable';
 import { Button } from '@/components/ui/button';
 import MetricCard from '@/components/global-components/MetricCard';
 import { useDebounce } from '@/hooks';
+import { exportToExcel } from '@/utils/excel-export';
 
 const ACTION_OPTIONS = [
     { label: 'Expense Created', value: 'EXPENSE_CREATED' },
@@ -50,26 +51,16 @@ const AccountantAuditLogsPage: React.FC = () => {
 
     const handleExport = () => {
         if (!logs.length) return;
-        const headers = ["Time", "Action", "Module", "Resource ID", "Value Updated"];
-        const rows = logs.map((log: any) => [
-            new Date(log.createdAt).toLocaleString(),
-            log.action,
-            log.module,
-            log.entityId || 'N/A',
-            JSON.stringify(log.newValue || {})
-        ]);
         
-        const csvContent = "data:text/csv;charset=utf-8," 
-            + headers.join(",") + "\n"
-            + rows.map((e: any) => e.join(",")).join("\n");
+        const rows = logs.map((log: any) => ({
+            'Log Timestamp': new Date(log.createdAt).toLocaleString(),
+            'Security Action': log.action,
+            'System Module': log.module,
+            'Resource Identifier': log.entityId || 'N/A',
+            'Change Detail': JSON.stringify(log.newValue || log.details || {})
+        }));
         
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `finance_audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        exportToExcel(rows, `Financial-Audit-Logs-${new Date().toISOString().split('T')[0]}`, 'Audit Trail');
     };
 
     return (
