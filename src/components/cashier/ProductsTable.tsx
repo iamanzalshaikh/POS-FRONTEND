@@ -46,14 +46,14 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
     () => [
       {
         accessorKey: "name",
-        header: "Product Description",
+        header:() => <div className="text-center">Product Description</div>,
         cell: ({ row }) => {
           const product = row.original;
           return (
-            <div className="flex flex-col py-2">
-              <span className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">
+            <div className="flex flex-col items-center py-2">
+              <div className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">
                 {product.name}
-              </span>
+              </div>
               
             </div>
           );
@@ -182,10 +182,10 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
   }
 
   return (
-    <div className="p-4 w-full">
-      <div className="overflow-x-auto custom-scrollbar rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
-        <table className="w-full min-w-[600px] border-collapse">
-          <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+    <div className="h-full w-full flex flex-col overflow-hidden">
+      <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
+        <table className="w-full min-w-[600px] border-separate border-spacing-0">
+          <thead className="sticky top-0 z-10 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 shadow-sm">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (

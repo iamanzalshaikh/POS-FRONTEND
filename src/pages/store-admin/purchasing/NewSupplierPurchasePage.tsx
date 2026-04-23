@@ -469,6 +469,7 @@ export default function NewSupplierPurchasePage() {
             </div>
           </div>
         </div>
+        </div>
       </form>
     </div>
   );

@@ -30,6 +30,9 @@ interface ActivityLog {
         name: string;
     };
     details?: any;
+    metadata?: any;
+    newValue?: any;
+    oldValue?: any;
 }
 
 interface ActivityLogsTableProps {
@@ -209,12 +212,112 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                                         </td>
                                         <td className="px-8 py-5 hidden xl:table-cell">
                                             <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                                    {log.entity} Entity
-                                                </span>
-                                                <span className="text-[10px] font-black tracking-widest uppercase text-slate-400 mt-0.5 font-mono">
-                                                    ID: {log.entityId || 'N/A:SYSTEM'}
-                                                </span>
+                                                {(() => {
+                                                    // Normalize the data format from different audit tables
+                                                    const data = log.newValue || log.details || log.metadata || {};
+                                                    
+                                                    if (log.action === 'CREATE_SALE') {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    {data.invoiceNumber ? `#${data.invoiceNumber}` : 'New Sale'}
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-blue-600 dark:text-blue-400 mt-0.5">
+                                                                    {data.totalAmount ? `Amount: Rs ${data.totalAmount}` : 'Details Pending'}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+                                                    
+                                                    if (log.action === 'REFUND_INVOICE' || log.action === 'REFUND_SALE') {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    {data.refundInvoice || data.invoiceNumber ? `#${data.refundInvoice || data.invoiceNumber}` : 'Refund Record'}
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-rose-600 dark:text-rose-400 mt-0.5">
+                                                                    Original: {data.originalInvoice || 'N/A'}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+                                                    
+                                                    if (log.action === 'STOCK_RETURNED') {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                                                                    {data.itemsCount || 0} Items Returned
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-slate-400 mt-0.5">
+                                                                    {data.notes || 'Stock Restored'}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+                                                    
+                                                    if (log.action === 'CREATE_EXPENSE' || log.action === 'UPDATE_EXPENSE') {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    {data.description || 'Expense Entry'}
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-purple-600 dark:text-purple-400 mt-0.5">
+                                                                    {data.amount ? `Rs ${data.amount}` : 'N/A'} — {data.category || 'General'}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+                                                    
+                                                    if (log.action === 'PROCESS_PAYROLL') {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    Salary Payment (ID: {data.staffId?.slice(-6) || 'Staff'})
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                                                    Rs {data.amountPaid || '0.00'} — Period: {data.month}/{data.year}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+                                                    
+                                                    if (log.action === 'RECORD_SUPPLIER_PAYMENT') {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    Supplier Payment
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-blue-600 dark:text-blue-400 mt-0.5">
+                                                                    Rs {data.amount || '0.00'} ({data.method || 'CASH'})
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+                                                    
+                                                    if (log.action === 'CREATE_SUPPLIER_PURCHASE') {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    Stock Purchase (Bill)
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-indigo-600 dark:text-indigo-400 mt-0.5">
+                                                                    Total: Rs {data.totalAmount || '0.00'} — Paid: Rs {data.paidAmount || '0.00'}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+
+                                                    return (
+                                                        <>
+                                                            <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                {log.entity} Activity
+                                                            </span>
+                                                            <span className="text-[10px] font-black tracking-widest uppercase text-slate-400 mt-0.5 font-mono">
+                                                                ID: {log.entityId || 'N/A'}
+                                                            </span>
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </td>
                                     </tr>

@@ -13,6 +13,7 @@ import {
   ClipboardList,
   ListOrdered,
   User,
+  ShieldCheck,
 } from 'lucide-react';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { getFinanceSummary, getSalesReport } from '../../api/finance.api';
@@ -27,6 +28,7 @@ import ProfitLossReport from './ProfitLossReport';
 import ExportData from './ExportData';
 import MonthlyCloseReport from './MonthlyCloseReport';
 import AllTransactions from './AllTransactions';
+import AccountantAuditLogsPage from './AccountantAuditLogsPage';
 import ReceiptPage from '../cashier/ReceiptPage';
 import StaffSalaryReceipt from './StaffSalaryReceipt';
 import StaffManagementPage from './StaffManagementPage';
@@ -79,6 +81,7 @@ const AccountantDashboard: React.FC = () => {
     { name: 'Payroll', icon: Wallet, path: '/accountant/payroll' },
     { name: 'P&L', icon: PieChart, path: '/accountant/pl' },
     { name: 'Monthly Close', icon: FileText, path: '/accountant/monthly-close' },
+    { name: 'Audit Logs', icon: ShieldCheck, path: '/accountant/audit-logs' },
     { name: 'Export', icon: Download, path: '/accountant/export' },
   ];
 
@@ -121,6 +124,7 @@ const AccountantDashboard: React.FC = () => {
         <Route path="tax" element={<TaxManagement />} />
         <Route path="pl" element={<ProfitLossReport />} />
         <Route path="monthly-close" element={<MonthlyCloseReport />} />
+        <Route path="audit-logs" element={<AccountantAuditLogsPage />} />
         <Route path="export" element={<ExportData />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<Navigate to="/accountant" replace />} />
