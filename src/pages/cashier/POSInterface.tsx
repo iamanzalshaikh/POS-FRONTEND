@@ -101,7 +101,7 @@ function parseProductTaxPct(product: {
 const POSInterface: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { deviceId } = useDeviceStore();
+  const { deviceId, terminalLane, totalLanes } = useDeviceStore();
   const displayTerminalName = user?.assignedTerminals?.[0]?.deviceName ?? null;
   
   // Use online status hook with auto-sync
@@ -750,7 +750,10 @@ const POSInterface: React.FC = () => {
         // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
         console.log('🔴 [POSInterface] OFFLINE MODE - Saving sale locally...');
 
-        const nextSeq = lastSequence + offlineSyncCount + 1;
+        // 🔀 INTERLEAVING: Avoid collisions by stepping based on total terminals
+        // nextSeq = 100 + (0 * 4) + 1 = 101 (Terminal 1)
+        // nextSeq = 100 + (0 * 4) + 2 = 102 (Terminal 2)
+        const nextSeq = lastSequence + (offlineSyncCount * totalLanes) + terminalLane;
         setOfflineSyncCount(prev => prev + 1);
         
         const tempId = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;

@@ -41,7 +41,7 @@ type Sale = {
   createdAt: string;
   isReversal: boolean;
   refundSaleId?: string;
-  saleItems: SaleItem[];
+  saleItems: (SaleItem & { quantityAlreadyRefunded?: number })[];
   user: {
     name: string;
     email: string;
@@ -66,6 +66,7 @@ type ReturnItem = {
   discountPercentage: number;
   returnQuantity: number;
   maxReturnQuantity: number;
+  quantityAlreadyRefunded: number;
 };
 
 const ReturnRefundPage: React.FC = () => {
@@ -141,8 +142,9 @@ const ReturnRefundPage: React.FC = () => {
           unitPrice: up,
           discountAmount: da,
           discountPercentage: Number(item.discountPercentage || 0),
-          returnQuantity: pq,
-          maxReturnQuantity: pq,
+          quantityAlreadyRefunded: Number(item.quantityAlreadyRefunded || 0),
+          returnQuantity: Math.max(0, pq - Number(item.quantityAlreadyRefunded || 0)),
+          maxReturnQuantity: Math.max(0, pq - Number(item.quantityAlreadyRefunded || 0)),
         };
       });
       setReturnItems(items);
@@ -291,11 +293,20 @@ const ReturnRefundPage: React.FC = () => {
                       const itemNetTotal = Number(item.returnQuantity) * discountedUnitPrice;
                       
                       return (
-                        <tr key={item.saleItemId} className={cn("transition-colors", item.returnQuantity > 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : "hover:bg-slate-50 dark:hover:bg-slate-800/50")}>
+                        <tr key={item.saleItemId} className={cn(
+                            "transition-colors", 
+                            item.maxReturnQuantity === 0 ? "opacity-60 bg-slate-50 dark:bg-slate-800/30 grayscale" :
+                            item.returnQuantity > 0 ? "bg-blue-50/50 dark:bg-blue-900/10" : 
+                            "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                        )}>
                           <td className="px-8 py-5">
                             <p className="text-xs font-black text-slate-900 dark:text-white uppercase">{item.productName}</p>
                             <div className="flex items-center gap-3 mt-1.5">
-                                {perUnitDiscount > 0 ? (
+                                {item.maxReturnQuantity === 0 ? (
+                                    <span className="text-[10px] font-black text-rose-500 uppercase tracking-widest bg-rose-50 dark:bg-rose-950/30 px-2 py-0.5 rounded-md border border-rose-100 dark:border-rose-900/40">
+                                        Item Fully Refunded
+                                    </span>
+                                ) : perUnitDiscount > 0 ? (
                                     <>
                                         <span className="text-[10px] font-black text-slate-400 uppercase line-through decoration-slate-300 decoration-2">{formatCurrency(item.unitPrice)}</span>
                                         <span className="text-[10px] font-black text-pink-500 uppercase tracking-widest bg-pink-50 dark:bg-pink-950/30 px-2 py-0.5 rounded-md border border-pink-100 dark:border-pink-900/40">
@@ -309,9 +320,17 @@ const ReturnRefundPage: React.FC = () => {
                           </td>
                           <td className="px-8 py-5">
                              <div className="flex items-center justify-center gap-4">
-                                <button onClick={() => handleQuantityChange(item.saleItemId, -1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">-</button>
+                                <button 
+                                    onClick={() => handleQuantityChange(item.saleItemId, -1)} 
+                                    disabled={item.maxReturnQuantity === 0}
+                                    className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all disabled:opacity-30"
+                                >-</button>
                                 <span className="text-xs font-black w-4 text-center">{item.returnQuantity}</span>
-                                <button onClick={() => handleQuantityChange(item.saleItemId, 1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all">+</button>
+                                <button 
+                                    onClick={() => handleQuantityChange(item.saleItemId, 1)} 
+                                    disabled={item.maxReturnQuantity === 0}
+                                    className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all disabled:opacity-30"
+                                >+</button>
                              </div>
                           </td>
                           <td className="px-8 py-5 text-right">
