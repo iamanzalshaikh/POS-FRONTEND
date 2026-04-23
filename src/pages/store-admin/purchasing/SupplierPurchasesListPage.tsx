@@ -218,7 +218,7 @@ export default function SupplierPurchasesListPage() {
                         </Button>
                         <Button
                             asChild
-                            className="h-14 px-8 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200/20 flex items-center gap-2"
+                            className="h-14 px-8 bg-[#1E1B4B] text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-opacity-90 transition-all active:scale-95 shadow-xl shadow-indigo-950/20 flex items-center gap-2"
                         >
                             <Link to="/store-admin/purchasing/purchases/new">
                                 <Plus className="w-4 h-4" />

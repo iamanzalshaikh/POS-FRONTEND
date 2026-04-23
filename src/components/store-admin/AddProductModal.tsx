@@ -149,12 +149,12 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     formData.append('sku', sku.trim());
     formData.append('barcode', barcode.trim());
     formData.append('categoryId', categoryId);
-    formData.append('purchasePrice', isMasterOnly ? '0' : purchasePrice);
-    formData.append('sellingPrice', isMasterOnly ? '0' : sellingPrice);
+    formData.append('purchasePrice', (isMasterOnly && !isEdit) ? '0' : purchasePrice);
+    formData.append('sellingPrice', (isMasterOnly && !isEdit) ? '0' : sellingPrice);
     formData.append('taxPercentage', taxPercentage);
     formData.append('discountPercentage', discountPercentage);
-    formData.append('initialStock', isMasterOnly ? '0' : initialStock);
-    formData.append('reorderLevel', isMasterOnly ? '0' : reorderLevel);
+    formData.append('initialStock', (isMasterOnly && !isEdit) ? '0' : initialStock);
+    formData.append('reorderLevel', (isMasterOnly && !isEdit) ? '0' : reorderLevel);
     formData.append('unitType', unitType);
     if (description.trim()) formData.append('description', description.trim());
     const uq = unitQuantity.trim();
@@ -319,7 +319,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {!isMasterOnly && (
+            {true && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <DollarSign size={14} />
@@ -453,7 +453,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {!isMasterOnly && (
+            {true && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
                 <Archive size={14} />

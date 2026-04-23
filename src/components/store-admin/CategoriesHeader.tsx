@@ -17,7 +17,7 @@ export default function CategoriesHeader({ onAddCategory }: CategoriesHeaderProp
             <div className="flex items-center gap-4">
                 <button
                     onClick={onAddCategory}
-                    className="flex items-center gap-3 px-8 py-3.5 bg-indigo-900 border border-indigo-900/20 rounded-2xl text-white font-bold uppercase tracking-widest text-[10px] hover:bg-indigo-600 shadow-lg shadow-indigo-900/20 transition-all active:scale-95"
+                    className="flex items-center gap-3 px-8 py-3.5 bg-[#1E1B4B] border border-[#1E1B4B]/20 rounded-2xl text-white font-bold uppercase tracking-widest text-[10px] hover:bg-opacity-90 shadow-lg shadow-indigo-950/20 transition-all active:scale-95"
                 >
                     <Plus className="w-4 h-4" strokeWidth={3} />
                     Add Category

@@ -157,7 +157,7 @@ export default function StoreAdminDashboard() {
           <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 font-black tracking-tight text-xs uppercase">{error || 'Failed to establish connection to POS core.'}</p>
           <Button 
             onClick={() => window.location.reload()} 
-            className="w-full h-14 bg-blue-600 text-white rounded-3xl font-black uppercase tracking-widest hover:bg-blue-700 shadow-xl shadow-blue-500/20 active:scale-95 transition-all transition-transform"
+            className="w-full h-14 bg-[#1E1B4B] text-white rounded-3xl font-black uppercase tracking-widest hover:bg-opacity-90 shadow-xl shadow-indigo-950/20 active:scale-95 transition-all transition-transform"
           >
             Emergency Reload
           </Button>
@@ -183,7 +183,7 @@ export default function StoreAdminDashboard() {
               className={cn(
                 "px-6 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all h-auto",
                 dateRange === range
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none"
+                  ? "bg-[#1E1B4B] text-white shadow-lg shadow-indigo-950/20"
                   : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
               )}
             >

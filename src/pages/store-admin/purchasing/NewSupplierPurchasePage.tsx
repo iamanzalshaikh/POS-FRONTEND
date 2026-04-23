@@ -249,13 +249,13 @@ export default function NewSupplierPurchasePage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">
                     Vendor / Supplier <span className="text-rose-500">*</span>
                   </label>
-                  <div className="relative flex items-center">
-                    <Truck className="absolute left-4 w-4 h-4 text-slate-400 pointer-events-none" />
+                  <div className="relative flex items-center overflow-x-auto custom-scrollbar no-scrollbar">
+                    <Truck className="absolute left-4 w-4 h-4 text-slate-400 pointer-events-none shrink-0" />
                     <select
                       required
                       value={supplierId}
                       onChange={(e) => setSupplierId(e.target.value)}
-                      className="h-12 w-full pl-11 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all cursor-pointer appearance-none"
+                      className="h-12 w-full min-w-max pl-11 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all cursor-pointer appearance-none"
                     >
                       <option value="">Select Vendor...</option>
                       {suppliers.map((s) => (
@@ -331,11 +331,12 @@ export default function NewSupplierPurchasePage() {
                 <ShoppingCart size={14} className="text-indigo-500" /> Product Selection
               </h3>
               <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                <select
-                  value={selectedProductId}
-                  onChange={(e) => setSelectedProductId(e.target.value)}
-                  className="h-10 w-full sm:min-w-[260px] px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-blue-500/5 transition-all"
-                >
+                <div className="relative flex-1 sm:min-w-[260px] overflow-x-auto custom-scrollbar no-scrollbar">
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => setSelectedProductId(e.target.value)}
+                    className="h-10 w-full min-w-max px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-blue-500/5 transition-all appearance-none cursor-pointer"
+                  >
                   <option value="">Select Product...</option>
                   {products.map((p: any) => (
                     <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>

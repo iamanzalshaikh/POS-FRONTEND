@@ -16,7 +16,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-0 right-0 z-[100] flex max-h-screen w-full flex-col p-4 md:max-w-[420px]",
+      "!fixed !inset-0 z-[100] !flex !flex-col !items-center !justify-center pointer-events-none p-4 gap-2",
       className
     )}
     {...props}
@@ -25,15 +25,15 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-2xl border p-5 pr-8 shadow-2xl transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=move]:transition-none data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full",
+  "group pointer-events-auto relative flex flex-col items-center justify-center text-center w-[380px] min-h-[200px] space-y-4 overflow-hidden rounded-[3rem] border p-10 shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=move]:transition-none data-[state=closed]:fade-out-80 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-bottom-2",
   {
     variants: {
       variant: {
         default: "border bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-50",
-        destructive: "border-rose-500 bg-rose-100 text-rose-900 border-l-4 border-l-rose-600 dark:bg-rose-950/50 dark:border-rose-900/50 dark:text-rose-400",
-        success: "border-emerald-500 bg-emerald-100 text-emerald-900 border-l-4 border-l-emerald-600 dark:bg-emerald-950/50 dark:border-emerald-900/50 dark:text-emerald-400",
-        warning: "border-amber-500 bg-amber-50 text-amber-900 border-l-4 border-l-amber-600 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400",
-        info: "border-blue-500 bg-blue-50 text-blue-900 border-l-4 border-l-blue-600 dark:bg-blue-950/30 dark:border-blue-900/50 dark:text-blue-400",
+        destructive: "border-rose-100 bg-rose-50 text-rose-900 dark:bg-rose-950/50 dark:border-rose-900/50 dark:text-rose-400",
+        success: "border-emerald-100 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/50 dark:border-emerald-900/50 dark:text-emerald-400",
+        warning: "border-amber-100 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400",
+        info: "border-blue-100 bg-blue-50 text-blue-900 dark:bg-blue-950/30 dark:border-blue-900/50 dark:text-blue-400",
       },
     },
     defaultVariants: {
