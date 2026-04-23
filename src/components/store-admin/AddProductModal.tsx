@@ -66,7 +66,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     if (open) {
       document.body.style.overflow = 'hidden';
       void fetchCategories();
-      
+
       if (product) {
         setName(product.name || '');
         setSku(product.sku || '');
@@ -319,103 +319,103 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {true && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
-                <DollarSign size={14} />
-                <h3 className="text-[10px] font-black uppercase tracking-widest">Pricing</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className={labelClass}>
-                    Purchase cost (Rs) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value)}
-                    className={inputClass}
-                  />
+            {(!isMasterOnly || isEdit) && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                  <DollarSign size={14} />
+                  <h3 className="text-[10px] font-black uppercase tracking-widest">Pricing</h3>
                 </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>
-                    Selling price (Rs) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={sellingPrice}
-                    onChange={(e) => setSellingPrice(e.target.value)}
-                    className={`${inputClass} text-blue-600 dark:text-blue-400 font-bold`}
-                  />
-                  <div className="mt-2 space-y-1">
-                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
-                      Calculated GST (18%): Rs {((Number(sellingPrice) || 0) * 0.18).toFixed(2)}
-                    </p>
-                    {Number(discountPercentage) > 0 && (
-                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                        Effective Price: Rs {(Number(sellingPrice) * (1 - Number(discountPercentage) / 100)).toFixed(2)}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className={labelClass}>
+                      Purchase cost (Rs) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={purchasePrice}
+                      onChange={(e) => setPurchasePrice(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelClass}>
+                      Selling price (Rs) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={sellingPrice}
+                      onChange={(e) => setSellingPrice(e.target.value)}
+                      className={`${inputClass} text-blue-600 dark:text-blue-400 font-bold`}
+                    />
+                    <div className="mt-2 space-y-1">
+                      <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
+                        Calculated GST (18%): Rs {((Number(sellingPrice) || 0) * 0.18).toFixed(2)}
                       </p>
-                    )}
+                      {Number(discountPercentage) > 0 && (
+                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                          Effective Price: Rs {(Number(sellingPrice) * (1 - Number(discountPercentage) / 100)).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                    <Percent size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">GST / Sales tax</span>
+                  </div>
+                  <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                    Percent added on top of the selling price at checkout (same rate is stored on the opening stock batch).
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {GST_PRESETS.map((p) => (
+                      <Button
+                        key={p}
+                        type="button"
+                        variant={taxPercentage === String(p) ? "default" : "outline"}
+                        onClick={() => setTaxPercentage(String(p))}
+                        className={cn(
+                          "px-3 py-1.5 h-8 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all",
+                          taxPercentage === String(p)
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600'
+                        )}
+                      >
+                        {p}%
+                      </Button>
+                    ))}
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelClass}>Tax rate (%)</label>
+                    <input
+                      readOnly
+                      type="number"
+                      value={taxPercentage}
+                      className={`${inputClass} bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed`}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelClass}>Line discount (%)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step="0.01"
+                      value={discountPercentage}
+                      onChange={(e) => setDiscountPercentage(e.target.value)}
+                      className={inputClass}
+                    />
+                    <p className="text-[9px] text-slate-500">Default product discount; POS can still apply cart discounts.</p>
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3">
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                  <Percent size={14} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">GST / Sales tax</span>
-                </div>
-                <p className="text-[10px] text-slate-600 dark:text-slate-400 leading-relaxed">
-                  Percent added on top of the selling price at checkout (same rate is stored on the opening stock batch).
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {GST_PRESETS.map((p) => (
-                    <Button
-                      key={p}
-                      type="button"
-                      variant={taxPercentage === String(p) ? "default" : "outline"}
-                      onClick={() => setTaxPercentage(String(p))}
-                      className={cn(
-                        "px-3 py-1.5 h-8 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all",
-                        taxPercentage === String(p)
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
-                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600'
-                      )}
-                    >
-                      {p}%
-                    </Button>
-                  ))}
-                </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>Tax rate (%)</label>
-                  <input
-                    readOnly
-                    type="number"
-                    value={taxPercentage}
-                    className={`${inputClass} bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed`}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>Line discount (%)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={100}
-                    step="0.01"
-                    value={discountPercentage}
-                    onChange={(e) => setDiscountPercentage(e.target.value)}
-                    className={inputClass}
-                  />
-                  <p className="text-[9px] text-slate-500">Default product discount; POS can still apply cart discounts.</p>
-                </div>
-              </div>
-            </div>
             )}
 
             <div className="space-y-4">
@@ -453,61 +453,61 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {true && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
-                <Archive size={14} />
-                <h3 className="text-[10px] font-black uppercase tracking-widest">Stock &amp; image</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className={labelClass}>Initial stock</label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    value={initialStock}
-                    onChange={(e) => setInitialStock(e.target.value)}
-                    className={inputClass}
-                  />
+            {(!isMasterOnly || isEdit) && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                  <Archive size={14} />
+                  <h3 className="text-[10px] font-black uppercase tracking-widest">Stock &amp; image</h3>
                 </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>Reorder alert at</label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    value={reorderLevel}
-                    onChange={(e) => setReorderLevel(e.target.value)}
-                    className={inputClass}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className={labelClass}>Initial stock</label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      value={initialStock}
+                      onChange={(e) => setInitialStock(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelClass}>Reorder alert at</label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      value={reorderLevel}
+                      onChange={(e) => setReorderLevel(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="relative group h-[140px] border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all hover:bg-slate-100 dark:hover:bg-slate-800/50 overflow-hidden">
-                {imagePreview ? (
-                  <div className="relative w-full h-full">
-                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setImageFile(null);
-                        setImagePreview('');
-                      }}
-                      className="absolute top-2 right-2 p-2 bg-rose-500 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-all active:scale-95"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center text-slate-400">
-                    <UploadCloud size={28} strokeWidth={1.5} />
-                    <p className="text-[10px] font-black uppercase tracking-widest mt-2">Upload product image</p>
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                  </div>
-                )}
+                <div className="relative group h-[140px] border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all hover:bg-slate-100 dark:hover:bg-slate-800/50 overflow-hidden">
+                  {imagePreview ? (
+                    <div className="relative w-full h-full">
+                      <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImageFile(null);
+                          setImagePreview('');
+                        }}
+                        className="absolute top-2 right-2 p-2 bg-rose-500 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-all active:scale-95"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center text-slate-400">
+                      <UploadCloud size={28} strokeWidth={1.5} />
+                      <p className="text-[10px] font-black uppercase tracking-widest mt-2">Upload product image</p>
+                      <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </div>
 

@@ -14,6 +14,7 @@ const ENTITY_OPTIONS = [
     { label: 'Users', value: 'users' },
     { label: 'Suppliers', value: 'suppliers' },
     { label: 'Purchases', value: 'supplier_purchases' },
+    { label: 'Supplier Payments', value: 'supplier_purchase_payments' },
     { label: 'Expenses', value: 'expenses' },
     { label: 'Devices', value: 'devices' },
     { label: 'Stores', value: 'stores' },
@@ -29,6 +30,10 @@ const ACTION_OPTIONS = [
     { label: 'Login', value: 'LOGIN' },
     { label: 'Logout', value: 'LOGOUT' },
     { label: 'Refund Sale', value: 'REFUND_SALE' },
+    { label: 'Create Supplier', value: 'CREATE_SUPPLIER' },
+    { label: 'Update Supplier', value: 'UPDATE_SUPPLIER' },
+    { label: 'New Stock Purchase', value: 'CREATE_SUPPLIER_PURCHASE' },
+    { label: 'Supplier Payment', value: 'RECORD_SUPPLIER_PAYMENT' },
 ];
 
 const AuditLogsPage: React.FC = () => {
