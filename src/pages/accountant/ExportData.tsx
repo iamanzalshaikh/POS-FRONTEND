@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Download, FileSpreadsheet, FileText, Calendar, Filter } from 'lucide-react';
-import { getSalesReport, getInventoryReport, getSalesTransactions } from '../../api/finance.api';
+import { getSalesReport, getProfitAndLoss } from '../../api/finance.api';
+import { getExpenses } from '../../api/expenses.api';
+import { exportToExcel } from '../../utils/excel-export';
+import { getCategoryLabel } from '../../utils/expense-utils';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
 
@@ -15,8 +18,12 @@ interface ExportOption {
 
 const ExportData: React.FC = () => {
   const [loading, setLoading] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState('2025-10-01');
-  const [endDate, setEndDate] = useState('2025-12-31');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3); // Default to last 3 months
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterCategory, setFilterCategory] = useState('all');
 
   const exportOptions: ExportOption[] = [
@@ -24,7 +31,7 @@ const ExportData: React.FC = () => {
       id: '1',
       name: 'Financial Statements',
       description: 'Complete financial reports including balance sheet, P&L, and cash flow',
-      format: 'PDF, Excel',
+      format: 'Excel (XLSX)',
       icon: <FileSpreadsheet size={24} className="text-emerald-400" />,
       endpoint: 'financial-statements'
     },
@@ -32,7 +39,7 @@ const ExportData: React.FC = () => {
       id: '2',
       name: 'Tax Reports',
       description: 'GST, TDS, and income tax summaries for filing',
-      format: 'PDF, Excel',
+      format: 'Excel (XLSX)',
       icon: <FileText size={24} className="text-blue-400" />,
       endpoint: 'tax-reports'
     },
@@ -40,7 +47,7 @@ const ExportData: React.FC = () => {
       id: '3',
       name: 'Expense Ledger',
       description: 'Detailed expense transactions with categories',
-      format: 'Excel, CSV',
+      format: 'Excel (XLSX)',
       icon: <FileSpreadsheet size={24} className="text-blue-400" />,
       endpoint: 'expense-ledger'
     },
@@ -48,7 +55,7 @@ const ExportData: React.FC = () => {
       id: '4',
       name: 'Revenue Report',
       description: 'Sales and revenue breakdown by period',
-      format: 'PDF, Excel',
+      format: 'Excel (XLSX)',
       icon: <FileText size={24} className="text-purple-400" />,
       endpoint: 'revenue-report'
     },
@@ -60,35 +67,80 @@ const ExportData: React.FC = () => {
 
       if (optionId === '4') { // Revenue Report
         const response = await getSalesReport({ startDate, endDate });
-        if (response.success) {
-          alert('Revenue report downloaded successfully!');
+        if (response.success && response.data) {
+          const reportData = response.data;
+          const rows = reportData.data.map(item => ({
+            'Transaction Date': item.date,
+            'Vol. Transactions': item.transactions,
+            'Gross Revenue': item.revenue,
+            'Total Discount': item.discount,
+            'Tax (GST)': item.tax,
+            'Net Revenue': item.revenue - item.discount
+          }));
+          exportToExcel(rows, `Revenue-Report-${startDate}-to-${endDate}`, 'Revenue Distribution');
         } else {
-          alert(`Export failed: ${response.message || 'Unknown error'}`);
+          throw new Error(response.message || 'Failed to fetch sales data');
         }
-      } else if (optionId === '3') { // Expense Ledger
-        const response = await getInventoryReport();
-        if (response.success) {
-          alert('Expense ledger downloaded successfully!');
+      } 
+      else if (optionId === '3') { // Expense Ledger
+        const response = await getExpenses();
+        if (response.success && response.data) {
+          const filtered = response.data.filter(e => {
+            const d = new Date(e.date);
+            return d >= new Date(startDate) && d <= new Date(endDate);
+          });
+          const rows = filtered.map(e => ({
+            'Ref ID': e.id.slice(-8).toUpperCase(),
+            'Record Date': e.date,
+            'Expense Category': e.customCategoryId ? 'Custom Category' : getCategoryLabel(e.category),
+            'Description': e.description,
+            'Settled Amount': Number(e.amount),
+            'Payment Notes': e.notes || '—'
+          }));
+          exportToExcel(rows, `Expense-Ledger-${startDate}-to-${endDate}`, 'Expense Statement');
         } else {
-          alert(`Export failed: ${response.message || 'Unknown error'}`);
+          throw new Error('Failed to fetch expense data');
         }
-      } else if (optionId === '2') { // Tax Reports
+      } 
+      else if (optionId === '2') { // Tax Reports
         const response = await getSalesReport({ startDate, endDate });
-        if (response.success) {
-          alert('Tax report downloaded successfully!');
+        if (response.success && response.data) {
+          const summary = response.data.summary;
+          const rows = [
+            { 'Tax Metric': 'Total Collected Revenue', 'Value (PKR)': summary.totalRevenue },
+            { 'Tax Metric': 'Estimated Tax Liability', 'Value (PKR)': summary.totalTax },
+            { 'Tax Metric': 'Effective Tax Rate', 'Value (PKR)': ((summary.totalTax / (summary.totalRevenue || 1)) * 100).toFixed(2) + '%' },
+            { 'Tax Metric': 'Reporting Period Start', 'Value (PKR)': startDate },
+            { 'Tax Metric': 'Reporting Period End', 'Value (PKR)': endDate }
+          ];
+          exportToExcel(rows, `Tax-Exemption-Report-${startDate}-to-${endDate}`, 'Audit Summary');
         } else {
-          alert(`Export failed: ${response.message || 'Unknown error'}`);
+          throw new Error(response.message || 'Failed to generate tax report');
         }
-      } else { // Financial Statements
-        const response = await getSalesTransactions({ startDate, endDate, limit: 100 });
-        if (response.success) {
-          alert('Financial statements downloaded successfully!');
+      } 
+      else { // Financial Statements (P&L)
+        const response = await getProfitAndLoss({ startDate, endDate });
+        if (response.success && response.data) {
+          const pl = response.data;
+          const rows = [
+            { 'Ledger Section': 'REVENUE', 'Account Label': 'Gross Sales Revenue', 'Amount (PKR)': pl.revenue },
+            { 'Ledger Section': 'COGS', 'Account Label': 'Cost of Goods Sold (Inventory)', 'Amount (PKR)': pl.cogs },
+            { 'Ledger Section': 'PROFIT', 'Account Label': 'Gross Operating Profit', 'Amount (PKR)': pl.grossProfit },
+            { 'Ledger Section': 'PROFIT', 'Account Label': 'Gross Margin Ratio', 'Amount (PKR)': (pl.grossMargin * 100).toFixed(2) + '%' },
+            { 'Ledger Section': 'EXPENSES', 'Account Label': 'Operational Overhead', 'Amount (PKR)': pl.operatingExpenses },
+            { 'Ledger Section': 'EXPENSES', 'Account Label': 'Salary & Payroll', 'Amount (PKR)': pl.salaries },
+            { 'Ledger Section': 'EXPENSES', 'Account Label': 'Total Operating Expenses', 'Amount (PKR)': pl.totalExpenses },
+            { 'Ledger Section': 'NET EARNINGS', 'Account Label': 'Net Profit After Expense', 'Amount (PKR)': pl.netProfit },
+            { 'Ledger Section': 'NET EARNINGS', 'Account Label': 'Net Margin Ratio', 'Amount (PKR)': (pl.netMargin * 100).toFixed(2) + '%' }
+          ];
+          exportToExcel(rows, `Income-Statement-${startDate}-to-${endDate}`, 'P&L Statement');
         } else {
-          alert(`Export failed: ${response.message || 'Unknown error'}`);
+          throw new Error(response.message || 'Failed to fetch P&L data');
         }
       }
     } catch (err: any) {
-      alert(`Export failed: ${err.message || 'Unknown error'}`);
+      console.error('Export error:', err);
+      alert(`Export failed: ${err.message || 'Internal connection error'}`);
     } finally {
       setLoading(null);
     }

@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FileText, Download, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
+import { FileText, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { getSalesReport } from '../../api/finance.api';
 import MetricCard from '../../components/global-components/MetricCard';
 import PageHeader from '../../components/global-components/PageHeader';
@@ -8,8 +8,7 @@ import { DataTable } from '../../components/global-components/data-table-2';
 import { formatAmount } from '@/utils/format';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
-import { cn } from '@/lib/utils';
-import { Calculator } from 'lucide-react';
+import { exportToExcel } from '../../utils/excel-export';
 
 interface TaxItem {
   id: string;
@@ -86,62 +85,32 @@ const TaxManagement: React.FC = () => {
 
   const error = queryError ? (queryError as any).message : (salesRes?.success === false ? salesRes.message : null);
 
-  const getStatusStyles = (status: TaxItem['status']) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'pending':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'overdue':
-        return 'bg-red-50 text-red-700 border-red-200';
-    }
-  };
-
   const handleExportReport = () => {
     if (taxItems.length === 0) {
       alert('No tax data available to export');
       return;
     }
 
-    // Create CSV content
-    const headers = ['Tax Type', 'Rate', 'Amount', 'Due Date', 'Status'];
-    const csvData = taxItems.map(item => [
-      item.type,
-      item.rate,
-      item.amount.toFixed(2),
-      item.dueDate,
-      item.status
-    ]);
+    const rows = taxItems.map(item => ({
+      'Tax Type': item.type,
+      'Rate': item.rate,
+      'Amount (PKR)': Number(item.amount),
+      'Due Date': item.dueDate,
+      'Status': item.status.toUpperCase()
+    }));
 
-    // Convert to CSV string
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    // Add summary section
-    const summaryContent = `\n\nSummary\nTotal Liability,${totalLiability.toFixed(2)}\nTotal Paid,${totalPaid.toFixed(2)}\nTotal Overdue,${totalOverdue.toFixed(2)}\nGenerated Date,${new Date().toLocaleDateString()}`;
+    // Add summary row
+    rows.push({
+      'Tax Type': 'TOTAL SUMMARY',
+      'Rate': '—',
+      'Amount (PKR)': Number(totalLiability),
+      'Due Date': '—',
+      'Status': 'GROSS'
+    });
     
-    const finalCSV = csvContent + summaryContent;
-
-    // Create blob and download
-    const blob = new Blob([finalCSV], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', `tax-report-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportToExcel(rows, `Tax-Report-${new Date().toISOString().split('T')[0]}`, 'Taxation Summary');
     
     console.log('🧾 [TaxManagement] Tax report exported successfully');
-  };
-
-  const handlePayTax = (taxId: string) => {
-    alert(`Pay tax ${taxId} - Would open payment gateway`);
   };
 
   if (loading) return <ManagementPageSkeleton cards={3} columns={4} />;
@@ -164,7 +133,7 @@ const TaxManagement: React.FC = () => {
         description="Monitor and manage business tax liabilities"
         icon={FileText}
         primaryAction={{
-          label: "Export Tax Report",
+          label: "Export XLS Report",
           icon: Download,
           onClick: handleExportReport
         }}
