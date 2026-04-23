@@ -9,7 +9,6 @@ import {
   type ExpenseCategory,
 } from '../../api/expenses.api';
 import { toast } from '@/lib/toast';
-import { Button } from '@/components/ui/button';
 
 interface CategoryModalProps {
   isOpen: boolean;

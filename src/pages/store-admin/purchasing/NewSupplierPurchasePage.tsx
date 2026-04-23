@@ -6,17 +6,18 @@ import { useQuery } from "@tanstack/react-query";
 import { usePurchasingBasePath } from "@/hooks/usePurchasingBasePath";
 
 // Icons
-import { 
-  ArrowLeft, 
-  Truck, 
-  Calendar, 
-  FileText, 
+import {
+  ArrowLeft,
+  Truck,
+  Calendar,
+  FileText,
   Plus,
   ShoppingCart,
   Wallet,
   CheckCircle2,
   AlertCircle,
-  Trash2
+  Trash2,
+  Search
 } from "lucide-react";
 
 // API
@@ -28,31 +29,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 type ProductRow = {
-    key: string;
-    productId: string;
-    name: string;
-    category: string;
-    sku: string;
-    barcode: string;
-    unitType: string;
-    qtyPerUnit: string;
-    quantity: string;
-    purchaseCost: string;
-    sellingPrice: string;
-    gstPercentage: string;
-    lineDiscount: string;
-    alertAt: string;
+  key: string;
+  productId: string;
+  name: string;
+  category: string;
+  sku: string;
+  barcode: string;
+  unitType: string;
+  qtyPerUnit: string;
+  quantity: string;
+  purchaseCost: string;
+  sellingPrice: string;
+  gstPercentage: string;
+  lineDiscount: string;
+  alertAt: string;
 };
 
 export default function NewSupplierPurchasePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const base = usePurchasingBasePath();
-  
+
   const [selectedProductId, setSelectedProductId] = useState("");
   const [supplierId, setSupplierId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
+  const [paidAmount, setPaidAmount] = useState<string>("0");
   const [items, setItems] = useState<ProductRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -148,7 +150,7 @@ export default function NewSupplierPurchasePage() {
         initialStock: parseInt(l.quantity, 10),
         alertAt: parseInt(l.alertAt, 10),
       }));
-    
+
     for (const it of apiItems) {
       if (!Number.isInteger(it.quantity) || it.quantity <= 0) {
         setError("Negative or fractional quantity detected in product lines.");
@@ -159,23 +161,23 @@ export default function NewSupplierPurchasePage() {
         return;
       }
     }
-    
+
     if (apiItems.length === 0) {
       setError("Empty manifest: Add at least one valid product line.");
       return;
     }
-    
+
     setSaving(true);
     try {
       const res = await createSupplierPurchase({
         supplierId,
         purchaseDate: new Date(purchaseDate + "T12:00:00").toISOString(),
         items: apiItems,
-        paidAmount: 0,
+        paidAmount: parseFloat(paidAmount) || 0,
         notes: notes.trim() || undefined,
       });
       toast.success("Purchase manifest committed and stock received successfully.", "Ledger Updated");
-      
+
       const id = res.data?.data?.id;
       if (id) navigate(`${base}/purchases/${id}`);
       else navigate(`${base}/purchases`);
@@ -198,10 +200,10 @@ export default function NewSupplierPurchasePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
           <div className="flex items-center gap-2 mb-2">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              asChild 
+            <Button
+              variant="ghost"
+              size="sm"
+              asChild
               className="h-8 px-2 rounded-lg hover:bg-slate-100 text-slate-400"
             >
               <Link to={`${base}/purchases`}>
@@ -228,8 +230,8 @@ export default function NewSupplierPurchasePage() {
         </div>
       )}
 
-      <form 
-        onSubmit={handleSubmit} 
+      <form
+        onSubmit={handleSubmit}
         className="space-y-8 w-full"
       >
         <div className="space-y-8">
@@ -243,7 +245,7 @@ export default function NewSupplierPurchasePage() {
                   Ledger Identification
                 </h3>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">
@@ -264,7 +266,7 @@ export default function NewSupplierPurchasePage() {
                     </select>
                     <div className="absolute right-4 pointer-events-none text-slate-400">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
                   </div>
@@ -293,11 +295,29 @@ export default function NewSupplierPurchasePage() {
                 </label>
                 <div className="relative">
                   <FileText className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                  <Input 
-                    value={notes} 
-                    onChange={(e) => setNotes(e.target.value)} 
-                    placeholder="Enter batch notes or invoice reference..." 
-                    className="h-12 pl-11 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700 rounded-xl font-bold text-sm" 
+                  <Input
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Enter batch notes or invoice reference..."
+                    className="h-12 pl-11 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700 rounded-xl font-bold text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">
+                  Initial Payment (Amount Paid Now)
+                </label>
+                <div className="relative">
+                  <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
+                  <Input
+                    type="number"
+                    min={0}
+                    max={totalAmount}
+                    value={paidAmount}
+                    onChange={(e) => setPaidAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="h-12 pl-11 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700 rounded-xl font-black text-sm text-emerald-600 focus:ring-emerald-500/20 focus:border-emerald-500"
                   />
                 </div>
               </div>
@@ -313,7 +333,7 @@ export default function NewSupplierPurchasePage() {
                   ₨ {totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </p>
               </div>
-              
+
               <Button
                 onClick={handleSubmit}
                 disabled={saving}
@@ -326,149 +346,162 @@ export default function NewSupplierPurchasePage() {
 
           {/* Line Items Table Section */}
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 md:p-8 border border-slate-100 dark:border-slate-800/50">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-              <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 flex items-center gap-2">
-                <ShoppingCart size={14} className="text-indigo-500" /> Product Selection
-              </h3>
-              <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                <div className="relative flex-1 sm:min-w-[260px] overflow-x-auto custom-scrollbar no-scrollbar">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
+              <div className="flex flex-col sm:flex-row md:items-center gap-6 flex-1">
+                <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 flex items-center gap-2 shrink-0">
+                  <ShoppingCart size={14} className="text-indigo-500" /> Product Selection
+                </h3>
+                
+                <div className="relative w-full max-w-md">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <Search size={14} className="text-slate-400" />
+                  </div>
                   <select
                     value={selectedProductId}
                     onChange={(e) => setSelectedProductId(e.target.value)}
-                    className="h-10 w-full min-w-max px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-bold outline-none focus:ring-4 focus:ring-blue-500/5 transition-all appearance-none cursor-pointer"
+                    className="h-11 w-full pl-11 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/40 transition-all cursor-pointer appearance-none shadow-sm"
                   >
-                  <option value="">Select Product...</option>
-                  {products.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>
-                  ))}
-                </select>
-                <Button 
-                  type="button" 
-                  onClick={addSelectedProduct} 
-                  className="h-10 px-4 rounded-xl shrink-0"
-                >
-                  <Plus size={14} /> Add Product
-                </Button>
+                    <option value="">Search keywords to add product...</option>
+                    {products.map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name} — {p.sku}</option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                      <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
               </div>
+
+              <Button
+                type="button"
+                onClick={addSelectedProduct}
+                disabled={!selectedProductId}
+                className="h-11 px-8 bg-[#1E1B4B] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-opacity-90 transition-all active:scale-95 shadow-xl shadow-indigo-950/20 flex items-center gap-2 shrink-0"
+              >
+                <Plus size={14} />
+                <span>Add Product to Ledger</span>
+              </Button>
             </div>
 
-            <div className="overflow-x-auto custom-scrollbar -mx-2 px-2">
-              <div className="min-w-[1000px]">
-                <table className="w-full table-auto">
-                  <thead>
-                    <tr className="border-b border-slate-100 dark:border-slate-800">
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[22%]">Product</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Unit</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Qty/Unit</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">Qty</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Buy</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Sell</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">GST (18%)</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Disc</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Net Sell</th>
-                      <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Reorder Level</th>
-                      <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 w-[4%]"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                    {items.map((line) => (
-                      <tr 
-                        key={line.key} 
-                        className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
-                      >
-                        <td className="py-3 pr-2">
-                          <p className="text-xs font-black text-slate-900 dark:text-white truncate">
-                            {line.name}
-                          </p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
-                            {line.category} • {line.sku}
-                          </p>
-                        </td>
-                        <td className="py-3 pr-2 text-xs font-bold text-slate-600 dark:text-slate-400">
-                          {line.unitType}
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            value={line.qtyPerUnit} 
-                            onChange={(e) => updateLine(line.key, { qtyPerUnit: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            type="number" 
-                            value={line.quantity} 
-                            onChange={(e) => updateLine(line.key, { quantity: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            type="number" 
-                            value={line.purchaseCost} 
-                            onChange={(e) => updateLine(line.key, { purchaseCost: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            type="number" 
-                            value={line.sellingPrice} 
-                            onChange={(e) => updateLine(line.key, { sellingPrice: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            value={(parseFloat(line.sellingPrice || "0") * 0.18).toFixed(2)} 
-                            readOnly
-                            disabled
-                            className="h-9 w-full font-bold text-xs bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-70" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            type="number" 
-                            value={line.lineDiscount} 
-                            onChange={(e) => updateLine(line.key, { lineDiscount: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            value={(parseFloat(line.sellingPrice || "0") * (1 - (parseFloat(line.lineDiscount || "0") / 100))).toFixed(2)} 
-                            readOnly
-                            disabled
-                            className="h-9 w-full font-bold text-xs bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-70" 
-                          />
-                        </td>
-                        <td className="py-3 px-1">
-                          <Input 
-                            type="number" 
-                            value={line.alertAt} 
-                            onChange={(e) => updateLine(line.key, { alertAt: e.target.value })} 
-                            className="h-9 w-full font-bold text-xs" 
-                          />
-                        </td>
-                        <td className="py-3 pl-1 text-right">
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => removeLine(line.key)}
-                            className="h-8 w-8 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all rounded-lg"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </td>
+              <div className="overflow-x-auto custom-scrollbar -mx-2 px-2">
+                <div className="min-w-[1000px]">
+                  <table className="w-full table-auto">
+                    <thead>
+                      <tr className="border-b border-slate-100 dark:border-slate-800">
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[22%]">Product</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Unit</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Qty/Unit</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">Qty</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Buy</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[10%]">Sell</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[7%]">GST (18%)</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[8%]">Disc</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Net Sell</th>
+                        <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 w-[9%]">Reorder Level</th>
+                        <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400 w-[4%]"></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                      {items.map((line) => (
+                        <tr
+                          key={line.key}
+                          className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                        >
+                          <td className="py-3 pr-2">
+                            <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                              {line.name}
+                            </p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">
+                              {line.category} • {line.sku}
+                            </p>
+                          </td>
+                          <td className="py-3 pr-2 text-xs font-bold text-slate-600 dark:text-slate-400">
+                            {line.unitType}
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              value={line.qtyPerUnit}
+                              onChange={(e) => updateLine(line.key, { qtyPerUnit: e.target.value })}
+                              className="h-9 w-full font-bold text-xs"
+                            />
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              type="number"
+                              value={line.quantity}
+                              onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
+                              className="h-9 w-full font-bold text-xs"
+                            />
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              type="number"
+                              value={line.purchaseCost}
+                              onChange={(e) => updateLine(line.key, { purchaseCost: e.target.value })}
+                              className="h-9 w-full font-bold text-xs"
+                            />
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              type="number"
+                              value={line.sellingPrice}
+                              onChange={(e) => updateLine(line.key, { sellingPrice: e.target.value })}
+                              className="h-9 w-full font-bold text-xs"
+                            />
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              value={(parseFloat(line.sellingPrice || "0") * 0.18).toFixed(2)}
+                              readOnly
+                              disabled
+                              className="h-9 w-full font-bold text-xs bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-70"
+                            />
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              type="number"
+                              value={line.lineDiscount}
+                              onChange={(e) => updateLine(line.key, { lineDiscount: e.target.value })}
+                              className="h-9 w-full font-bold text-xs"
+                            />
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              value={(parseFloat(line.sellingPrice || "0") * (1 - (parseFloat(line.lineDiscount || "0") / 100))).toFixed(2)}
+                              readOnly
+                              disabled
+                              className="h-9 w-full font-bold text-xs bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed opacity-70"
+                            />
+                          </td>
+                          <td className="py-3 px-1">
+                            <Input
+                              type="number"
+                              value={line.alertAt}
+                              onChange={(e) => updateLine(line.key, { alertAt: e.target.value })}
+                              className="h-9 w-full font-bold text-xs"
+                            />
+                          </td>
+                          <td className="py-3 pl-1 text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeLine(line.key)}
+                              className="h-8 w-8 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all rounded-lg"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       </form>
     </div>
