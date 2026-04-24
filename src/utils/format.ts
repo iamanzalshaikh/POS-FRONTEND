@@ -114,17 +114,14 @@ export const formatInvoiceNumber = (invoice: string | null | undefined): string 
     if (!invoice) return 'N/A';
     const str = String(invoice).trim();
     
-    // If it has a dash, check for REF prefix
+    if (str.toUpperCase().startsWith('REF-')) {
+        return str.toUpperCase();
+    }
+    
+    // If it has a dash, check for other prefixes (like legacy or specific ids)
     if (str.includes('-')) {
         const parts = str.split('-');
-        const prefix = parts[0].toUpperCase();
-        
-        // Always preserve REF prefix
-        if (prefix === 'REF') {
-            return `REF-${parts[parts.length - 1]}`;
-        }
-        
-        // For other dashed formats (like legacy or specific ids), return the last part
+        // For other dashed formats, return the last part
         return parts[parts.length - 1];
     }
     

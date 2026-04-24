@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Package, Search, RefreshCcw, ShoppingCart, Box, AlertTriangle } from 'lucide-react';
 import { fetchProducts } from '../../api/products.api';
 import { formatCurrency, formatCurrencyShort, formatNumberShort } from '@/utils/format';
@@ -9,6 +9,7 @@ import { DataTable } from '../../components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { cn } from '@/lib/utils';
 import { TableSkeleton } from '@/components/ui/skeletons/TableSkeleton';
+import { useSocket } from '../../hooks/useSocket';
 
 interface Product {
   id: string;
@@ -34,6 +35,23 @@ interface Product {
 
 const ProductsListPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  const queryClient = useQueryClient();
+
+  // Real-time stock updates
+  const socket = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('inventory:updated', (data: any) => {
+      console.log('📡 [ProductsList] Inventory update received:', data);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['pos-products'] });
+    });
+
+    return () => {
+      socket.off('inventory:updated');
+    };
+  }, [socket, queryClient]);
 
   // Combined Query
   const { data: productsRes, isLoading, refetch } = useQuery({

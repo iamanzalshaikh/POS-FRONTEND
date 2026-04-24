@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { Search, Plus, Minus, CheckCircle, Package, Loader2 } from 'lucide-react';
 import { adjustStock } from '@/api/inventory.api';
+import { getSuppliers } from '@/api/suppliers.api';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 
 const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], onSuccess?: () => void }) => {
     const [quantity, setQuantity] = useState(0);
@@ -11,9 +13,22 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
     const [changeType, setChangeType] = useState('OPENING_STOCK');
+    const [selectedSupplierId, setSelectedSupplierId] = useState('');
     const [notes, setNotes] = useState('');
     const [referenceId, setReferenceId] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const { data: suppliersRes } = useQuery({
+        queryKey: ['suppliers', 'active'],
+        queryFn: () => getSuppliers({ activeOnly: true }),
+    });
+
+    const suppliers = useMemo(() => {
+        const raw = suppliersRes?.data?.data || suppliersRes?.data;
+        return Array.isArray(raw) ? raw : [];
+    }, [suppliersRes]);
+
+    const showSupplierSelect = changeType === 'DAMAGE' || changeType === 'RETURN';
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => 
@@ -49,7 +64,8 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                 changeType,
                 quantity: adjustedQuantity,
                 notes: notes.trim() || undefined,
-                referenceId: referenceId.trim() || undefined
+                referenceId: referenceId.trim() || undefined,
+                supplierId: showSupplierSelect ? selectedSupplierId : undefined
             });
             
             // Reset form
@@ -58,6 +74,7 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
             setSelectedProduct(null);
             setNotes('');
             setReferenceId('');
+            setSelectedSupplierId('');
             
             toast.success('Stock level adjusted successfully', 'Success');
             if (onSuccess) onSuccess();
@@ -185,6 +202,25 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                             onChange={(e) => setReferenceId(e.target.value)}
                         />
                     </div>
+
+                    {showSupplierSelect && (
+                        <div className="space-y-2 animate-slide-up">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Link to Supplier (Required for Returns)</label>
+                            <select 
+                                value={selectedSupplierId}
+                                onChange={(e) => setSelectedSupplierId(e.target.value)}
+                                className="w-full px-5 py-4 bg-gray-50 border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-blue-500 transition-all text-gray-800 appearance-none"
+                            >
+                                <option value="">Select Supplier...</option>
+                                {suppliers.map((s: any) => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                            <p className="text-[9px] text-blue-500 font-bold px-1 italic">
+                                Note: This will add the value of returned stock to the supplier's pending return card.
+                            </p>
+                        </div>
+                    )}
                 </div>
                 
                 {/* Adjustment Details Column */}
@@ -257,7 +293,8 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                             isSubmitting || 
                             !selectedProduct || 
                             quantity < 0 ||
-                            quantity === (selectedProduct.inventoryStock?.totalQuantity || 0)
+                            quantity === (selectedProduct.inventoryStock?.totalQuantity || 0) ||
+                            (showSupplierSelect && !selectedSupplierId)
                         }
                         className="w-full h-14 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-[2px] shadow-xl shadow-blue-500/20 hover:bg-blue-700 transition-all active:scale-95 group disabled:opacity-50 disabled:cursor-not-allowed disabled:grayscale"
                     >

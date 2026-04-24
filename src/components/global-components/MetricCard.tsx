@@ -6,7 +6,7 @@ import { formatNumberShort, formatCurrencyShort } from '@/utils/format';
 interface MetricCardProps {
     title: string;
     value: string | number;
-    icon: any;
+    icon?: any;
     change?: number | string;
     isPositive?: boolean;
     /** Small line under the main value (e.g. data source) */

@@ -29,6 +29,7 @@ import { formatCurrency, formatAmount } from '../../utils/expense-utils';
 import { offlineStorage } from '../../services/offline-storage.service';
 import type { OfflineSale } from '../../services/offline-storage.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useSocket } from '../../hooks/useSocket';
 import ProductsFilters from '../../components/cashier/ProductsFilters';
 import ProductsTable from '../../components/cashier/ProductsTable';
 import ThermalReceipt from '../../components/cashier/ThermalReceipt';
@@ -153,7 +154,9 @@ const POSInterface: React.FC = () => {
   const [lastSequence, setLastSequence] = useState<number>(() => {
     return Number(localStorage.getItem('pos-last-sequence')) || 0;
   });
-  const [offlineSyncCount, setOfflineSyncCount] = useState<number>(0);
+  const [offlineSyncCount, setOfflineSyncCount] = useState<number>(() => {
+    return Number(localStorage.getItem('pos-offline-count')) || 0;
+  });
 
   // Extract fetchLastSeq to a memoized function so we can refresh it after online sales
   const refreshSequence = useCallback(async () => {
@@ -168,6 +171,9 @@ const POSInterface: React.FC = () => {
           console.log('🔄 [POSInterface] Sequence refreshed:', seq);
           setLastSequence(seq);
           localStorage.setItem('pos-last-sequence', seq.toString());
+          // Reset offline count when sequence is refreshed from server
+          setOfflineSyncCount(0);
+          localStorage.setItem('pos-offline-count', '0');
         }
       }
     } catch (err) {
@@ -178,6 +184,24 @@ const POSInterface: React.FC = () => {
   useEffect(() => {
     refreshSequence();
   }, [refreshSequence]);
+
+  // Real-time stock updates
+  const socket = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('inventory:updated', (data: any) => {
+      console.log('📡 [Socket] Inventory update received:', data);
+      // Invalidate all product/inventory related queries
+      queryClient.invalidateQueries({ queryKey: ['pos-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-catalog'] });
+    });
+
+    return () => {
+      socket.off('inventory:updated');
+    };
+  }, [socket, queryClient]);
 
   // Rest of effects ...
 
@@ -633,6 +657,8 @@ const POSInterface: React.FC = () => {
       receivedAmount: paymentMethod === 'CASH' ? receivedAmountNum : undefined,
       changeAmount: paymentMethod === 'CASH' ? changeAmount : undefined,
       items: itemsPayload,
+      terminalLane,
+      totalLanes,
     };
 
     // Validate payload before sending
@@ -754,7 +780,9 @@ const POSInterface: React.FC = () => {
         // nextSeq = 100 + (0 * 4) + 1 = 101 (Terminal 1)
         // nextSeq = 100 + (0 * 4) + 2 = 102 (Terminal 2)
         const nextSeq = lastSequence + (offlineSyncCount * totalLanes) + terminalLane;
-        setOfflineSyncCount(prev => prev + 1);
+        const newOfflineCount = offlineSyncCount + 1;
+        setOfflineSyncCount(newOfflineCount);
+        localStorage.setItem('pos-offline-count', newOfflineCount.toString());
         
         const tempId = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         const invoiceNumber = String(nextSeq).padStart(6, '0');

@@ -11,7 +11,8 @@ import {
     Power,
     ShieldAlert,
     Ban,
-    RefreshCw
+    RefreshCw,
+    Box
 } from 'lucide-react';
 import { 
     getSuppliers, 
@@ -28,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import AddSupplierModal from '@/components/store-admin/purchasing/AddSupplierModal';
+import SupplierPendingReturnsList from '@/components/store-admin/purchasing/SupplierPendingReturnsList';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/hooks';
 
@@ -42,6 +44,7 @@ export default function SuppliersPage() {
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+    const [activeTab, setActiveTab] = useState<'directory' | 'pending'>('directory');
 
     const { data: suppliersRes, isLoading: loading, refetch: loadSuppliers } = useQuery({
         queryKey: ['suppliers', statusFilter],
@@ -237,7 +240,34 @@ export default function SuppliersPage() {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            <div className="flex items-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-[2rem] w-fit border border-slate-200 dark:border-slate-800/50 mt-8 mb-4">
+                <button
+                    onClick={() => setActiveTab('directory')}
+                    className={cn(
+                        "flex items-center gap-2 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95",
+                        activeTab === 'directory' 
+                            ? "bg-white dark:bg-slate-900 text-blue-600 shadow-sm" 
+                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    )}
+                >
+                    <Truck size={14} />
+                    Vendors Directory
+                </button>
+                <button
+                    onClick={() => setActiveTab('pending')}
+                    className={cn(
+                        "flex items-center gap-2 px-6 py-3 rounded-full text-[10px] font-black uppercase tracking-widest transition-all active:scale-95",
+                        activeTab === 'pending' 
+                            ? "bg-white dark:bg-slate-900 text-blue-600 shadow-sm" 
+                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    )}
+                >
+                    <Box size={14} />
+                    Pending Returns
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <MetricCard 
                     title="Total Vendors" 
                     value={list.length} 
@@ -258,41 +288,51 @@ export default function SuppliersPage() {
                 />
             </div>
 
-            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
-                <DataTable 
-                    columns={columns} 
-                    data={filteredList}
-                    isLoading={loading}
-                    onRefresh={loadSuppliers}
-                    placeholder="Search vendors..."
-                    hidePagination={false}
-                    manualPagination={false}
-                    exportFilename="Suppliers-Records"
-                    headerActions={
-                        <div className="flex items-center gap-3">
-                            <div className="relative group">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                                <input
-                                    type="text"
-                                    placeholder="Identify supplier..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
-                                />
+            {activeTab === 'directory' ? (
+                <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-6 shadow-none">
+                    <DataTable 
+                        columns={columns} 
+                        data={filteredList}
+                        isLoading={loading}
+                        onRefresh={loadSuppliers}
+                        placeholder="Search vendors..."
+                        hidePagination={false}
+                        manualPagination={false}
+                        exportFilename="Suppliers-Records"
+                        headerActions={
+                            <div className="flex items-center gap-3">
+                                <div className="relative group">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                                    <input
+                                        type="text"
+                                        placeholder="Identify supplier..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="h-10 pl-11 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all w-[240px]"
+                                    />
+                                </div>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value as any)}
+                                    className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
+                                >
+                                    <option value="All">All Status</option>
+                                    <option value="Active">Active Only</option>
+                                    <option value="Inactive">Inactive Only</option>
+                                </select>
                             </div>
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value as any)}
-                                className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
-                            >
-                                <option value="All">All Status</option>
-                                <option value="Active">Active Only</option>
-                                <option value="Inactive">Inactive Only</option>
-                            </select>
-                        </div>
-                    }
-                />
-            </div>
+                        }
+                    />
+                </div>
+            ) : (
+                <div className="space-y-6">
+                    <div className="flex flex-col gap-1 px-4">
+                        <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Resolvable Actions</h2>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Handle damage/return adjustments for suppliers</p>
+                    </div>
+                    <SupplierPendingReturnsList />
+                </div>
+            )}
 
             <AddSupplierModal
                 isOpen={isModalOpen}

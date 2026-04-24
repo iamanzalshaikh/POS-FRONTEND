@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   AlertCircle, 
   DollarSign, 
@@ -22,6 +22,8 @@ import { cn } from '@/lib/utils';
 import { toLocalYMD } from '@/utils/format';
 import { getDashboardSummary, getInventory } from '@/api/dashboard.api';
 import * as deviceApi from '@/api/devices.api';
+import { useSocket } from '@/hooks/useSocket';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface DashboardView {
   metrics: { value: number }[];
@@ -75,6 +77,22 @@ export default function StoreAdminDashboard() {
     queryFn: () => deviceApi.fetchDevices(),
     staleTime: 30000,
   });
+
+  const socket = useSocket();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('inventory:updated', (data: any) => {
+      console.log('📡 [Dashboard] Inventory update received:', data);
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    });
+
+    return () => {
+      socket.off('inventory:updated');
+    };
+  }, [socket, queryClient]);
 
   const loading = dashLoading || devicesLoading;
   const isConnectionError = [dashError, devicesError].some((e: any) => e && !e.response);

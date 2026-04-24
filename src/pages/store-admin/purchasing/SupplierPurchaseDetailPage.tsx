@@ -18,6 +18,7 @@ import {
     type SupplierPurchase,
     type SupplierPurchasePayment
 } from "@/api/suppliers.api";
+import { fetchPendingReturns, type SupplierPendingReturn } from "@/api/supplierPendingReturns.api";
 import { useAuthStore } from "@/store/useAuthStore";
 import { usePurchasingBasePath } from "@/hooks/usePurchasingBasePath";
 import { formatCurrencyShort, formatAmountShort, formatNumberShort } from "@/utils/format";
@@ -48,6 +49,9 @@ export default function SupplierPurchaseDetailPage() {
     const [paySaving, setPaySaving] = useState(false);
     const [payError, setPayError] = useState<string | null>(null);
 
+    const [resolvedReturns, setResolvedReturns] = useState<SupplierPendingReturn[]>([]);
+    const [loadingReturns, setLoadingReturns] = useState(false);
+
     const loadPurchase = async () => {
         if (!id) return;
         setLoading(true);
@@ -62,6 +66,24 @@ export default function SupplierPurchaseDetailPage() {
             setLoading(false);
         }
     };
+
+    const loadReturns = async (supplierId: string) => {
+        setLoadingReturns(true);
+        try {
+            const res = await fetchPendingReturns({ supplierId, status: 'RESOLVED' });
+            setResolvedReturns(res.data || []);
+        } catch (e) {
+            console.error("Failed to load returns:", e);
+        } finally {
+            setLoadingReturns(false);
+        }
+    };
+
+    useEffect(() => {
+        if (purchase?.supplierId) {
+            loadReturns(purchase.supplierId);
+        }
+    }, [purchase?.supplierId]);
 
     useEffect(() => {
         loadPurchase();
@@ -265,6 +287,63 @@ export default function SupplierPurchaseDetailPage() {
                                                 </td>
                                                 <td className="py-5 text-right text-sm font-black text-emerald-600">
                                                     +{formatAmountShort(num(p.amount))}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Return History Ledger */}
+                    <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 border border-slate-100 dark:border-slate-800/50 shadow-sm">
+                        <h3 className="text-[11px] font-black uppercase tracking-[3px] text-slate-400 flex items-center gap-2 mb-8">
+                            <HistoryIcon size={14} className="text-rose-500" /> Return History Ledger
+                        </h3>
+                        {loadingReturns ? (
+                             <div className="py-12 text-center text-[10px] font-black uppercase tracking-[2px] text-slate-400 animate-pulse">
+                                Analyzing return history...
+                             </div>
+                        ) : resolvedReturns.length === 0 ? (
+                            <div className="py-12 text-center text-[10px] font-black uppercase tracking-[2px] text-slate-400 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                                No resolved returns found for this supplier
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 dark:border-slate-800">
+                                            <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Date</th>
+                                            <th className="pb-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Product</th>
+                                            <th className="pb-4 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Resolution</th>
+                                            <th className="pb-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Impact</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                        {resolvedReturns.map((r) => (
+                                            <tr key={r.id} className="group hover:bg-slate-50/50 transition-colors">
+                                                <td className="py-5 text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                                                    {r.resolvedAt ? new Date(r.resolvedAt).toLocaleDateString() : '—'}
+                                                </td>
+                                                <td className="py-5">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-tight">{r.product.name}</span>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">QTY: {r.quantity}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-5 text-center">
+                                                    <span className={cn(
+                                                        "inline-block px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest",
+                                                        r.resolutionType === 'STOCK_ADJUST_IN' 
+                                                            ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
+                                                            : "bg-blue-50 text-blue-600 border border-blue-100"
+                                                    )}>
+                                                        {r.resolutionType === 'STOCK_ADJUST_IN' ? 'Stock In' : 'Ledger Credit'}
+                                                    </span>
+                                                </td>
+                                                <td className="py-5 text-right text-sm font-black text-rose-500">
+                                                    -₨ {Number(r.totalAmount).toLocaleString()}
                                                 </td>
                                             </tr>
                                         ))}

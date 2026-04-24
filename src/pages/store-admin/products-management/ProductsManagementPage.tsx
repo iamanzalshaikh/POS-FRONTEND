@@ -13,6 +13,7 @@ import { formatCurrencyShort, formatAmountShort, formatNumberShort } from "@/uti
 import AddStockModal from "@/components/store-admin/AddStockModal";
 import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
 import { useDebounce } from '@/hooks';
+import { useSocket } from "@/hooks/useSocket";
 
 import { fetchProducts, deleteProduct } from "@/api/products.api";
 import { fetchFullInventory } from "@/api/inventory.api";
@@ -68,6 +69,23 @@ export default function ProductsManagementPage() {
         placeholderData: (previousData) => previousData,
         staleTime: 60000, // 1 minute stale time
     });
+
+    const socket = useSocket();
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('inventory:updated', (data: any) => {
+            console.log('📡 [ProductsCatalog] Inventory update received:', data);
+            queryClient.invalidateQueries({ queryKey: ['products-catalog'] });
+            queryClient.invalidateQueries({ queryKey: ['pos-products'] });
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+        });
+
+        return () => {
+            socket.off('inventory:updated');
+        };
+    }, [socket, queryClient]);
 
     const products = useMemo(() => {
         const productsRaw = productsRes?.data?.data || productsRes?.data || (Array.isArray(productsRes) ? productsRes : [])
