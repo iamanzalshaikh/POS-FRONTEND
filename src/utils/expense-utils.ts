@@ -14,12 +14,15 @@ export interface Expense {
   displayId?: string;
   category: string;
   customCategoryId?: string | null;
+  subcategoryId?: string | null;
   description: string;
   amount: number;
   date: string;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
+  customCategory?: { id: string; name: string };
+  subcategory?: { id: string; name: string };
 }
 
 export interface ExpenseSummary {
