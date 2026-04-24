@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Download, Search, AlertCircle } from "lucide-react";
+import { Download, Search, AlertCircle, Eye } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import MonthlyActivityChart from "@/components/global-components/monthly-activity-chart";
 import SalesSummaryCards from "@/components/store-admin/SalesHistory/SalesSummaryCards";
@@ -15,6 +16,7 @@ import { getSalesTransactions, cancelSale } from "@/api/sales.api";
 import { getSaleGrandTotal } from "@/utils/saleAmounts";
 
 const SalesHistoryPage = () => {
+    const navigate = useNavigate();
     // Filters state
     const [search, setSearch] = useState("");
     const debouncedSearch = useDebounce(search, 500);
@@ -222,6 +224,13 @@ const SalesHistoryPage = () => {
             header: "Actions",
             cell: ({ row }) => (
                 <div className="flex justify-center items-center gap-2">
+                    <button 
+                        onClick={() => navigate(`/cashier/receipt/${row.original.id}`)}
+                        className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-xl transition-all active:scale-90 border border-transparent hover:border-blue-100 dark:hover:border-blue-900/50 shadow-sm"
+                        title="View Receipt"
+                    >
+                        <Eye size={16} />
+                    </button>
                     <button 
                         onClick={() => {
                             if (window.confirm("Cancel this sale?")) {

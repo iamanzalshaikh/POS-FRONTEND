@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { 
     getSupplierPurchases, 
-    getSuppliers, 
+    getSuppliers,
+    updateSupplier,
     type SupplierPurchase 
 } from "@/api/suppliers.api";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -22,6 +23,8 @@ import MetricCard from '@/components/global-components/MetricCard';
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/lib/toast";
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { useDebounce } from '@/hooks';
@@ -73,7 +76,11 @@ export default function SupplierPurchasesListPage() {
 
     const suppliers = useMemo(() => {
         const d = suppliersRes?.data?.data;
-        if (Array.isArray(d)) return d.map((s) => ({ id: s.id, name: s.name }));
+        if (Array.isArray(d)) {
+            return d
+                .filter(s => s.name !== "STARTUP INVENTORY / OPENING STOCK")
+                .map((s) => ({ id: s.id, name: s.name }));
+        }
         return [];
     }, [suppliersRes]);
 
@@ -95,6 +102,17 @@ export default function SupplierPurchasesListPage() {
         };
     }, [rows, purchasesRes]);
 
+    const handleSupplierRename = async (id: string, newName: string, oldName: string) => {
+        if (!newName.trim() || newName === oldName) return;
+        try {
+            await updateSupplier(id, { name: newName });
+            toast.success("Supplier renamed successfully.", "Auto-Saved");
+            loadPurchases();
+        } catch (err: any) {
+            toast.error(err.message || "Rename failed", "Action Failed");
+        }
+    };
+
     const columns: ColumnDef<SupplierPurchase>[] = useMemo(() => [
         {
             id: "purchaseNo",
@@ -107,11 +125,32 @@ export default function SupplierPurchasesListPage() {
         },
         {
             header: "Supplier / Vendor",
-            cell: ({ row }) => (
-                <p className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">
-                    {row.original.supplier?.name || "Unknown"}
-                </p>
-            )
+            cell: ({ row }) => {
+                const s = row.original.supplier;
+                if (!s) return <span className="text-slate-300 italic">Unknown</span>;
+                
+                // Don't allow editing startup inventory name from here (safety)
+                const isSystem = s.name === "STARTUP INVENTORY / OPENING STOCK";
+                
+                if (isSystem) return (
+                    <p className="text-sm font-black text-slate-400 leading-none uppercase tracking-tight italic text-center">
+                        {s.name}
+                    </p>
+                );
+
+                return (
+                    <div className="flex justify-center">
+                        <Input
+                            defaultValue={s.name}
+                            className="h-8 w-full max-w-[200px] bg-transparent border-transparent hover:border-slate-200 focus:border-blue-500 focus:bg-white text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight transition-all px-2 rounded-lg text-center mx-auto"
+                            onBlur={(e) => handleSupplierRename(s.id, e.target.value, s.name)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                            }}
+                        />
+                    </div>
+                );
+            }
         },
         {
             header: "Bought Qty",

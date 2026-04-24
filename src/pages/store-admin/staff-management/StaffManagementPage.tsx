@@ -8,7 +8,8 @@ import {
     Search,
     Edit2, 
     Trash2,
-    RefreshCw
+    RefreshCw,
+    AlertCircle
 } from 'lucide-react';
 import AddStaffModal from '@/components/store-admin/AddStaffModal';
 import MetricCard from '@/components/global-components/MetricCard';
@@ -254,10 +255,10 @@ export default function StaffManagementPage() {
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
-                    title="Managers" 
-                    value={staff.filter((m: any) => m.role === 'ADMIN').length} 
-                    icon={ShieldCheck} 
-                    colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                    title="Inactive" 
+                    value={staff.filter((m: any) => m.status === 'inactive').length} 
+                    icon={AlertCircle} 
+                    colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
                 />
                 <MetricCard 
                     title="Cashiers" 

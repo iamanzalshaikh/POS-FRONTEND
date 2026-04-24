@@ -144,6 +144,12 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     setLoading(true);
     setError(null);
 
+    if (Number(initialStock) > 18) {
+      setError('Initial stock cannot exceed 18 units.');
+      setLoading(false);
+      return;
+    }
+
     const formData = new FormData();
     formData.append('name', name.trim());
     formData.append('sku', sku.trim());
@@ -466,6 +472,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                       required
                       type="number"
                       min={0}
+                      max={18}
                       value={initialStock}
                       onChange={(e) => setInitialStock(e.target.value)}
                       className={inputClass}

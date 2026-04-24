@@ -43,8 +43,12 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
         // Calculate the difference between the target quantity and current stock
         let adjustedQuantity = quantity - currentStock;
 
-        // Validation for negative stock
+        // Validation for quantity limit
         const projectedStock = quantity;
+
+        if (projectedStock > 18) {
+            return toast.error('Stock level cannot exceed 18 units.', 'Limit Reached');
+        }
 
         if (projectedStock < 0) {
             return toast.error(
@@ -247,7 +251,7 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                             </div>
                             <Button 
                                 variant="outline"
-                                onClick={() => setQuantity(quantity + 1)}
+                                onClick={() => setQuantity(prev => Math.min(prev + 1, 18))}
                                 className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all active:scale-90 border-2 border-slate-100 shadow-none p-0"
                             >
                                 <Plus size={24} strokeWidth={3} />

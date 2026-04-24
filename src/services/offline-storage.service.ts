@@ -12,8 +12,6 @@ export type OfflineSale = {
   changeAmount?: number;
   discountAmount: number;
   notes?: string;
-  receivedAmount?: number;
-  changeAmount?: number;
   items: Array<{
     productId: string;
     productName: string;
