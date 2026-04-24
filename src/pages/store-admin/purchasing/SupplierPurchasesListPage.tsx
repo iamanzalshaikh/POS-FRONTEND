@@ -114,6 +114,14 @@ export default function SupplierPurchasesListPage() {
             )
         },
         {
+            header: "Bought Qty",
+            cell: ({ row }) => (
+                <div className="font-bold text-sm text-slate-900 dark:text-white tracking-tight text-center">
+                    {row.original.boughtQty || 0}
+                </div>
+            )
+        },
+        {
             header: "Total Amount",
             accessorKey: "totalAmount",
             cell: ({ row }) => (
@@ -123,31 +131,29 @@ export default function SupplierPurchasesListPage() {
             )
         },
         {
-            header: "Paid Status",
-            cell: ({ row }) => {
-                const bal = num(row.original.balance);
-                const isPaid = bal <= 0;
-                return (
-                    <div className="flex flex-col gap-1 items-center">
-                        <span className={cn(
-                            "px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-[2px] border",
-                            isPaid 
-                                ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
-                                : "bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50"
-                        )}>
-                            {isPaid ? 'Fully Paid' : 'Partially Paid'}
-                        </span>
-                        {!isPaid && (
-                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">
-                                {formatAmountShort(num(row.original.paidAmount))} paid
-                            </span>
-                        )}
-                    </div>
-                );
-            }
+            header: "Return Qty",
+            cell: ({ row }) => (
+                <div className={cn(
+                    "font-black text-sm tracking-tight text-center",
+                    (row.original.returnQty || 0) > 0 ? "text-rose-500" : "text-slate-300"
+                )}>
+                    {row.original.returnQty || '—'}
+                </div>
+            )
         },
         {
-            header: "Remaining Balance",
+            header: "Return Amount",
+            cell: ({ row }) => (
+                <div className={cn(
+                    "font-black text-sm tracking-tight text-center",
+                    (row.original.returnAmount || 0) > 0 ? "text-rose-500" : "text-slate-300"
+                )}>
+                    {row.original.returnAmount ? formatAmountShort(num(row.original.returnAmount)) : '—'}
+                </div>
+            )
+        },
+        {
+            header: "Net Balance",
             accessorKey: "balance",
             cell: ({ row }) => {
                 const bal = num(row.original.balance);
@@ -156,14 +162,14 @@ export default function SupplierPurchasesListPage() {
                         "font-black text-sm tracking-tight text-center",
                         bal > 0 ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"
                     )}>
-                        {bal > 0 ? formatAmountShort(bal) : '—'}
+                        {bal !== 0 ? formatAmountShort(bal) : '—'}
                     </div>
                 );
             }
         },
         {
             id: "purchaseDate",
-            header: "Purchase Date",
+            header: "Date & Time",
             accessorKey: "purchaseDate",
             cell: ({ row }) => (
                 <div className="flex flex-col items-center">

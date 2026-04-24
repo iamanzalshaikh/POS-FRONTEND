@@ -319,52 +319,52 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {true && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
-                <DollarSign size={14} />
-                <h3 className="text-[10px] font-black uppercase tracking-widest">Pricing</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className={labelClass}>
-                    Purchase cost (Rs) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={purchasePrice}
-                    onChange={(e) => setPurchasePrice(e.target.value)}
-                    className={inputClass}
-                  />
+            {(!isMasterOnly || isEdit) && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                  <DollarSign size={14} />
+                  <h3 className="text-[10px] font-black uppercase tracking-widest">Pricing</h3>
                 </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>
-                    Selling price (Rs) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={sellingPrice}
-                    onChange={(e) => setSellingPrice(e.target.value)}
-                    className={`${inputClass} text-blue-600 dark:text-blue-400 font-bold`}
-                  />
-                  <div className="mt-2 space-y-1">
-                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
-                      Calculated GST (18%): Rs {((Number(sellingPrice) || 0) * 0.18).toFixed(2)}
-                    </p>
-                    {Number(discountPercentage) > 0 && (
-                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                        Effective Price: Rs {(Number(sellingPrice) * (1 - Number(discountPercentage) / 100)).toFixed(2)}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className={labelClass}>
+                      Purchase cost (Rs) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={purchasePrice}
+                      onChange={(e) => setPurchasePrice(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelClass}>
+                      Selling price (Rs) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={sellingPrice}
+                      onChange={(e) => setSellingPrice(e.target.value)}
+                      className={`${inputClass} text-blue-600 dark:text-blue-400 font-bold`}
+                    />
+                    <div className="mt-2 space-y-1">
+                      <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest flex items-center gap-1">
+                        Calculated GST (18%): Rs {((Number(sellingPrice) || 0) * 0.18).toFixed(2)}
                       </p>
-                    )}
+                      {Number(discountPercentage) > 0 && (
+                        <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
+                          Effective Price: Rs {(Number(sellingPrice) * (1 - Number(discountPercentage) / 100)).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
                 <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/40 p-4 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
@@ -453,36 +453,36 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
               </div>
             </div>
 
-            {true && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
-                <Archive size={14} />
-                <h3 className="text-[10px] font-black uppercase tracking-widest">Stock &amp; image</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className={labelClass}>Initial stock</label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    value={initialStock}
-                    onChange={(e) => setInitialStock(e.target.value)}
-                    className={inputClass}
-                  />
+            {(!isMasterOnly || isEdit) && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 border-b border-slate-50 dark:border-slate-800 pb-2">
+                  <Archive size={14} />
+                  <h3 className="text-[10px] font-black uppercase tracking-widest">Stock &amp; image</h3>
                 </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>Reorder alert at</label>
-                  <input
-                    required
-                    type="number"
-                    min={0}
-                    value={reorderLevel}
-                    onChange={(e) => setReorderLevel(e.target.value)}
-                    className={inputClass}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className={labelClass}>Initial stock</label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      value={initialStock}
+                      onChange={(e) => setInitialStock(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className={labelClass}>Reorder alert at</label>
+                    <input
+                      required
+                      type="number"
+                      min={0}
+                      value={reorderLevel}
+                      onChange={(e) => setReorderLevel(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
-              </div>
 
                 <div className="relative group h-[140px] border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all hover:bg-slate-100 dark:hover:bg-slate-800/50 overflow-hidden">
                   {imagePreview ? (

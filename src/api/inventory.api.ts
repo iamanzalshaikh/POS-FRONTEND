@@ -18,6 +18,7 @@ export const adjustStock = (data: {
   quantity: number;
   notes?: string;
   referenceId?: string;
+  supplierId?: string;
 }) => {
   return api.post("/inventory/adjust", data).then(res => res.data);
 };

@@ -29,6 +29,7 @@ import { formatCurrency, formatAmount } from '../../utils/expense-utils';
 import { offlineStorage } from '../../services/offline-storage.service';
 import type { OfflineSale } from '../../services/offline-storage.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+import { useSocket } from '../../hooks/useSocket';
 import ProductsFilters from '../../components/cashier/ProductsFilters';
 import ProductsTable from '../../components/cashier/ProductsTable';
 import ThermalReceipt from '../../components/cashier/ThermalReceipt';
@@ -183,6 +184,24 @@ const POSInterface: React.FC = () => {
   useEffect(() => {
     refreshSequence();
   }, [refreshSequence]);
+
+  // Real-time stock updates
+  const socket = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('inventory:updated', (data: any) => {
+      console.log('📡 [Socket] Inventory update received:', data);
+      // Invalidate all product/inventory related queries
+      queryClient.invalidateQueries({ queryKey: ['pos-products'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.invalidateQueries({ queryKey: ['products-catalog'] });
+    });
+
+    return () => {
+      socket.off('inventory:updated');
+    };
+  }, [socket, queryClient]);
 
   // Rest of effects ...
 

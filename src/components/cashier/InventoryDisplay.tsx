@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Package, AlertTriangle, XCircle, Loader2, RefreshCcw } from 'lucide-react';
+import { useSocket } from '../../hooks/useSocket';
 import { fetchFullInventory, fetchLowStockInventory } from '../../api/inventory.api';
 import { DataTable } from '../global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -86,6 +87,21 @@ const InventoryDisplay: React.FC<InventoryDisplayProps> = ({
   useEffect(() => {
     loadInventory();
   }, [showLowStockOnly]);
+
+  // Real-time stock updates
+  const socket = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('inventory:updated', (data: any) => {
+      console.log('📡 [InventoryDisplay] Inventory update received:', data);
+      loadInventory();
+    });
+
+    return () => {
+      socket.off('inventory:updated');
+    };
+  }, [socket, loadInventory]);
 
   const handleRefresh = async () => {
     await loadInventory();

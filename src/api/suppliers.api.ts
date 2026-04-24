@@ -48,6 +48,9 @@ export interface SupplierPurchase {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  boughtQty?: number;
+  returnQty?: number;
+  returnAmount?: number;
   supplier?: { id: string; name: string; phone?: string | null };
   user?: { id: string; name: string; email: string };
   store?: {
