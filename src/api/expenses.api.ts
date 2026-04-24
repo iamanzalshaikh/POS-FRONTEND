@@ -19,6 +19,7 @@ export interface CreateExpenseData {
   date: string;
   notes?: string;
   customCategoryId?: string;
+  subcategoryId?: string;
 }
 
 export interface UpdateExpenseData extends Partial<CreateExpenseData> {}
@@ -259,10 +260,20 @@ export const getExpenseById = async (id: string): Promise<ExpensesApiResponse> =
 // CUSTOM CATEGORIES API
 // ============================================================================
 
+export interface ExpenseSubcategory {
+  id: string;
+  name: string;
+  customCategoryId?: string | null;
+  defaultParentCategory?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ExpenseCategory {
   id: string;
   name: string;
   isDefault?: boolean;
+  subcategories?: ExpenseSubcategory[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -362,6 +373,40 @@ export const deleteExpenseCategory = async (id: string): Promise<CategoriesApiRe
     };
   } catch (error: any) {
     console.error('[Expenses API] Failed to delete category:', error);
+    throw error;
+  }
+};
+
+// ============================================================================
+// SUBCATEGORIES API
+// ============================================================================
+
+/**
+ * Create a new expense subcategory
+ */
+export const createExpenseSubcategory = async (data: {
+  name: string;
+  customCategoryId?: string;
+  defaultParentCategory?: string;
+}): Promise<any> => {
+  try {
+    const response = await api.post<any>('/expenses/subcategories', data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[Expenses API] Failed to create subcategory:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an expense subcategory
+ */
+export const deleteExpenseSubcategory = async (id: string): Promise<any> => {
+  try {
+    const response = await api.delete<any>(`/expenses/subcategories/${id}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('[Expenses API] Failed to delete subcategory:', error);
     throw error;
   }
 };

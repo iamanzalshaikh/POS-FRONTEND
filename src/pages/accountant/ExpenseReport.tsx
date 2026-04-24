@@ -122,6 +122,7 @@ const ExpenseReport: React.FC = () => {
         'Ref ID': e.id.slice(-8).toUpperCase(),
         'Date': e.date,
         'Category': catLabel,
+        'Subcategory': e.subcategory?.name || '—',
         'Description': e.description,
         'Amount': Number(e.amount),
         'Notes': e.notes || '—'
@@ -268,9 +269,16 @@ const ExpenseReport: React.FC = () => {
                           </td>
                           <td className="px-8 py-5 text-center">
                             <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{expense.description}</p>
-                            <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase rounded-md border border-slate-200 dark:border-slate-700">
-                              {customCat ? customCat.name : getCategoryLabel(expense.category)}
-                            </span>
+                            <div className="flex flex-col items-center gap-1 mt-1">
+                              <span className="inline-block px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[8px] font-black uppercase rounded-md border border-slate-200 dark:border-slate-700">
+                                {customCat ? customCat.name : getCategoryLabel(expense.category)}
+                              </span>
+                              {expense.subcategory && (
+                                <span className="inline-block px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase rounded-md border border-blue-100 dark:border-blue-800">
+                                  {expense.subcategory.name}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-8 py-5 text-center">
                             <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(expense.amount)}</p>

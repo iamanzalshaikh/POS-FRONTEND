@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { X, DollarSign, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, DollarSign, CheckCircle2, Loader2, AlertCircle, Tags } from 'lucide-react';
 import EnhancedCalendar from '../global-components/Calendar/EnhancedCalendar';
 import { createPortal } from 'react-dom';
 import type { Expense } from '../../utils/expense-utils';
 import { EXPENSE_CATEGORIES } from '../../utils/expense-utils';
-import { getExpenseCategories, type ExpenseCategory } from '../../api/expenses.api';
+import { getExpenseCategories, type ExpenseCategory, type ExpenseSubcategory } from '../../api/expenses.api';
 import { toLocalYMD } from '@/utils/format';
 
 interface ExpenseModalProps {
@@ -21,6 +21,7 @@ export interface ExpenseFormData {
   date: string;
   notes: string;
   customCategoryId?: string;
+  subcategoryId?: string;
 }
 
 const ExpenseModal: React.FC<ExpenseModalProps> = ({
@@ -36,10 +37,14 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     date: toLocalYMD(new Date()),
     notes: '',
     customCategoryId: undefined,
+    subcategoryId: undefined,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [customCategories, setCustomCategories] = useState<ExpenseCategory[]>([]);
+  const [allCategories, setAllCategories] = useState<{
+    defaultCategories: ExpenseCategory[];
+    customCategories: ExpenseCategory[];
+  }>({ defaultCategories: [], customCategories: [] });
   const [categoriesLoading, setCategoriesLoading] = useState(false);
 
   useEffect(() => {
@@ -47,11 +52,14 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
       setCategoriesLoading(true);
       getExpenseCategories()
         .then((res) => {
-          // Only keep custom categories (not defaults, not "Other")
-          const custom = res.data.filter(
-            (c) => !c.isDefault && c.name.toLowerCase() !== 'other'
-          );
-          setCustomCategories(custom);
+          if (res.success && Array.isArray(res.data)) {
+            const defaults = res.data.filter(c => c.isDefault);
+            const custom = res.data.filter(c => !c.isDefault);
+            setAllCategories({
+              defaultCategories: defaults,
+              customCategories: custom
+            });
+          }
         })
         .catch(() => {})
         .finally(() => setCategoriesLoading(false));
@@ -60,7 +68,6 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   useEffect(() => {
     if (editingExpense) {
-      // If expense has a custom category, set the value to CUSTOM:id
       const categoryValue = editingExpense.customCategoryId
         ? `CUSTOM:${editingExpense.customCategoryId}`
         : editingExpense.category;
@@ -72,6 +79,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         date: editingExpense.date,
         notes: editingExpense.notes || '',
         customCategoryId: editingExpense.customCategoryId || undefined,
+        subcategoryId: editingExpense.subcategoryId || undefined,
       });
     } else {
       setFormData({
@@ -81,23 +89,37 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         date: toLocalYMD(new Date()),
         notes: '',
         customCategoryId: undefined,
+        subcategoryId: undefined,
       });
     }
     setError(null);
   }, [editingExpense, isOpen]);
+
+  // Derived subcategories based on selected category
+  const availableSubcategories = useMemo(() => {
+    if (!formData.category) return [];
+    
+    if (formData.category.startsWith('CUSTOM:')) {
+      const id = formData.category.replace('CUSTOM:', '');
+      const cat = allCategories.customCategories.find(c => c.id === id);
+      return cat?.subcategories || [];
+    } else {
+      const cat = allCategories.defaultCategories.find(c => c.name === formData.category);
+      return cat?.subcategories || [];
+    }
+  }, [formData.category, allCategories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Parse category value - handle custom categories
     let category = formData.category;
     let customCategoryId: string | undefined = undefined;
 
     if (category.startsWith('CUSTOM:')) {
       customCategoryId = category.replace('CUSTOM:', '');
-      category = 'OTHER'; // Backend requires a valid enum value when customCategoryId is provided
+      category = 'OTHER';
     }
 
     try {
@@ -108,6 +130,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
         date: formData.date,
         notes: formData.notes,
         customCategoryId,
+        subcategoryId: formData.subcategoryId || undefined,
       });
       onClose();
     } catch (err: any) {
@@ -121,13 +144,11 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
-      {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm animate-fade-in" 
         onClick={onClose}
       ></div>
 
-      {/* Modal Container */}
       <div className="relative z-10 w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-800">
         
         {/* Header */}
@@ -168,7 +189,10 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
               <div className="relative group">
                 <select
                   value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, category: val, subcategoryId: undefined });
+                  }}
                   required
                   disabled={categoriesLoading}
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all disabled:opacity-50"
@@ -179,7 +203,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                       {cat.label}
                     </option>
                   ))}
-                  {customCategories.map((cat) => (
+                  {allCategories.customCategories.map((cat) => (
                     <option key={cat.id} value={`CUSTOM:${cat.id}`}>
                       {cat.name}
                     </option>
@@ -190,6 +214,32 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Subcategory - Dynamic */}
+            {availableSubcategories.length > 0 && (
+              <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                <label className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 ml-1 flex items-center gap-2">
+                  <Tags size={12} /> Sub-Category (Optional)
+                </label>
+                <div className="relative group">
+                  <select
+                    value={formData.subcategoryId || ''}
+                    onChange={(e) => setFormData({ ...formData, subcategoryId: e.target.value })}
+                    className="w-full px-4 py-3 bg-blue-50/30 dark:bg-blue-950/10 border-2 border-blue-100 dark:border-blue-900/50 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all"
+                  >
+                    <option value="">All Sub-categories</option>
+                    {availableSubcategories.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-blue-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Description */}
             <div className="space-y-1.5">

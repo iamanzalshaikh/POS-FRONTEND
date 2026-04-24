@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2, Loader2 } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2, Loader2, Tags } from 'lucide-react';
 import {
   getExpenses,
   getExpenseCategories,
@@ -70,6 +70,8 @@ const ExpensesPage: React.FC = () => {
       if (res.success) {
         toast.success('Expense created successfully');
         queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] });
+        queryClient.invalidateQueries({ queryKey: ['accountant-finance-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['accountant-finance-sales-report'] });
         setIsModalOpen(false);
       } else {
         toast.error(res.message || 'Failed to create expense');
@@ -83,6 +85,8 @@ const ExpensesPage: React.FC = () => {
       if (res.success) {
         toast.success('Expense updated successfully');
         queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] });
+        queryClient.invalidateQueries({ queryKey: ['accountant-finance-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['accountant-finance-sales-report'] });
         setIsModalOpen(false);
       } else {
         toast.error(res.message || 'Failed to update expense');
@@ -96,6 +100,8 @@ const ExpensesPage: React.FC = () => {
       if (res.success) {
         toast.success('Expense deleted successfully');
         queryClient.invalidateQueries({ queryKey: ['accountant-expenses-list'] });
+        queryClient.invalidateQueries({ queryKey: ['accountant-finance-summary'] });
+        queryClient.invalidateQueries({ queryKey: ['accountant-finance-sales-report'] });
       } else {
         toast.error(res.message || 'Failed to delete expense');
       }
@@ -110,6 +116,7 @@ const ExpensesPage: React.FC = () => {
       date: data.date,
       notes: data.notes || undefined,
       customCategoryId: data.customCategoryId,
+      subcategoryId: data.subcategoryId,
     };
 
     if (editingExpense) {
@@ -167,12 +174,22 @@ const ExpensesPage: React.FC = () => {
     {
       header: "Category",
       cell: ({ row }) => {
-        const customCat = customCategories.find(c => c.id === row.original.customCategoryId);
+        const expense = row.original;
+        const parentLabel = expense.customCategory 
+          ? expense.customCategory.name 
+          : getCategoryLabel(expense.category);
+        
         return (
-          <div className="flex justify-center">
-            <span className="px-3 py-1.5 bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800/50 dark:border-slate-700 dark:text-slate-400 rounded-xl text-[9px] font-black uppercase tracking-[2px]">
-              {customCat ? customCat.name : getCategoryLabel(row.original.category)}
+          <div className="flex flex-col items-center justify-center gap-1.5">
+            <span className="px-3 py-1 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-lg text-[9px] font-black uppercase tracking-wider">
+              {parentLabel}
             </span>
+            {expense.subcategory && (
+              <span className="flex items-center gap-1 text-[8px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest bg-blue-50/50 dark:bg-blue-900/20 px-2.5 py-1 rounded-full border border-blue-100 dark:border-blue-800/50">
+                <Tags size={10} className="opacity-70" />
+                {expense.subcategory.name}
+              </span>
+            )}
           </div>
         );
       }
@@ -203,22 +220,32 @@ const ExpensesPage: React.FC = () => {
               setEditingExpense(row.original);
               setIsModalOpen(true);
             }}
-            className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-slate-700 dark:hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700 disabled:opacity-50"
-            title="Edit"
-            disabled={updateMutation.isPending}
+            className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-slate-700 dark:hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed group/edit relative"
+            title={row.original.category === 'SUPPLIER_PURCHASE' ? "Cannot edit supplier payments" : "Edit"}
+            disabled={updateMutation.isPending || row.original.category === 'SUPPLIER_PURCHASE'}
           >
             <Edit2 size={16} />
+            {row.original.category === 'SUPPLIER_PURCHASE' && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/edit:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20">
+                Cleared Record (Locked)
+              </div>
+            )}
           </button>
           <button
             onClick={() => handleDelete(row.original.id)}
-            className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50 disabled:opacity-50"
-            title="Delete"
-            disabled={deleteMutation.isPending}
+            className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50 disabled:opacity-50 disabled:cursor-not-allowed group/del relative"
+            title={row.original.category === 'SUPPLIER_PURCHASE' ? "Cannot delete supplier payments" : "Delete"}
+            disabled={deleteMutation.isPending || row.original.category === 'SUPPLIER_PURCHASE'}
           >
             {deleteMutation.isPending && deleteMutation.variables === row.original.id ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
               <Trash2 size={16} />
+            )}
+            {row.original.category === 'SUPPLIER_PURCHASE' && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/del:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20">
+                Cleared Record (Locked)
+              </div>
             )}
           </button>
         </div>
