@@ -1,24 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users, UserPlus, Shield, AlertCircle, Eye, Edit2, MoreVertical } from 'lucide-react';
+import { Users, UserPlus, Shield, AlertCircle, Eye, Edit2 } from 'lucide-react';
 import { usersApi } from '../../service/api';
 import { DataTable } from '@/components/global-components/data-table';
 import PageHeader from '@/components/global-components/PageHeader';
 import MetricCard from '@/components/global-components/MetricCard';
-import { useToast } from '@/hooks/use-toast';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from '@/components/ui/button';
 import type { ColumnDef } from '@tanstack/react-table';
 
 const UserManagement: React.FC = () => {
   const navigate = useNavigate();
-
-  const { toast } = useToast();
   const [usersRes, setUsersRes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

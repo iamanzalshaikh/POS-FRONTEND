@@ -34,6 +34,7 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
         state: '',
         country: ''
     });
+    const [customCity, setCustomCity] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -41,17 +42,24 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
         if (isOpen) {
             document.body.style.overflow = 'hidden';
             if (editSupplier) {
+                const state = (editSupplier as any).state || '';
+                const city = (editSupplier as any).city || '';
+                const cities = state ? PAKISTAN_CITIES[state as keyof typeof PAKISTAN_CITIES] || [] : [];
+                const isPredefined = cities.includes(city);
+
                 setFormData({
                     name: editSupplier.name,
                     companyName: (editSupplier as any).companyName || '',
                     phone: editSupplier.phone || '',
                     addressLine: (editSupplier as any).addressLine || '',
-                    city: (editSupplier as any).city || '',
-                    state: (editSupplier as any).state || '',
+                    city: city ? (isPredefined ? city : 'Other') : '',
+                    state: state,
                     country: (editSupplier as any).country || ''
                 });
+                setCustomCity(isPredefined ? '' : city);
             } else {
                 setFormData({ name: '', companyName: '', phone: '', addressLine: '', city: '', state: '', country: '' });
+                setCustomCity('');
             }
             setError(null);
         } else {
@@ -90,25 +98,21 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
         }
 
         setLoading(true);
+        const finalCity = formData.city === 'Other' ? customCity.trim() : formData.city;
+        
+        const payload = {
+            name: formData.name.trim(),
+            companyName: formData.companyName.trim() || undefined,
+            phone: formData.phone.trim() || undefined,
+            addressLine: formData.addressLine.trim() || undefined,
+            city: finalCity || undefined,
+            state: formData.state.trim() || undefined,
+            country: formData.country.trim() || undefined
+        };
+
         const result = editSupplier && onEdit
-            ? await onEdit(editSupplier.id, {
-                name: formData.name.trim(),
-                companyName: formData.companyName.trim() || undefined,
-                phone: formData.phone.trim() || undefined,
-                addressLine: formData.addressLine.trim() || undefined,
-                city: formData.city.trim() || undefined,
-                state: formData.state.trim() || undefined,
-                country: formData.country.trim() || undefined
-              })
-            : await onAdd({
-                name: formData.name.trim(),
-                companyName: formData.companyName.trim() || undefined,
-                phone: formData.phone.trim() || undefined,
-                addressLine: formData.addressLine.trim() || undefined,
-                city: formData.city.trim() || undefined,
-                state: formData.state.trim() || undefined,
-                country: formData.country.trim() || undefined
-              });
+            ? await onEdit(editSupplier.id, payload)
+            : await onAdd(payload);
         setLoading(false);
 
         if (result.success) {
@@ -250,9 +254,29 @@ export default function AddSupplierModal({ isOpen, onClose, onAdd, editSupplier,
                                     {formData.state && PAKISTAN_CITIES[formData.state as keyof typeof PAKISTAN_CITIES]?.map(city => (
                                         <option key={city} value={city}>{city}</option>
                                     ))}
+                                    <option value="Other" className="text-blue-600 font-bold">Other (Custom City)</option>
                                 </select>
                             </div>
                         </div>
+
+                        {formData.city === 'Other' && (
+                            <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                <label className="text-[#1e293b] dark:text-slate-300">
+                                    Custom City Name <span className="text-rose-500">*</span>
+                                </label>
+                                <div className="relative group">
+                                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors pointer-events-none" />
+                                    <input
+                                        required
+                                        type="text"
+                                        placeholder="Enter custom city name"
+                                        value={customCity}
+                                        onChange={e => setCustomCity(e.target.value)}
+                                        className="w-full pl-11 pr-4 py-3 bg-blue-50/30 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-900/50 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Footer Actions */}

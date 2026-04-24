@@ -47,6 +47,15 @@ export default function AddStockModal({ open, onClose, onSuccess, product }: Add
         setLoading(true);
         setError(null);
 
+        const currentStock = product.inventoryStock?.totalQuantity || 0;
+        const totalStock = currentStock + Number(quantityReceived);
+
+        if (totalStock > 18) {
+            setError(`Total stock cannot exceed 18 units. Current: ${currentStock}, adding ${quantityReceived} would result in ${totalStock}.`);
+            setLoading(false);
+            return;
+        }
+
         try {
             await addBatch(product.id, {
                 purchasePrice,
@@ -114,7 +123,7 @@ export default function AddStockModal({ open, onClose, onSuccess, product }: Add
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Quantity Received</label>
                         <div className="relative group">
                             <Archive className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-amber-500 transition-colors pointer-events-none" />
-                            <input required type="number" value={quantityReceived} onChange={e => setQuantityReceived(e.target.value)} min="1" className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all font-black tabular-nums text-slate-900 dark:text-white" />
+                            <input required type="number" value={quantityReceived} onChange={e => setQuantityReceived(e.target.value)} min="1" max={Math.max(0, 18 - (product.inventoryStock?.totalQuantity || 0))} className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 outline-none transition-all font-black tabular-nums text-slate-900 dark:text-white" />
                         </div>
                     </div>
 

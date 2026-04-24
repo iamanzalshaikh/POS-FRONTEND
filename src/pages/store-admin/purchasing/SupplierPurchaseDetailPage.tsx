@@ -10,11 +10,13 @@ import {
     Clock,
     Receipt,
     HistoryIcon,
-    AlertCircle
+    AlertCircle,
+    Edit2
 } from "lucide-react";
 import {
     getSupplierPurchase,
     createSupplierPayment,
+    updateSupplierPurchaseItemCost,
     type SupplierPurchase,
     type SupplierPurchasePayment
 } from "@/api/suppliers.api";
@@ -126,6 +128,7 @@ export default function SupplierPurchaseDetailPage() {
         }
     };
 
+
     if (loading) {
         return <div className="p-20 text-center text-slate-400 font-black uppercase tracking-widest text-[10px] animate-pulse">Retrieving stock receipt...</div>;
     }
@@ -186,13 +189,14 @@ export default function SupplierPurchaseDetailPage() {
             </div>
 
             {/* Financial Overview Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-6">
+            <div className="flex flex-wrap gap-6">
                 <MetricCard
                     title="Invoice Total"
                     value={num(purchase.totalAmount)}
                     isCurrency={true}
                     icon={Receipt}
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+                    className="flex-1 min-w-[280px]"
                 />
                 <MetricCard
                     title="Settled Amount"
@@ -200,6 +204,7 @@ export default function SupplierPurchaseDetailPage() {
                     isCurrency={true}
                     icon={CreditCard}
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                    className="flex-1 min-w-[280px]"
                 />
                 <MetricCard
                     title="Remaining Debt"
@@ -207,6 +212,7 @@ export default function SupplierPurchaseDetailPage() {
                     isCurrency={true}
                     icon={Clock}
                     colorClass={balance > 0 ? "bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400" : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"}
+                    className="flex-1 min-w-[280px]"
                 />
             </div>
 
@@ -242,7 +248,11 @@ export default function SupplierPurchaseDetailPage() {
                                                 #{it.batch?.batchNumber || it.id.slice(0, 6).toUpperCase()}
                                             </td>
                                             <td className="py-5 text-center text-sm font-black text-slate-900 dark:text-white">{formatNumberShort(it.quantity)}</td>
-                                            <td className="py-5 text-right text-[11px] font-black text-slate-500 dark:text-slate-400">{formatAmountShort(num(it.unitPrice))}</td>
+                                            <td className="py-5 text-right px-4">
+                                                <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">
+                                                    {formatAmountShort(num(it.unitPrice))}
+                                                </span>
+                                            </td>
                                             <td className="py-5 text-right text-sm font-black text-slate-900 dark:text-white">{formatAmountShort(num(it.totalPrice))}</td>
                                         </tr>
                                     ))}

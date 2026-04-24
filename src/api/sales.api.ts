@@ -21,6 +21,10 @@ export const getSaleById = (saleId: string) => {
   return api.get(`/sales/${saleId}`).then(res => res.data);
 };
 
+export const getSaleReceipt = (saleId: string) => {
+  return api.get(`/sales/${saleId}/receipt`).then(res => res.data);
+};
+
 export const getSaleByInvoiceNumber = (invoiceNumber: string) => {
   const encodedInvoiceNumber = encodeURIComponent(invoiceNumber);
   return api.get(`/sales/invoice/${encodedInvoiceNumber}`).then(res => res.data);

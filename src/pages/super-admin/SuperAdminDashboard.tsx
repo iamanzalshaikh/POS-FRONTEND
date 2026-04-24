@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { reportsApi, storesApi } from '../../service/api';
 import {
@@ -41,8 +41,7 @@ const SuperAdminDashboard: React.FC = () => {
         data: overviewRes, 
         isLoading: isOverviewLoading, 
         isError: isOverviewError, 
-        refetch: refetchOverview,
-        isRefetching: isOverviewRefetching 
+        refetch: refetchOverview
     } = useQuery({
         queryKey: ['super-admin-overview'],
         queryFn: () => reportsApi.getSuperAdminOverview(),

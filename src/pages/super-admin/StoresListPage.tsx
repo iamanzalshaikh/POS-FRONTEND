@@ -3,24 +3,13 @@ import { useStoreStore } from '../../store/useStoreStore';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus,
-    MoreVertical,
     Eye,
     Edit2,
-    Trash2,
     Power,
-    MapPin,
-    Shield,
     Warehouse
 } from 'lucide-react';
 import PageHeader from '@/components/global-components/PageHeader';
 import { useToast } from '@/hooks/use-toast';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { DataTable } from '@/components/global-components/data-table-2';
 import type { ColumnDef } from '@tanstack/react-table';
 

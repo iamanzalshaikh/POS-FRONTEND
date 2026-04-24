@@ -69,11 +69,8 @@ export function getSaleGrandTotal(sale: SaleLike): number {
   const stored = toNum(sale.totalAmount);
   const disc = toNum(sale.discountAmount ?? 0);
   const headerSub = toNum(sale.subtotal);
-  const headerTax = toNum(sale.totalTax);
-  const { lineTax, lineSub } = lineRollups(sale);
+  const { lineSub } = lineRollups(sale);
 
-  const effTax =
-    Number.isFinite(headerTax) && headerTax > 0.0001 ? headerTax : lineTax > 0.0001 ? lineTax : 0;
   const effSub =
     lineSub > 0.0001 ? lineSub : Number.isFinite(headerSub) ? headerSub : NaN;
 

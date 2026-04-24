@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Printer, Mail, CheckCircle2, Clock, ArrowLeft, WifiOff, RefreshCw, MapPin, Phone, Building2, Globe } from 'lucide-react';
-import { getSaleById } from '../../api/sales.api';
+import { getSaleById, getSaleReceipt } from '../../api/sales.api';
 import { offlineStorage } from '../../services/offline-storage.service';
 import { offlineSync } from '../../services/offline-sync.service';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
@@ -278,12 +278,11 @@ const ReceiptPage: React.FC = () => {
       if (isOnline && !isOfflineSale) {
         setIsLoading(true);
         try {
-          console.log('📡 [ReceiptPage] Fetching from API (online-first):', saleId);
-          const res = await getSaleById(saleId);
-          console.log('📦 [ReceiptPage] Raw API response:', res);
+          console.log('📡 [ReceiptPage] Fetching from API (RECEIPT ENDPOINT):', saleId);
+          const res = await getSaleReceipt(saleId);
+          console.log('📦 [ReceiptPage] Raw Receipt API response:', res);
 
-          // getSaleById returns res.data which is { success, data: {sale}, message }
-          // or sometimes the sale object directly
+          // getSaleReceipt returns res.data which is { success, data: {sale}, message }
           const saleData = res?.data?.data || res?.data || res;
 
           if (saleData?.id) {
@@ -676,26 +675,34 @@ const ReceiptPage: React.FC = () => {
                 )}
               </div>
 
-              {user?.store ? (
+              {(sale?.store || user?.store) ? (
                 <>
-                  <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-[0.15em] mb-1 print:text-[10pt]">{user.store.name}</h2>
+                  <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-[0.15em] mb-1 print:text-[10pt]">
+                    {sale?.store?.name || user?.store?.name}
+                  </h2>
                   <div className="space-y-0.5">
-                    {user.store.address && (
+                    {(sale?.store?.address || user?.store?.address) && (
                       <div className="flex items-center justify-center space-x-1">
                         <MapPin size={10} className="text-slate-500 flex-shrink-0" />
-                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">{user.store.address}</p>
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">
+                          {sale?.store?.address || user?.store?.address}
+                        </p>
                       </div>
                     )}
-                    {user.store.phone && (
+                    {(sale?.store?.phone || user?.store?.phone) && (
                       <div className="flex items-center justify-center space-x-1">
                         <Phone size={10} className="text-slate-500 flex-shrink-0" />
-                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">{user.store.phone}</p>
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">
+                          {sale?.store?.phone || user?.store?.phone}
+                        </p>
                       </div>
                     )}
-                    {user.store.email && (
+                    {(sale?.store?.email || user?.store?.email) && (
                       <div className="flex items-center justify-center space-x-1">
                         <Mail size={10} className="text-slate-500 flex-shrink-0" />
-                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">{user.store.email}</p>
+                        <p className="text-[10px] font-bold text-slate-600 uppercase tracking-tight print:text-[6.5pt]">
+                          {sale?.store?.email || user?.store?.email}
+                        </p>
                       </div>
                     )}
                   </div>

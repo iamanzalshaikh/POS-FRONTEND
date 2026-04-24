@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
 import { Store, CreditCard, Laptop2, Activity, CalendarDays, Download, Loader2, AlertCircle } from 'lucide-react';
 import { reportsApi } from '../../service/api';
 import { StatsCard } from '../../components/ui/StatsCard';
@@ -9,7 +10,7 @@ const SuperOverview: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  useEffect(() => {
     const fetchStats = async () => {
       try {
         const res = await reportsApi.getSuperAdminOverview();
@@ -52,27 +53,27 @@ const SuperOverview: React.FC = () => {
 
   const maxRevenue = stats?.revenueByStore?.length ? Math.max(...stats.revenueByStore.map((s: any) => s.revenue)) : 1;
 
-  const recentDeviceColumns = [
+  const recentDeviceColumns: ColumnDef<any>[] = [
     {
       accessorKey: 'storeId',
       header: 'Store ID',
-      cell: ({ getValue }) => <span className="font-bold text-slate-700">STR-{getValue<string>()?.slice(-4)?.toUpperCase()}</span>,
+      cell: ({ getValue }) => <span className="font-bold text-slate-700">STR-{String(getValue() || '')?.slice(-4)?.toUpperCase()}</span>,
     },
     {
       accessorKey: 'deviceType',
       header: 'Device Type',
-      cell: ({ getValue }) => <span className="text-slate-500 font-medium">{getValue<string>() || 'Terminal'}</span>,
+      cell: ({ getValue }) => <span className="text-slate-500 font-medium">{String(getValue() || '') || 'Terminal'}</span>,
     },
     {
       accessorKey: 'store.city',
       id: 'region',
       header: 'Region',
-      cell: ({ row }) => <span className="text-slate-500 font-medium truncate max-w-[150px]">{row.original.store?.city || 'Unknown'}, {row.original.store?.state || ''}</span>,
+      cell: ({ row }: { row: any }) => <span className="text-slate-500 font-medium truncate max-w-[150px]">{row.original.store?.city || 'Unknown'}, {row.original.store?.state || ''}</span>,
     },
     {
       id: 'status',
       header: 'Status',
-      cell: ({ row }) => {
+      cell: ({ row }: { row: any }) => {
         const device = row.original;
         const lastActive = device.lastActiveAt ? new Date(device.lastActiveAt).getTime() : 0;
         const now = Date.now();
@@ -91,7 +92,7 @@ const SuperOverview: React.FC = () => {
     {
       accessorKey: 'createdAt',
       header: 'Time',
-      cell: ({ getValue }) => <span className="text-slate-400 font-medium text-xs">{new Date(getValue<string>()).toLocaleDateString()}</span>,
+      cell: ({ getValue }) => <span className="text-slate-400 font-medium text-xs">{new Date(String(getValue() || '')).toLocaleDateString()}</span>,
     },
   ];
 

@@ -99,15 +99,17 @@ export default function SuppliersPage() {
         {
             header: "Vendor Name",
             accessorKey: "name",
-            meta: { align: 'left' },
+            meta: { align: 'center' },
             cell: ({ row }) => (
-                <p className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">{row.original.name}</p>
+                <div className="flex justify-center">
+                    <p className="text-sm font-black text-slate-900 dark:text-white leading-none uppercase tracking-tight">{row.original.name}</p>
+                </div>
             )
         },
         {
             header: "Contact Phone",
             accessorKey: "phone",
-            meta: { align: 'left' },
+            meta: { align: 'center' },
             cell: ({ row }) => (
                 <div className="font-bold text-[10px] text-slate-500 dark:text-slate-400 tracking-[0.05em]">
                     {row.original.phone || "—"}
@@ -117,12 +119,12 @@ export default function SuppliersPage() {
         {
             header: "Outstanding Balance",
             accessorKey: "totalBalance",
-            meta: { align: 'right' },
+            meta: { align: 'center' },
             cell: ({ row }) => {
                 const balance = Number(row.original.totalBalance || 0);
                 return (
                     <div className={cn(
-                        "font-black text-xs tabular-nums text-right",
+                        "font-black text-xs tabular-nums text-center",
                         balance > 0 ? "text-rose-500" : "text-emerald-500"
                     )}>
                         ₨ {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
@@ -151,13 +153,21 @@ export default function SuppliersPage() {
         },
         {
             header: "Location",
-            accessorKey: "address",
-            meta: { align: 'left' },
-            cell: ({ row }) => (
-                <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate max-w-[200px]">
-                    {row.original.address || "—"}
-                </div>
-            )
+            id: "location",
+            meta: { align: 'center' },
+            cell: ({ row }) => {
+                const { city, state, addressLine } = row.original;
+                const parts = [addressLine, city, state].filter(Boolean);
+                const locationString = parts.join(", ");
+                return (
+                    <div 
+                        className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest truncate max-w-[250px]"
+                        title={locationString}
+                    >
+                        {locationString || "—"}
+                    </div>
+                );
+            }
         },
         {
             id: "actions",

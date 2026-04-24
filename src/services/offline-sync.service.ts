@@ -6,7 +6,6 @@
 import api from '../service/api';
 import { offlineStorage, type OfflineSale } from './offline-storage.service';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 export type SyncProgress = {
   total: number;

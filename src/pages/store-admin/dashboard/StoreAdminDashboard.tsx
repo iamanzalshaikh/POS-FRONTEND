@@ -5,7 +5,8 @@ import {
   ShoppingCart, 
   PackageOpen, 
   Undo2, 
-  BadgePercent 
+  BadgePercent,
+  Wallet 
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import DashboardGrid from './components/DashboardGrid';
@@ -219,7 +220,7 @@ export default function StoreAdminDashboard() {
               value={data?.metrics?.[0]?.value ?? 0}
               isCurrency={true}
               isPositive={true}
-              icon={DollarSign}
+              icon={Wallet}
               colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
             />
             <MetricCard
@@ -318,7 +319,11 @@ export default function StoreAdminDashboard() {
 
         {/* Row 2: Top Selling Inventory & Active Devices */}
         <div className="col-span-1 lg:col-span-4 xl:col-span-8">
-          <TopProductsTable products={data?.topProducts ?? []} />
+          <TopProductsTable 
+            products={data?.topProducts ?? []} 
+            onRefresh={() => queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })}
+            isLoading={dashLoading}
+          />
         </div>
         <div className="col-span-1 lg:col-span-4 xl:col-span-4">
           <ActiveDevicesPanel devices={data?.devices ?? []} />

@@ -28,6 +28,7 @@ import { fetchProducts } from "@/api/products.api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 type ProductRow = {
   key: string;
   productId: string;
@@ -58,6 +59,8 @@ export default function NewSupplierPurchasePage() {
   const [items, setItems] = useState<ProductRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [prodSearch, setProdSearch] = useState("");
+  const [showResults, setShowResults] = useState(false);
 
   // Queries
   const { data: supsRes } = useQuery({
@@ -84,6 +87,16 @@ export default function NewSupplierPurchasePage() {
     const body = prodsRes;
     return body?.data?.data || body?.data || (Array.isArray(body) ? body : []);
   }, [prodsRes]);
+
+  const filteredProducts = useMemo(() => {
+    if (!prodSearch.trim()) return products.slice(0, 50); // Show recent 50 if empty
+    const q = prodSearch.toLowerCase();
+    return products.filter((p: any) => 
+        p.name.toLowerCase().includes(q) || 
+        p.sku.toLowerCase().includes(q) || 
+        p.barcode?.toLowerCase().includes(q)
+    ).slice(0, 100);
+  }, [products, prodSearch]);
 
   const totalAmount = useMemo(() => {
     return items.reduce((acc, it) => {
@@ -119,6 +132,7 @@ export default function NewSupplierPurchasePage() {
       },
     ]);
     setSelectedProductId("");
+    setProdSearch("");
   };
 
   const removeLine = (key: string) => {
@@ -352,25 +366,46 @@ export default function NewSupplierPurchasePage() {
                   <ShoppingCart size={14} className="text-indigo-500" /> Product Selection
                 </h3>
                 
-                <div className="relative w-full max-w-md">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <Search size={14} className="text-slate-400" />
+                <div className="relative w-full max-w-md group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+                    <Search size={14} className={cn("transition-colors", showResults ? "text-blue-500" : "text-slate-400")} />
                   </div>
-                  <select
-                    value={selectedProductId}
-                    onChange={(e) => setSelectedProductId(e.target.value)}
-                    className="h-11 w-full pl-11 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/40 transition-all cursor-pointer appearance-none shadow-sm"
-                  >
-                    <option value="">Search keywords to add product...</option>
-                    {products.map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name} — {p.sku}</option>
-                    ))}
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                      <path d="M19 9l-7 7-7-7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
+                  <Input
+                    value={prodSearch}
+                    onChange={(e) => {
+                        setProdSearch(e.target.value);
+                        setShowResults(true);
+                    }}
+                    onFocus={() => setShowResults(true)}
+                    onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                    placeholder="Type name or SKU to search..."
+                    className="h-11 w-full pl-11 pr-10 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500/40 transition-all shadow-sm"
+                  />
+                  
+                  {showResults && filteredProducts.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-2xl z-[100] max-h-64 overflow-y-auto custom-scrollbar p-2 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                          {filteredProducts.map((p: any) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => {
+                                    setSelectedProductId(p.id);
+                                    setProdSearch(p.name);
+                                    setShowResults(false);
+                                }}
+                                className={cn(
+                                    "w-full text-left px-4 py-3 rounded-xl transition-all flex flex-col gap-0.5",
+                                    selectedProductId === p.id 
+                                        ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-100 dark:border-blue-900/50" 
+                                        : "hover:bg-slate-50 dark:hover:bg-slate-800 border border-transparent"
+                                )}
+                              >
+                                  <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight">{p.name}</span>
+                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{p.sku} • {p.category?.name}</span>
+                              </button>
+                          ))}
+                      </div>
+                  )}
                 </div>
               </div>
 
