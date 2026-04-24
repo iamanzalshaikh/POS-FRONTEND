@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Download, FileSpreadsheet, FileText, Calendar, Filter } from 'lucide-react';
 import { getSalesReport, getProfitAndLoss } from '../../api/finance.api';
 import { getExpenses } from '../../api/expenses.api';
@@ -14,7 +14,47 @@ interface ExportOption {
   format: string;
   icon: React.ReactNode;
   endpoint: string;
+  category: string;
 }
+
+const exportOptions: ExportOption[] = [
+  {
+    id: '1',
+    name: 'Financial Statements',
+    description: 'Complete financial reports including balance sheet, P&L, and cash flow',
+    format: 'Excel (XLSX)',
+    icon: <FileSpreadsheet size={24} className="text-emerald-400" />,
+    endpoint: 'financial-statements',
+    category: 'all'
+  },
+  {
+    id: '2',
+    name: 'Tax Reports',
+    description: 'GST, TDS, and income tax summaries for filing',
+    format: 'Excel (XLSX)',
+    icon: <FileText size={24} className="text-blue-400" />,
+    endpoint: 'tax-reports',
+    category: 'tax'
+  },
+  {
+    id: '3',
+    name: 'Expense Ledger',
+    description: 'Detailed expense transactions with categories',
+    format: 'Excel (XLSX)',
+    icon: <FileSpreadsheet size={24} className="text-blue-400" />,
+    endpoint: 'expense-ledger',
+    category: 'expenses'
+  },
+  {
+    id: '4',
+    name: 'Revenue Report',
+    description: 'Sales and revenue breakdown by period',
+    format: 'Excel (XLSX)',
+    icon: <FileText size={24} className="text-purple-400" />,
+    endpoint: 'revenue-report',
+    category: 'revenue'
+  },
+];
 
 const ExportData: React.FC = () => {
   const [loading, setLoading] = useState<string | null>(null);
@@ -26,40 +66,15 @@ const ExportData: React.FC = () => {
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterCategory, setFilterCategory] = useState('all');
 
-  const exportOptions: ExportOption[] = [
-    {
-      id: '1',
-      name: 'Financial Statements',
-      description: 'Complete financial reports including balance sheet, P&L, and cash flow',
-      format: 'Excel (XLSX)',
-      icon: <FileSpreadsheet size={24} className="text-emerald-400" />,
-      endpoint: 'financial-statements'
-    },
-    {
-      id: '2',
-      name: 'Tax Reports',
-      description: 'GST, TDS, and income tax summaries for filing',
-      format: 'Excel (XLSX)',
-      icon: <FileText size={24} className="text-blue-400" />,
-      endpoint: 'tax-reports'
-    },
-    {
-      id: '3',
-      name: 'Expense Ledger',
-      description: 'Detailed expense transactions with categories',
-      format: 'Excel (XLSX)',
-      icon: <FileSpreadsheet size={24} className="text-blue-400" />,
-      endpoint: 'expense-ledger'
-    },
-    {
-      id: '4',
-      name: 'Revenue Report',
-      description: 'Sales and revenue breakdown by period',
-      format: 'Excel (XLSX)',
-      icon: <FileText size={24} className="text-purple-400" />,
-      endpoint: 'revenue-report'
-    },
-  ];
+  const filteredOptions = useMemo(() => {
+    if (filterCategory === 'all') return exportOptions;
+    return exportOptions.filter(opt => opt.category === filterCategory || opt.id === '1');
+  }, [filterCategory]);
+
+  const activeFilterLabel = useMemo(() => {
+    if (filterCategory === 'all') return 'All Categories';
+    return filterCategory.charAt(0).toUpperCase() + filterCategory.slice(1);
+  }, [filterCategory]);
 
   const handleExport = async (optionId: string) => {
     try {
@@ -81,7 +96,7 @@ const ExportData: React.FC = () => {
         } else {
           throw new Error(response.message || 'Failed to fetch sales data');
         }
-      } 
+      }
       else if (optionId === '3') { // Expense Ledger
         const response = await getExpenses();
         if (response.success && response.data) {
@@ -101,7 +116,7 @@ const ExportData: React.FC = () => {
         } else {
           throw new Error('Failed to fetch expense data');
         }
-      } 
+      }
       else if (optionId === '2') { // Tax Reports
         const response = await getSalesReport({ startDate, endDate });
         if (response.success && response.data) {
@@ -117,7 +132,7 @@ const ExportData: React.FC = () => {
         } else {
           throw new Error(response.message || 'Failed to generate tax report');
         }
-      } 
+      }
       else { // Financial Statements (P&L)
         const response = await getProfitAndLoss({ startDate, endDate });
         if (response.success && response.data) {
@@ -219,7 +234,7 @@ const ExportData: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <MetricCard
           title="Available Reports"
-          value={exportOptions.length}
+          value={filteredOptions.length}
           icon={FileSpreadsheet}
           colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
@@ -231,7 +246,7 @@ const ExportData: React.FC = () => {
         />
         <MetricCard
           title="Active Filter"
-          value={filterCategory === 'all' ? 'All Categories' : filterCategory}
+          value={activeFilterLabel}
           icon={Filter}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
@@ -239,7 +254,7 @@ const ExportData: React.FC = () => {
 
       {/* Export Options Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {exportOptions.map((option) => (
+        {filteredOptions.map((option) => (
           <div
             key={option.id}
             className="bg-white border border-slate-200 rounded-3xl p-6 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-500/10 transition-all group cursor-pointer"

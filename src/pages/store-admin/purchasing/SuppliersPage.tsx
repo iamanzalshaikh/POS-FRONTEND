@@ -121,13 +121,25 @@ export default function SuppliersPage() {
             accessorKey: "totalBalance",
             meta: { align: 'center' },
             cell: ({ row }) => {
-                const balance = Number(row.original.totalBalance || 0);
+                const supplier = row.original;
+                const balance = Number(supplier.totalBalance || 0);
+                
                 return (
-                    <div className={cn(
-                        "font-black text-xs tabular-nums text-center",
-                        balance > 0 ? "text-rose-500" : "text-emerald-500"
-                    )}>
-                        ₨ {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <div className="flex flex-col items-center">
+                        <div className={cn(
+                            "font-black text-xs tabular-nums text-center",
+                            balance > 0 ? "text-rose-500" : "text-emerald-500"
+                        )}>
+                            ₨ {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </div>
+                        <div className="flex flex-col mt-1">
+                            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight leading-tight">
+                                Payable: ₨ {(Number(supplier.supplierPayable || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                            <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight leading-tight">
+                                Paid: ₨ {(Number(supplier.supplierPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </span>
+                        </div>
                     </div>
                 );
             }

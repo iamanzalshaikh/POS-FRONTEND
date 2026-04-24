@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2, Loader2, Tags } from 'lucide-react';
+import { TrendingUp, DollarSign, Calendar, FolderPlus, Search, Edit2, Trash2, Loader2, Wallet, AlertCircle, Tags } from 'lucide-react';
 import {
   getExpenses,
   getExpenseCategories,
@@ -25,6 +25,21 @@ import { DataTable } from '../../components/global-components/data-table-2';
 import { toast } from '@/lib/toast';
 import type { ColumnDef } from '@tanstack/react-table';
 import { ManagementPageSkeleton } from '@/components/ui/skeletons/ManagementPageSkeleton';
+import { cn } from '@/lib/utils';
+import { getSuppliers, getSupplierPurchases } from '../../api/suppliers.api';
+
+interface GroupedSupplierExpense {
+  isGrouped: true;
+  supplierId: string;
+  category: 'SUPPLIER_PURCHASE';
+  description: string;
+  amount: number; // This will show Total
+  paidAmount: number; // This will show Paid
+  date: string;
+  id: string; // Synthetic ID
+}
+
+type TableRow = Expense | GroupedSupplierExpense;
 
 const ExpensesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -132,24 +147,39 @@ const ExpensesPage: React.FC = () => {
     }
   };
 
-  const filteredExpenses = expenses.filter(e => {
-    const isSalary = e.category === 'SALARIES';
-    if (isSalary) return false;
-
-    const matchesSearch = e.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          e.category.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    let matchesCategory = categoryFilter === 'ALL';
-    if (!matchesCategory) {
-      if (categoryFilter.startsWith('CUSTOM:')) {
-        matchesCategory = e.customCategoryId === categoryFilter.replace('CUSTOM:', '');
-      } else {
-        matchesCategory = e.category === categoryFilter;
-      }
-    }
-
-    return matchesSearch && matchesCategory;
+  const { data: suppliersRes } = useQuery({
+    queryKey: ['suppliers-list-brief'],
+    queryFn: () => getSuppliers(),
   });
+
+  const { data: purchasesRes } = useQuery({
+    queryKey: ['all-supplier-purchases-brief'],
+    queryFn: () => getSupplierPurchases({ limit: 1000 }), // High limit for grouping
+  });
+
+  const suppliers = useMemo(() => suppliersRes?.data?.data || [], [suppliersRes]);
+  const purchases = useMemo(() => purchasesRes?.data?.data?.items || [], [purchasesRes]);
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => {
+      const isSalary = e.category === 'SALARIES';
+      if (isSalary) return false;
+
+      const matchesSearch = e.description.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            e.category.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      let matchesCategory = categoryFilter === 'ALL';
+      if (!matchesCategory) {
+        if (categoryFilter.startsWith('CUSTOM:')) {
+          matchesCategory = e.customCategoryId === categoryFilter.replace('CUSTOM:', '');
+        } else {
+          matchesCategory = e.category === categoryFilter;
+        }
+      }
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [expenses, searchQuery, categoryFilter]);
 
   const columns: ColumnDef<Expense>[] = [
     {
@@ -196,11 +226,33 @@ const ExpensesPage: React.FC = () => {
     },
     {
       header: "Amount",
-      cell: ({ row }) => (
-        <div className="text-center text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest tabular-nums">
-          {formatAmount(row.original.amount)}
-        </div>
-      )
+      cell: ({ row }) => {
+        const expense = row.original;
+        const isSupplierPurchase = expense.category === 'SUPPLIER_PURCHASE';
+
+        return (
+          <div className="flex flex-col items-center justify-center">
+            <div className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest tabular-nums">
+              {formatAmount(expense.amount)}
+            </div>
+            {isSupplierPurchase && (
+              <div className="flex flex-col mt-1 space-y-0.5">
+                <div className="text-[9px] font-medium text-slate-500 uppercase tracking-tight leading-tight">
+                  Total: {formatAmount(expense.amount)}
+                </div>
+                <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight leading-tight flex justify-center gap-1">
+                  <span>Paid:</span> {formatAmount(expense.paidAmount || 0)}
+                </div>
+                {(expense.amount - (expense.paidAmount || 0)) > 0 && (
+                  <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tight leading-tight">
+                    Remaining: {formatAmount(expense.amount - (expense.paidAmount || 0))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      }
     },
     {
       header: "Date",
@@ -213,43 +265,48 @@ const ExpensesPage: React.FC = () => {
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        <div className="flex justify-center items-center gap-2">
-          <button
-            onClick={() => {
-              setEditingExpense(row.original);
-              setIsModalOpen(true);
-            }}
-            className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-slate-700 dark:hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed group/edit relative"
-            title={row.original.category === 'SUPPLIER_PURCHASE' ? "Cannot edit supplier payments" : "Edit"}
-            disabled={updateMutation.isPending || row.original.category === 'SUPPLIER_PURCHASE'}
-          >
-            <Edit2 size={16} />
-            {row.original.category === 'SUPPLIER_PURCHASE' && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/edit:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20">
-                Cleared Record (Locked)
-              </div>
-            )}
-          </button>
-          <button
-            onClick={() => handleDelete(row.original.id)}
-            className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50 disabled:opacity-50 disabled:cursor-not-allowed group/del relative"
-            title={row.original.category === 'SUPPLIER_PURCHASE' ? "Cannot delete supplier payments" : "Delete"}
-            disabled={deleteMutation.isPending || row.original.category === 'SUPPLIER_PURCHASE'}
-          >
-            {deleteMutation.isPending && deleteMutation.variables === row.original.id ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Trash2 size={16} />
-            )}
-            {row.original.category === 'SUPPLIER_PURCHASE' && (
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/del:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20">
-                Cleared Record (Locked)
-              </div>
-            )}
-          </button>
-        </div>
-      )
+      cell: ({ row }) => {
+        const expense = row.original;
+        const isSupplier = expense.category === 'SUPPLIER_PURCHASE';
+
+        return (
+          <div className="flex justify-center items-center gap-2">
+            <button
+              onClick={() => {
+                setEditingExpense(expense);
+                setIsModalOpen(true);
+              }}
+              className="p-2.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white dark:hover:bg-slate-700 dark:hover:text-white transition-all active:scale-95 border border-slate-200 dark:border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed group/edit relative"
+              title={isSupplier ? "Cannot edit supplier payments" : "Edit"}
+              disabled={updateMutation.isPending || isSupplier}
+            >
+              <Edit2 size={16} />
+              {isSupplier && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/edit:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20">
+                  Cleared Record (Locked)
+                </div>
+              )}
+            </button>
+            <button
+              onClick={() => handleDelete(expense.id)}
+              className="p-2.5 bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 rounded-xl hover:bg-rose-600 hover:text-white transition-all active:scale-95 border border-rose-100 dark:border-rose-900/50 disabled:opacity-50 disabled:cursor-not-allowed group/del relative"
+              title={isSupplier ? "Cannot delete supplier payments" : "Delete"}
+              disabled={deleteMutation.isPending || isSupplier}
+            >
+              {deleteMutation.isPending && deleteMutation.variables === expense.id ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Trash2 size={16} />
+              )}
+              {isSupplier && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900 text-white text-[8px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/del:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-20">
+                  Cleared Record (Locked)
+                </div>
+              )}
+            </button>
+          </div>
+        );
+      }
     }
   ];
 
@@ -275,7 +332,7 @@ const ExpensesPage: React.FC = () => {
         }}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
         <MetricCard
           title="Today's Expenses"
           value={formatAmount(summary.today)}
@@ -293,6 +350,25 @@ const ExpensesPage: React.FC = () => {
           value={formatAmount(summary.total)}
           icon={TrendingUp}
           colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+        />
+        <MetricCard
+          title="Supplier Paid"
+          value={formatAmount(summary.paid)}
+          icon={Wallet}
+          colorClass="bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400"
+          subtitle="Cash Paid Out"
+        />
+        <MetricCard
+          title="Pending Payables"
+          value={formatAmount(summary.remaining)}
+          icon={AlertCircle}
+          colorClass={cn(
+            "border",
+            summary.remaining > 0 
+              ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-950/30" 
+              : "bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-800/30"
+          )}
+          subtitle={summary.remaining > 0 ? "Outstanding Debt" : "All Settled"}
         />
       </div>
 

@@ -23,12 +23,15 @@ export interface Expense {
   updatedAt?: string;
   customCategory?: { id: string; name: string };
   subcategory?: { id: string; name: string };
+  paidAmount?: number;
 }
 
 export interface ExpenseSummary {
   today: number;
   thisMonth: number;
   total: number;
+  paid: number;
+  remaining: number;
 }
 
 export interface CategorySummary {
@@ -69,7 +72,13 @@ export const EXPENSE_CATEGORIES = [
 export const getTotalExpenses = (expenses: Expense[]): number => {
   return expenses
     .filter(expense => expense.category !== 'SALARIES')
-    .reduce((sum, expense) => sum + expense.amount, 0);
+    .reduce((sum, expense) => {
+      // Sum the actual cash outflow
+      const val = expense.category === 'SUPPLIER_PURCHASE' 
+        ? (expense.paidAmount ?? expense.amount) 
+        : (expense.paidAmount ?? expense.amount);
+      return sum + Number(val || 0);
+    }, 0);
 };
 
 /**
@@ -111,10 +120,26 @@ export const getMonthlyExpenses = (expenses: Expense[]): number => {
  * Get complete expense summary (today, month, total)
  */
 export const getExpenseSummary = (expenses: Expense[]): ExpenseSummary => {
+  const paid = expenses.reduce((sum, e) => {
+    const val = e.category === 'SUPPLIER_PURCHASE' ? (e.paidAmount ?? e.amount) : e.amount;
+    return sum + Number(val || 0);
+  }, 0);
+
+  const remaining = expenses.reduce((sum, e) => {
+    if (e.category === 'SUPPLIER_PURCHASE') {
+      const total = e.amount || 0;
+      const alreadyPaid = e.paidAmount || 0;
+      return sum + (total - alreadyPaid);
+    }
+    return sum;
+  }, 0);
+
   return {
     today: getTodayExpenses(expenses),
     thisMonth: getMonthlyExpenses(expenses),
     total: getTotalExpenses(expenses),
+    paid,
+    remaining
   };
 };
 
