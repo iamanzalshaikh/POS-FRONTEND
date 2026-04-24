@@ -281,7 +281,19 @@ const ExpenseReport: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-8 py-5 text-center">
-                            <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(expense.amount)}</p>
+                            <div className="flex flex-col items-center">
+                              <p className="text-sm font-black text-slate-900 dark:text-white tabular-nums">{formatCurrency(expense.amount)}</p>
+                              {expense.category === 'SUPPLIER_PURCHASE' && (
+                                <div className="flex flex-col mt-1">
+                                  <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight leading-tight">
+                                    Payable: {formatCurrency(expense.supplierPayable || 0)}
+                                  </span>
+                                  <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight leading-tight">
+                                    Paid: {formatCurrency(expense.supplierPaid || 0)}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

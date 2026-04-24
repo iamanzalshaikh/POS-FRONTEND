@@ -15,6 +15,8 @@ export interface Supplier {
   createdAt: string;
   updatedAt: string;
   totalBalance?: number;
+  supplierPayable?: number;
+  supplierPaid?: number;
   _count?: { purchases: number };
 }
 

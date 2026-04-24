@@ -78,7 +78,19 @@ const ExpensesTable: React.FC<ExpensesTableProps> = ({
                   </div>
                 </td>
                 <td className="py-4 px-6">
-                  <span className="text-base font-black text-slate-900">{formatCurrency(expense.amount)}</span>
+                  <div className="flex flex-col">
+                    <span className="text-base font-black text-slate-900">{formatCurrency(expense.amount)}</span>
+                    {expense.category === 'SUPPLIER_PURCHASE' && (
+                      <div className="flex flex-col mt-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight leading-tight">
+                          Payable: {formatCurrency(expense.supplierPayable || 0)}
+                        </span>
+                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tight leading-tight">
+                          Paid: {formatCurrency(expense.supplierPaid || 0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </td>
                 <td className="py-4 px-6">
                   <span className="text-sm font-medium text-slate-600">{formatDate(expense.date)}</span>
