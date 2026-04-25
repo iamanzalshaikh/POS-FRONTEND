@@ -32,5 +32,5 @@ export interface CreateStaffInput {
     email: string;
     role: "CASHIER" | "ACCOUNTANT";
     password: string;
-    assignedTerminalIds?: string[];
+    assignedTerminalIds: string[];
 }

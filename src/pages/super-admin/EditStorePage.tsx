@@ -4,6 +4,7 @@ import { ArrowLeft, Store, Mail, MapPin, Loader2, AlertCircle } from 'lucide-rea
 import { storesApi } from '../../service/api';
 import { StoreCharts } from '../../components/super-admin/StoreCharts';
 import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '@/components/global-components/pakistan-geography';
+import { toast } from '@/lib/toast';
 
 const EditStorePage: React.FC = () => {
   const navigate = useNavigate();
@@ -76,12 +77,17 @@ const EditStorePage: React.FC = () => {
     try {
       const response = await storesApi.update(id, formData);
       if (response.data.success) {
+        toast.success("Store configuration updated successfully", "Sync Successful");
         navigate('/super-admin/stores');
       } else {
-        setError(response.data.message || 'Failed to update store');
+        const errorMsg = response.data.message || 'Failed to update store';
+        setError(errorMsg);
+        toast.error(errorMsg, "Action Failed");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error occurred during update');
+      const errorMsg = err.response?.data?.message || 'Error occurred during update';
+      setError(errorMsg);
+      toast.error(errorMsg, "Sync Error");
     } finally {
       setLoading(false);
     }

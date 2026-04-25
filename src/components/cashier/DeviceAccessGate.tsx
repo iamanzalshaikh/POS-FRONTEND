@@ -102,11 +102,10 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
             }
         }
         
-        // Auto-select if only one free device available
-        const freeDevices = activeDevices.filter((d) => !d.currentUserId);
-        if (freeDevices.length === 1 && !deviceId && !isSelecting) {
-          console.log('[DeviceGate] Auto-selecting single free device');
-          handleSelectDevice(freeDevices[0]);
+        // Auto-select if only one device available
+        if (activeDevices.length === 1 && !deviceId && !isSelecting) {
+          console.log('[DeviceGate] Auto-selecting single device');
+          handleSelectDevice(activeDevices[0]);
         }
       }
     }, [devicesRes, deviceId, isSelecting, clearDevice]);
@@ -271,12 +270,10 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
                     return (
                       <button
                         key={device.id}
-                        disabled={isSelecting || isInUse}
-                        onClick={() => !isInUse && handleSelectDevice(device)}
+                        disabled={isSelecting}
+                        onClick={() => handleSelectDevice(device)}
                         className={`w-full flex items-center justify-between p-4 rounded-3xl border-2 transition-all disabled:opacity-50
-                          ${isInUse 
-                            ? 'border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/30' 
-                            : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.98]'}`}
+                          ${'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.98]'}`}
                       >
                         <div className="flex items-center gap-4">
                           <div className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all
@@ -296,11 +293,6 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
                         <div className="shrink-0">
                           {isSelecting ? (
                             <Loader2 size={18} className="text-blue-500 animate-spin" />
-                          ) : isInUse ? (
-                            <div className="flex flex-col items-end">
-                              <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Occupied By</span>
-                              <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400">{inUseBy}</span>
-                            </div>
                           ) : (
                             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl">
                               <CheckCircle2 size={12} />

@@ -94,11 +94,13 @@ export default function SupplierPurchasesListPage() {
     const metrics = useMemo(() => {
         // Since we only have the current page's rows, we ideally need a summary endpoint
         // But for now we calculate based on what we have or zero out if uncertain
-        const totalAmount = rows.reduce((acc: number, r: SupplierPurchase) => acc + num(r.totalAmount), 0);
-        const totalBalance = rows.reduce((acc: number, r: SupplierPurchase) => acc + num(r.balance), 0);
+        const totalAmount = rows.reduce((acc: number, r: any) => acc + num(r.totalAmount), 0);
+        const totalBalance = rows.reduce((acc: number, r: any) => acc + num(r.balance), 0);
+        const totalReturns = rows.reduce((acc: number, r: any) => acc + num(r.returnAmount), 0);
         return {
             totalAmount,
-            totalBalance
+            totalBalance,
+            totalReturns
         };
     }, [rows, purchasesRes]);
 
@@ -274,7 +276,7 @@ export default function SupplierPurchasesListPage() {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
                 <MetricCard 
                     title="Total Receipts" 
                     value={total} 
@@ -287,6 +289,13 @@ export default function SupplierPurchasesListPage() {
                     isCurrency={true}
                     icon={Wallet} 
                     colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                />
+                <MetricCard 
+                    title="Total Returns" 
+                    value={metrics.totalReturns} 
+                    isCurrency={true}
+                    icon={RefreshCw} 
+                    colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"
                 />
                 <MetricCard 
                     title="Pending Balances" 

@@ -18,6 +18,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { StaffStatusBadge, RoleBadge } from '@/components/store-admin/StaffStatusBadge';
 import { Button } from "@/components/ui/button";
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 import type { StaffMember, CreateStaffInput, StaffRole, StaffStatus } from './types/staff.types';
 import { useUserStore } from '../../../store/useUserStore';
 import { useQuery } from '@tanstack/react-query';
@@ -221,8 +222,13 @@ export default function StaffManagementPage() {
     };
 
     const handleToggleStatus = async (id: string, active: boolean) => {
-        await toggleUserStatus(id, active);
-        await fetchUsers();
+        try {
+            await toggleUserStatus(id, active);
+            await fetchUsers();
+            toast.success(`Staff member ${active ? 'activated' : 'deactivated'} successfully`, "Status Updated");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || `Failed to ${active ? 'activate' : 'deactivate'} staff.`, "Action Failed");
+        }
     };
 
     return (
@@ -296,8 +302,7 @@ export default function StaffManagementPage() {
                                 className="pl-4 pr-10 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-bold uppercase tracking-widest text-[10px] outline-none focus:border-indigo-600/30 focus:ring-4 focus:ring-indigo-600/5 transition-all cursor-pointer appearance-none min-w-[140px] h-10"
                             >
                                 <option value="All">All Roles</option>
-                                <option value="ADMIN">Admin</option>
-                                <option value="MANAGER">Manager</option>
+                                <option value="STORE_ADMIN">Store Admin</option>
                                 <option value="CASHIER">Cashier</option>
                                 <option value="ACCOUNTANT">Accountant</option>
                             </select>
@@ -325,6 +330,7 @@ export default function StaffManagementPage() {
                 editMember={selectedStaffToEdit}
                 onAdd={handleAddStaff}
                 onEdit={handleEditStaff}
+                allStaff={staff}
             />
         </div>
     );

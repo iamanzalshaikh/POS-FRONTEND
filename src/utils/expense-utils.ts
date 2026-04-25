@@ -72,13 +72,7 @@ export const EXPENSE_CATEGORIES = [
 export const getTotalExpenses = (expenses: Expense[]): number => {
   return expenses
     .filter(expense => expense.category !== 'SALARIES')
-    .reduce((sum, expense) => {
-      // Sum the actual cash outflow
-      const val = expense.category === 'SUPPLIER_PURCHASE' 
-        ? (expense.paidAmount ?? expense.amount) 
-        : (expense.paidAmount ?? expense.amount);
-      return sum + Number(val || 0);
-    }, 0);
+    .reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 };
 
 /**
@@ -121,15 +115,20 @@ export const getMonthlyExpenses = (expenses: Expense[]): number => {
  */
 export const getExpenseSummary = (expenses: Expense[]): ExpenseSummary => {
   const paid = expenses.reduce((sum, e) => {
-    const val = e.category === 'SUPPLIER_PURCHASE' ? (e.paidAmount ?? e.amount) : e.amount;
-    return sum + Number(val || 0);
+    const total = Number(e.amount || 0);
+    const alreadyPaid = e.category === 'SUPPLIER_PURCHASE' ? Number(e.paidAmount || 0) : total;
+    // Only count payment up to the amount of the expense to ignore credit balances in the summary
+    const effectivePaid = Math.min(total, alreadyPaid);
+    return sum + effectivePaid;
   }, 0);
 
   const remaining = expenses.reduce((sum, e) => {
     if (e.category === 'SUPPLIER_PURCHASE') {
-      const total = e.amount || 0;
-      const alreadyPaid = e.paidAmount || 0;
-      return sum + (total - alreadyPaid);
+      const total = Number(e.amount || 0);
+      const alreadyPaid = Number(e.paidAmount || 0);
+      // Only count positive debt, ignore credits (overpayments)
+      const balance = total - alreadyPaid;
+      return sum + (balance > 0 ? balance : 0);
     }
     return sum;
   }, 0);

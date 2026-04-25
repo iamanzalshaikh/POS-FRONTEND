@@ -3,6 +3,7 @@ import type { StaffMember, CreateStaffInput } from '../../pages/store-admin/staf
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { terminalsApi } from '../../service/api';
+import { toast } from '@/lib/toast';
 
 interface Terminal {
     id: string;
@@ -15,6 +16,7 @@ interface AddStaffModalProps {
     onAdd: (data: CreateStaffInput) => Promise<{ success: boolean; error?: string }>;
     editMember?: StaffMember;
     onEdit?: (id: string, data: any) => Promise<{ success: boolean; error?: string }>;
+    allStaff?: StaffMember[];
 }
 
 const PASSWORD_HINT = '8+ chars, uppercase, lowercase, digit, special character';
@@ -23,13 +25,14 @@ interface FormState extends CreateStaffInput {
     isActive: boolean;
 }
 
-export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEdit }: AddStaffModalProps) {
+export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEdit, allStaff = [] }: AddStaffModalProps) {
     const [formData, setFormData] = useState<FormState>({
         name: '',
         email: '',
         role: 'CASHIER',
         password: '',
-        isActive: true
+        isActive: true,
+        assignedTerminalIds: []
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -47,10 +50,10 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                     role: editMember.role as any,
                     password: '',
                     isActive: editMember.status === 'active',
-                    assignedTerminalIds: terminalIds.length > 0 ? terminalIds : undefined,
+                    assignedTerminalIds: terminalIds,
                 });
             } else {
-                setFormData({ name: '', email: '', role: 'CASHIER', password: '', isActive: true });
+                setFormData({ name: '', email: '', role: 'CASHIER', password: '', isActive: true, assignedTerminalIds: [] });
             }
             setError(null);
             setShowPassword(false);
@@ -79,7 +82,7 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
 
     const handleClose = () => {
         setError(null);
-        setFormData({ name: '', email: '', role: 'CASHIER', password: '', isActive: true });
+        setFormData({ name: '', email: '', role: 'CASHIER', password: '', isActive: true, assignedTerminalIds: [] });
         setShowPassword(false);
         onClose();
     };
@@ -87,6 +90,13 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+
+        // Required terminal for Cashier
+        if (formData.role === 'CASHIER' && (!formData.assignedTerminalIds || formData.assignedTerminalIds.length === 0)) {
+            setError('Terminal assignment is required for Cashiers.');
+            toast.error('Terminal assignment is required for Cashiers.', "Validation Error");
+            return;
+        }
 
         if (!editMember) {
             const passRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$/;
@@ -115,9 +125,12 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
         setLoading(false);
 
         if (result.success) {
+            toast.success(`Staff member ${editMember ? 'updated' : 'created'} successfully`, "Staff Managed");
             handleClose();
         } else {
-            setError(result.error || `Failed to ${editMember ? 'update' : 'create'} staff.`);
+            const errorMsg = result.error || `Failed to ${editMember ? 'update' : 'create'} staff.`;
+            setError(errorMsg);
+            toast.error(errorMsg, "Action Failed");
         }
     };
 
@@ -209,7 +222,7 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                                         value={formData.role}
                                         onChange={e => {
                                             const role = e.target.value as any;
-                                            setFormData({ ...formData, role, assignedTerminalIds: role === 'ACCOUNTANT' ? undefined : formData.assignedTerminalIds });
+                                            setFormData({ ...formData, role, assignedTerminalIds: role === 'ACCOUNTANT' ? [] : formData.assignedTerminalIds });
                                         }}
                                         className="w-full pl-11 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm appearance-none cursor-pointer text-slate-900 dark:text-white"
                                     >
@@ -224,16 +237,31 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
 
                             {formData.role === 'CASHIER' && (
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">Assign Terminal</label>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">Assign Terminal<span className="text-rose-500">*</span></label>
                                     <div className="relative">
                                         <Monitor className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                                         <select
                                             value={formData.assignedTerminalIds?.[0] || ""}
-                                            onChange={e => setFormData({ ...formData, assignedTerminalIds: e.target.value ? [e.target.value] : undefined })}
+                                            onChange={e => setFormData({ ...formData, assignedTerminalIds: e.target.value ? [e.target.value] : [] })}
                                             className="w-full pl-11 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm appearance-none cursor-pointer text-slate-900 dark:text-white"
                                         >
-                                            <option value="">No Terminal</option>
-                                            {terminals.map(t => <option key={t.id} value={t.id}>{t.deviceName}</option>)}
+                                            <option value="" disabled>Select Terminal</option>
+                                            {terminals.map(t => {
+                                                const isTaken = allStaff.some(s => 
+                                                    s.id !== editMember?.id && 
+                                                    s.assignedTerminals?.some(at => at.id === t.id)
+                                                );
+                                                return (
+                                                    <option 
+                                                        key={t.id} 
+                                                        value={t.id} 
+                                                        disabled={isTaken}
+                                                        className={isTaken ? "text-slate-300 italic" : ""}
+                                                    >
+                                                        {t.deviceName} {isTaken ? "(Already Taken)" : ""}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>

@@ -46,10 +46,6 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
         // Validation for quantity limit
         const projectedStock = quantity;
 
-        if (projectedStock > 18) {
-            return toast.error('Stock level cannot exceed 18 units.', 'Limit Reached');
-        }
-
         if (projectedStock < 0) {
             return toast.error(
                 `Stock cannot be negative. Current: ${currentStock}, adjustment: ${adjustedQuantity}.`,
@@ -137,6 +133,12 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                                                 setSearchQuery(p.name);
                                                 setIsDropdownOpen(false);
                                                 setQuantity(p.inventoryStock?.totalQuantity || 0);
+                                                
+                                                // Auto-detect last supplier
+                                                const lastSupId = p.supplierPurchaseItems?.[0]?.purchase?.supplierId;
+                                                if (lastSupId) {
+                                                    setSelectedSupplierId(lastSupId);
+                                                }
                                             }}
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter' || e.key === ' ') {
@@ -144,6 +146,12 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                                                     setSearchQuery(p.name);
                                                     setIsDropdownOpen(false);
                                                     setQuantity(p.inventoryStock?.totalQuantity || 0);
+
+                                                    // Auto-detect last supplier
+                                                    const lastSupId = p.supplierPurchaseItems?.[0]?.purchase?.supplierId;
+                                                    if (lastSupId) {
+                                                        setSelectedSupplierId(lastSupId);
+                                                    }
                                                 }
                                             }}
                                         >
@@ -251,8 +259,14 @@ const StockAdjustmentForm = ({ products = [], onSuccess }: { products?: any[], o
                             </div>
                             <Button 
                                 variant="outline"
-                                onClick={() => setQuantity(prev => Math.min(prev + 1, 18))}
-                                className="w-14 h-14 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100 transition-all active:scale-90 border-2 border-slate-100 shadow-none p-0"
+                                onClick={() => setQuantity(prev => prev + 1)}
+                                disabled={!selectedProduct || quantity >= (selectedProduct.inventoryStock?.totalQuantity || 0)}
+                                className={cn(
+                                    "w-14 h-14 rounded-2xl flex items-center justify-center transition-all active:scale-90 border-2 border-slate-100 shadow-none p-0",
+                                    (!selectedProduct || quantity >= (selectedProduct.inventoryStock?.totalQuantity || 0))
+                                    ? "text-slate-200 cursor-not-allowed opacity-50"
+                                    : "text-slate-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-100"
+                                )}
                             >
                                 <Plus size={24} strokeWidth={3} />
                             </Button>

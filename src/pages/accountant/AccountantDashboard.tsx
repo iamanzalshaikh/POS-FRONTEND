@@ -70,7 +70,6 @@ const AccountantDashboard: React.FC = () => {
       children: [
         { name: 'Suppliers', icon: Truck, path: '/accountant/purchasing/suppliers' },
         { name: 'Purchases', icon: ClipboardList, path: '/accountant/purchasing/purchases' },
-        { name: 'New Purchase', icon: ClipboardList, path: '/accountant/purchasing/purchases/new' },
         { name: 'Opening Stock', icon: LayoutDashboard, path: '/accountant/purchasing/opening-stock' },
       ],
     },

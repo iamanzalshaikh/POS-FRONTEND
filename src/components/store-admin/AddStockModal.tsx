@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { createPortal } from 'react-dom';
 import { addBatch } from '@/api/products.api';
+import { toast } from '@/lib/toast';
 
 interface AddStockModalProps {
     open: boolean;
@@ -65,12 +66,15 @@ export default function AddStockModal({ open, onClose, onSuccess, product }: Add
                 expiryDate: expiryDate || undefined
             });
             onSuccess?.();
+            toast.success(`Successfully added ${quantityReceived} units to stock`, "Inventory Updated");
             handleClose();
             setQuantityReceived('0');
             setBatchNumber('');
             setExpiryDate('');
         } catch (error: any) {
-            setError(error.response?.data?.message || "Failed to add stock.");
+            const errorMsg = error.response?.data?.message || "Failed to add stock.";
+            setError(errorMsg);
+            toast.error(errorMsg, "Action Failed");
         } finally {
             setLoading(false);
         }

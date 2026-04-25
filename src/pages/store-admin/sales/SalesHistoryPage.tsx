@@ -231,17 +231,7 @@ const SalesHistoryPage = () => {
                     >
                         <Eye size={16} />
                     </button>
-                    <button 
-                        onClick={() => {
-                            if (window.confirm("Cancel this sale?")) {
-                                cancelSale(row.original.id, "Cancelled by admin").then(() => refetchSales());
-                            }
-                        }}
-                        className="p-2.5 text-slate-300 dark:text-slate-700 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all active:scale-90 border border-transparent hover:border-rose-100 dark:hover:border-rose-900/50 shadow-sm"
-                        title="Cancel Sale"
-                    >
-                        <AlertCircle size={16} />
-                    </button>
+                   
                 </div>
             )
         }
@@ -256,12 +246,7 @@ const SalesHistoryPage = () => {
                     <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Manage and track all transaction logs</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-5 py-3 bg-white dark:bg-slate-900 border border-[#1E1B4B]/20 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#1E1B4B] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95 shadow-sm">
-                        <Download size={16} className="text-[#1E1B4B] dark:text-slate-300" />
-                        Export CSV
-                    </button>
-                </div>
+                
             </div>
 
             {/* Stats & Charts Summary */}

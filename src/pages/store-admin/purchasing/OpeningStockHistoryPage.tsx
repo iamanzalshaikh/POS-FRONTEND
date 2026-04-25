@@ -80,9 +80,7 @@ export default function OpeningStockHistoryPage() {
                      <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
                         {row.original.notes || `O.S. Batch ${row.original.id.slice(-6)}`}
                     </p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                        <Calendar size={10} /> {new Date(row.original.purchaseDate).toLocaleDateString()}
-                    </p>
+                    
                 </div>
             )
         },
@@ -131,6 +129,25 @@ export default function OpeningStockHistoryPage() {
                 );
             }
         },
+        
+        {
+            id: "Date",
+            header: "date",
+            cell: ({ row }) => (
+                <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+                    {new Date(row.original.purchaseDate).toLocaleDateString()}
+                </div>
+            )
+        },
+        {
+            id: "Time",
+            header: "time",
+            cell: ({ row }) => (
+                <div className="text-center text-slate-400 dark:text-slate-500 text-[10px] font-black uppercase tracking-widest tabular-nums leading-none">
+                     {new Date(row.original.purchaseDate).toLocaleTimeString()}
+                </div>
+            )
+        },
         {
             id: "actions",
             header: "Actions",
@@ -143,7 +160,7 @@ export default function OpeningStockHistoryPage() {
                         className="h-9 px-4 hover:bg-indigo-50 text-indigo-600 rounded-xl font-black uppercase tracking-widest text-[9px]"
                     >
                         <Link to={`${base}/purchases/${row.original.id}`}>
-                            View Items <ArrowRight size={14} className="ml-2" />
+                            View <ArrowRight size={14} className="ml-2" />
                         </Link>
                     </Button>
                 </div>
