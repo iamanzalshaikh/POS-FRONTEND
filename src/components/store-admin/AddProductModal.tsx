@@ -274,10 +274,11 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                     <input
                       required
                       type="text"
+                      disabled={isEdit}
                       value={sku}
                       onChange={(e) => setSku(e.target.value)}
                       placeholder="SKU-001"
-                      className={inputClass}
+                      className={cn(inputClass, isEdit && "opacity-50 cursor-not-allowed")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -287,26 +288,30 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                     <input
                       required
                       type="text"
+                      disabled={isEdit}
                       value={barcode}
                       onChange={(e) => setBarcode(e.target.value)}
                       placeholder="EAN / internal code"
-                      className={inputClass}
+                      className={cn(inputClass, isEdit && "opacity-50 cursor-not-allowed")}
                     />
                   </div>
                 </div>
                 <div className="flex justify-end">
-                  <Button type="button" variant="outline" onClick={autoGenerateCodes} className="h-8 text-[10px] uppercase tracking-widest">
-                    Auto-generate SKU/Barcode
-                  </Button>
+                  {!isEdit && (
+                    <Button type="button" variant="outline" onClick={autoGenerateCodes} className="h-8 text-[10px] uppercase tracking-widest">
+                      Auto-generate SKU/Barcode
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className={labelClass}>Description (optional)</label>
                   <textarea
+                    disabled={isEdit}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Notes for staff or receipt…"
                     rows={2}
-                    className={`${inputClass} resize-none min-h-[72px]`}
+                    className={cn(inputClass, "resize-none min-h-[72px]", isEdit && "opacity-50 cursor-not-allowed")}
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -399,11 +404,12 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                     <input
                       required
                       type="number"
+                      disabled={isEdit}
                       min={0}
                       step="0.01"
                       value={purchasePrice}
                       onChange={(e) => setPurchasePrice(e.target.value)}
-                      className={inputClass}
+                      className={cn(inputClass, isEdit && "opacity-50 cursor-not-allowed")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -445,13 +451,15 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                       <Button
                         key={p}
                         type="button"
+                        disabled={isEdit}
                         variant={taxPercentage === String(p) ? "default" : "outline"}
                         onClick={() => setTaxPercentage(String(p))}
                         className={cn(
                           "px-3 py-1.5 h-8 rounded-lg text-[10px] font-black uppercase tracking-wide border transition-all",
                           taxPercentage === String(p)
                             ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20'
-                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600'
+                            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:border-blue-400 hover:text-blue-600',
+                          isEdit && "opacity-50 cursor-not-allowed"
                         )}
                       >
                         {p}%
@@ -471,12 +479,13 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                     <label className={labelClass}>Line discount (%)</label>
                     <input
                       type="number"
+                      disabled={isEdit}
                       min={0}
                       max={100}
                       step="0.01"
                       value={discountPercentage}
                       onChange={(e) => setDiscountPercentage(e.target.value)}
-                      className={inputClass}
+                      className={cn(inputClass, isEdit && "opacity-50 cursor-not-allowed")}
                     />
                     <p className="text-[9px] text-slate-500">Default product discount; POS can still apply cart discounts.</p>
                   </div>
@@ -531,10 +540,11 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                     <input
                       required
                       type="number"
+                      disabled={isEdit}
                       min={0}
                       value={initialStock}
                       onChange={(e) => setInitialStock(e.target.value)}
-                      className={inputClass}
+                      className={cn(inputClass, isEdit && "opacity-50 cursor-not-allowed")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -550,25 +560,30 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                   </div>
                 </div>
 
-                <div className="relative group h-[140px] border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all hover:bg-slate-100 dark:hover:bg-slate-800/50 overflow-hidden">
+                <div className={cn(
+                  "relative group h-[140px] border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 transition-all hover:bg-slate-100 dark:hover:bg-slate-800/50 overflow-hidden",
+                  isEdit && "opacity-50 cursor-not-allowed pointer-events-none"
+                )}>
                   {imagePreview ? (
                     <div className="relative w-full h-full">
                       <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setImageFile(null);
-                          setImagePreview('');
-                        }}
-                        className="absolute top-2 right-2 p-2 bg-rose-500 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-all active:scale-95"
-                      >
-                        <X size={16} />
-                      </button>
+                      {!isEdit && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageFile(null);
+                            setImagePreview('');
+                          }}
+                          className="absolute top-2 right-2 p-2 bg-rose-500 text-white rounded-lg shadow-lg hover:bg-rose-600 transition-all active:scale-95"
+                        >
+                          <X size={16} />
+                        </button>
+                      )}
                     </div>
                   ): (<div className="flex flex-col items-center text-slate-400">
                       <UploadCloud size={28} strokeWidth={1.5} />
                       <p className="text-[10px] font-black uppercase tracking-widest mt-2">Upload product image</p>
-                      <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                      <input type="file" disabled={isEdit} accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>)}
                 </div>
               </div>
