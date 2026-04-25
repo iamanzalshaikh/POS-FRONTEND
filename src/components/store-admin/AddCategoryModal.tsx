@@ -205,68 +205,71 @@ const AddCategoryModal = ({ open, onClose, onCategoryAdded, category }: Props) =
               />
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between ml-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">
-                  Sub-categories (Optional)
-                </label>
-                <button
-                  type="button"
-                  onClick={addSubcategoryField}
-                  className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors"
-                >
-                  <Plus size={14} strokeWidth={3} />
-                  Add Field
-                </button>
-              </div>
-              
-              {subcategories.map((sub, idx) => (
-                <div key={idx} className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={sub.name}
-                      onChange={(e) => updateSubcategoryValue(idx, e.target.value)}
-                      placeholder={`Subcategory ${idx + 1}`}
-                      className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white"
-                    />
-                    {sub.id && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-widest rounded-md">
-                        Existing
-                      </div>
-                    )}
-                  </div>
+            {/* Only show sub-categories management if it's a new category or a root-level category */}
+            {!category?.parentId && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[#1e293b] dark:text-slate-300">
+                    Sub-categories (Optional)
+                  </label>
                   <button
                     type="button"
-                    onClick={() => removeSubcategoryField(idx)}
-                    className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all"
+                    onClick={addSubcategoryField}
+                    className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors"
                   >
-                    <X size={18} />
+                    <Plus size={14} strokeWidth={3} />
+                    Add Field
                   </button>
                 </div>
-              ))}
-
-              {subcategories.length === 0 && (
-                <button
-                  type="button"
-                  onClick={addSubcategoryField}
-                  className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-2 group hover:border-blue-500/50 hover:bg-blue-50/30 dark:hover:bg-blue-950/10 transition-all"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-all">
-                    <Plus size={20} />
+                
+                {subcategories.map((sub, idx) => (
+                  <div key={idx} className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={sub.name}
+                        onChange={(e) => updateSubcategoryValue(idx, e.target.value)}
+                        placeholder={`Subcategory ${idx + 1}`}
+                        className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm text-slate-900 dark:text-white"
+                      />
+                      {sub.id && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-widest rounded-md">
+                          Existing
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeSubcategoryField(idx)}
+                      className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition-all"
+                    >
+                      <X size={18} />
+                    </button>
                   </div>
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-all">
-                    New Sub-category Registry
-                  </span>
-                </button>
-              )}
+                ))}
 
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-2 ml-1 opacity-60 leading-relaxed italic">
-                {category 
-                  ? "Adding new items here will create them as children of this category." 
-                  : "These will be created as sub-items under the new category above."}
-              </p>
-            </div>
+                {subcategories.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={addSubcategoryField}
+                    className="w-full py-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-2 group hover:border-blue-500/50 hover:bg-blue-50/30 dark:hover:bg-blue-950/10 transition-all"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-all">
+                      <Plus size={20} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-blue-600 transition-all">
+                      New Sub-category Registry
+                    </span>
+                  </button>
+                )}
+
+                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-2 ml-1 opacity-60 leading-relaxed italic">
+                  {category 
+                    ? "Adding new items here will create them as children of this category." 
+                    : "These will be created as sub-items under the new category above."}
+                </p>
+              </div>
+            )}
 
           </div>
 

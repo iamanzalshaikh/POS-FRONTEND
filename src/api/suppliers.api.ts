@@ -178,3 +178,6 @@ export const getPaymentsBySupplier = (supplierId: string) =>
   api.get<{ success: boolean; data: SupplierPurchasePayment[] }>(
     `/supplier-payments/supplier/${supplierId}`
   );
+
+export const updatePurchaseItemCost = (purchaseId: string, itemId: string, unitPrice: number) =>
+  api.patch<{ success: boolean; data: null }>(`/supplier-purchases/${purchaseId}/items/${itemId}`, { unitPrice });

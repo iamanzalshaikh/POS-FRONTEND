@@ -11,7 +11,9 @@ import {
     Receipt,
     HistoryIcon,
     AlertCircle,
-    Edit2
+    Edit2,
+    Check,
+    X
 } from "lucide-react";
 import {
     getSupplierPurchase,
@@ -52,6 +54,32 @@ export default function SupplierPurchaseDetailPage() {
 
     const [resolvedReturns, setResolvedReturns] = useState<SupplierPendingReturn[]>([]);
     const [loadingReturns, setLoadingReturns] = useState(false);
+
+    // Editing State
+    const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const [editCost, setEditCost] = useState("");
+    const [isUpdatingCost, setIsUpdatingCost] = useState(false);
+
+    const handleUpdateCost = async (itemId: string) => {
+        const val = parseFloat(editCost);
+        if (isNaN(val) || val < 0) {
+            toast.error("Please enter a valid cost", "Invalid Input");
+            return;
+        }
+        if (!id) return;
+
+        setIsUpdatingCost(true);
+        try {
+            await import("@/api/suppliers.api").then(m => m.updatePurchaseItemCost(id, itemId, val));
+            toast.success("Purchase cost updated and ledger recalculated", "Success");
+            setEditingItemId(null);
+            await loadPurchase();
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Failed to update cost", "Update Failed");
+        } finally {
+            setIsUpdatingCost(false);
+        }
+    };
 
     const loadPurchase = async () => {
         if (!id) return;
@@ -235,26 +263,69 @@ export default function SupplierPurchaseDetailPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                                    {(purchase.items || []).map((it) => (
-                                        <tr key={it.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                                            <td className="py-5">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{it.product?.name || "—"}</span>
-                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mt-0.5">{it.product?.sku || "NO-SKU"}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-5 text-center text-[10px] font-black text-slate-400 dark:text-slate-500 font-mono">
-                                                #{it.batch?.batchNumber || it.id.slice(0, 6).toUpperCase()}
-                                            </td>
-                                            <td className="py-5 text-center text-sm font-black text-slate-900 dark:text-white">{formatNumberShort(it.quantity)}</td>
-                                            <td className="py-5 text-right px-4">
-                                                <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">
-                                                    {formatAmountShort(num(it.unitPrice))}
-                                                </span>
-                                            </td>
-                                            <td className="py-5 text-right text-sm font-black text-slate-900 dark:text-white">{formatAmountShort(num(it.totalPrice))}</td>
-                                        </tr>
-                                    ))}
+                                    {(purchase.items || []).map((it) => {
+                                        const isEditing = editingItemId === it.id;
+                                        return (
+                                            <tr key={it.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                                                <td className="py-5">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">{it.product?.name || "—"}</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[2px] mt-0.5">{it.product?.sku || "NO-SKU"}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="py-5 text-center text-[10px] font-black text-slate-400 dark:text-slate-500 font-mono">
+                                                    #{it.batch?.batchNumber || it.id.slice(0, 6).toUpperCase()}
+                                                </td>
+                                                <td className="py-5 text-center text-sm font-black text-slate-900 dark:text-white">{formatNumberShort(it.quantity)}</td>
+                                                <td className="py-5 text-right px-4">
+                                                    {isEditing ? (
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Input 
+                                                                type="number" 
+                                                                className="h-8 w-24 text-[11px] font-black text-right"
+                                                                value={editCost}
+                                                                onChange={(e) => setEditCost(e.target.value)}
+                                                                autoFocus
+                                                            />
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="ghost" 
+                                                                className="h-8 w-8 p-0 text-emerald-600"
+                                                                disabled={isUpdatingCost}
+                                                                onClick={() => handleUpdateCost(it.id)}
+                                                            >
+                                                                <Check size={14} />
+                                                            </Button>
+                                                            <Button 
+                                                                size="sm" 
+                                                                variant="ghost" 
+                                                                className="h-8 w-8 p-0 text-slate-400"
+                                                                onClick={() => setEditingItemId(null)}
+                                                            >
+                                                                <X size={14} />
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-end gap-3 group/cost">
+                                                            <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tight">
+                                                                {formatAmountShort(num(it.unitPrice))}
+                                                            </span>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setEditingItemId(it.id);
+                                                                    setEditCost(String(num(it.unitPrice)));
+                                                                }}
+                                                                className="opacity-0 group-hover:opacity-100 group-hover/cost:text-blue-500 transition-all p-1 hover:bg-blue-50 rounded-lg"
+                                                            >
+                                                                <Edit2 size={12} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="py-5 text-right text-sm font-black text-slate-900 dark:text-white">{formatAmountShort(num(it.totalPrice))}</td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
