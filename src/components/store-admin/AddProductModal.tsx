@@ -29,7 +29,8 @@ interface AddProductModalProps {
 export default function AddProductModal({ open, onClose, onSuccess, mode = "opening", product }: AddProductModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [parentCategoryId, setParentCategoryId] = useState('');
 
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
@@ -83,6 +84,20 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
         if (product.image) {
           setImagePreview(`http://localhost:3005${product.image}`);
         }
+        
+        // Handle nested category selection if product has a category
+        if (product.categoryId) {
+           // We need to find if this category has a parent
+           void fetchCategories().then((allCats) => {
+             const current = allCats.find((c: any) => c.id === product.categoryId);
+             if (current?.parentId) {
+               setParentCategoryId(current.parentId);
+             } else {
+               // It's a top level category
+               setParentCategoryId(current?.id || '');
+             }
+           });
+        }
       } else {
         resetForm();
       }
@@ -97,9 +112,12 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
   const fetchCategories = async () => {
     try {
       const res = await getCategories();
-      setCategories(res.data?.data || res.data || []);
+      const data = res.data?.data || res.data || [];
+      setCategories(data);
+      return data;
     } catch (e) {
       console.error('Failed to fetch categories:', e);
+      return [];
     }
   };
 
@@ -108,6 +126,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     setSku('');
     setBarcode('');
     setCategoryId('');
+    setParentCategoryId('');
     setDescription('');
     setPurchasePrice('');
     setSellingPrice('');
@@ -144,11 +163,7 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
     setLoading(true);
     setError(null);
 
-    if (Number(initialStock) > 18) {
-      setError('Initial stock cannot exceed 18 units.');
-      setLoading(false);
-      return;
-    }
+   
 
     const formData = new FormData();
     formData.append('name', name.trim());
@@ -294,34 +309,79 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                     className={`${inputClass} resize-none min-h-[72px]`}
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className={labelClass}>
-                    Category <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      required
-                      value={categoryId}
-                      onChange={(e) => setCategoryId(e.target.value)}
-                      className={`${inputClass} appearance-none cursor-pointer`}
-                    >
-                      <option value="">Select category (leaf)</option>
-                      {categories.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                        <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className={labelClass}>
+                      Main Category <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={parentCategoryId}
+                        onChange={(e) => {
+                          setParentCategoryId(e.target.value);
+                          setCategoryId(''); // Reset leaf selection
+                        }}
+                        className={`${inputClass} appearance-none cursor-pointer`}
+                      >
+                        <option value="">Select Main Category</option>
+                        {categories
+                          .filter((cat) => !cat.parentId)
+                          .map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                  <p className="text-[9px] text-slate-500 font-medium">
-                    Products must use a leaf category (no subcategories under it).
-                  </p>
+
+                  <div className="space-y-2">
+                    <label className={labelClass}>
+                      Sub-category <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        required
+                        disabled={!parentCategoryId}
+                        value={categoryId}
+                        onChange={(e) => setCategoryId(e.target.value)}
+                        className={`${inputClass} appearance-none cursor-pointer disabled:opacity-50 disabled:bg-slate-50 dark:disabled:bg-slate-800/50`}
+                      >
+                        <option value="">Select Sub-category</option>
+                        {categories
+                          .filter((cat) => cat.parentId === parentCategoryId)
+                          .map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                      </select>
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
                 </div>
+                {!categoryId && parentCategoryId && categories.filter(c => c.parentId === parentCategoryId).length === 0 && (
+                   <p className="text-[9px] text-amber-500 font-bold uppercase tracking-tight">
+                      This category has no subcategories. You can select it as the primary category.
+                      <button 
+                        type="button" 
+                        onClick={() => setCategoryId(parentCategoryId)}
+                        className="ml-2 underline text-blue-500"
+                      >
+                        Use Main Category
+                      </button>
+                   </p>
+                )}
               </div>
             </div>
 
@@ -472,7 +532,6 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                       required
                       type="number"
                       min={0}
-                      max={18}
                       value={initialStock}
                       onChange={(e) => setInitialStock(e.target.value)}
                       className={inputClass}
@@ -506,13 +565,11 @@ export default function AddProductModal({ open, onClose, onSuccess, mode = "open
                         <X size={16} />
                       </button>
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center text-slate-400">
+                  ): (<div className="flex flex-col items-center text-slate-400">
                       <UploadCloud size={28} strokeWidth={1.5} />
                       <p className="text-[10px] font-black uppercase tracking-widest mt-2">Upload product image</p>
                       <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    </div>
-                  )}
+                    </div>)}
                 </div>
               </div>
             )}

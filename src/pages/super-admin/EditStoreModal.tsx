@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Store, Mail, MapPin, Loader2, AlertCircle } from 'lucide-react';
 import { storesApi } from '../../service/api';
 import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '../../components/global-components/pakistan-geography';
+import { toast } from '@/lib/toast';
 
 interface EditStoreModalProps {
   isOpen: boolean;
@@ -64,13 +65,18 @@ const EditStoreModal: React.FC<EditStoreModalProps> = ({ isOpen, onClose, onSucc
     try {
       const response = await storesApi.update(store.id, formData);
       if (response.data.success) {
+        toast.success("Store configuration updated successfully", "Sync Successful");
         onSuccess();
         onClose();
       } else {
-        setError(response.data.message || 'Failed to update store');
+        const errorMsg = response.data.message || 'Failed to update store';
+        setError(errorMsg);
+        toast.error(errorMsg, "Action Failed");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error occurred during update');
+      const errorMsg = err.response?.data?.message || 'Error occurred during update';
+      setError(errorMsg);
+      toast.error(errorMsg, "Sync Error");
     } finally {
       setLoading(false);
     }

@@ -129,12 +129,12 @@ const StoresListPage: React.FC = () => {
                         <Eye size={16} />
                     </button>
                     <button
-                        onClick={() => navigate(`/super-admin/stores/edit/${row.original.id}`)}
+                       onClick={() => navigate(`/super-admin/stores/edit/${row.original.id}`)}
                         className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 rounded-lg transition-all"
                         title="Edit Store"
                     >
                         <Edit2 size={16} />
-                    </button>
+                    </button> 
                     <button
                         onClick={() => handleToggleStatus(row.original.id, row.original.isActive)}
                         className={`p-2 rounded-lg transition-all ${row.original.isActive 

@@ -12,10 +12,12 @@ import PageLoader from '@/components/ui/PageLoader';
 import HomeRedirect from '@/components/shared/HomeRedirect';
 import StoreAdminLayout from '@/components/layout/StoreAdminLayout';
 import { Toaster } from '@/components/ui/toaster';
+import SocketInvalidator from '@/components/shared/SocketInvalidator';
 
 // Lazy loading pages
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const CreateStorePage = lazy(() => import('@/pages/super-admin/CreateStorePage'));
+const EditStorePage = lazy(() => import('@/pages/super-admin/EditStorePage'));
 
 const StoreAdminDashboard = lazy(() => import('@/pages/store-admin/dashboard/StoreAdminDashboard'));
 const StaffManagementPage = lazy(() => import('@/pages/store-admin/staff-management/StaffManagementPage'));
@@ -110,6 +112,7 @@ const App: React.FC = () => {
       <SidebarProvider defaultOpen={true}>
         <Toaster />
         <Router>
+          <SocketInvalidator />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Routes */}
@@ -166,6 +169,7 @@ const App: React.FC = () => {
                 <Route path="/super-admin/dashboard" element={<SuperAdminDashboard />} />
                 <Route path="/super-admin/stores" element={<StoresListPage />} />
                 <Route path="/super-admin/stores/create" element={<CreateStorePage />} />
+                <Route path="/super-admin/stores/edit/:id" element={<EditStorePage />} />
                 <Route path="/super-admin/stores/:id" element={<StoreDetailsPage />} />
                 <Route path="/super-admin/stores/:id/users" element={<StoreDetailsPage />} />
                 <Route path="/super-admin/audit-logs" element={<SuperAdminAuditLogs />} />

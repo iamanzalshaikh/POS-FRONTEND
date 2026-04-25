@@ -25,6 +25,8 @@ import { fetchProducts, getProductByBarcode } from '../../api/products.api';
 import { createSale, getSalesTransactions } from '../../api/sales.api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
+import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import { formatCurrency, formatAmount } from '../../utils/expense-utils';
 import { offlineStorage } from '../../services/offline-storage.service';
 import type { OfflineSale } from '../../services/offline-storage.service';
@@ -768,9 +770,12 @@ const POSInterface: React.FC = () => {
           
           // DO NOT navigate - stay on POS Terminal
           console.log('✅ [POSInterface] Sale completed, staying on terminal.');
+          toast.success("Sale completed and receipt triggered.", "Checkout Success");
         } else {
           console.error('❌ [POSInterface] Sale response missing data:', res);
-          setError(res?.message || 'Unable to complete sale');
+          const errorMsg = res?.message || 'Unable to complete sale';
+          setError(errorMsg);
+          toast.error(errorMsg, "Checkout Failed");
         }
       } else {
         // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
@@ -888,6 +893,7 @@ const POSInterface: React.FC = () => {
 
         // DO NOT navigate - stay on POS Terminal
         console.log('✅ [POSInterface] Offline sale completed, staying on terminal.');
+        toast.info("Offline sale saved locally. It will sync when online.", "Offline Recorded");
       }
     } catch (err: any) {
       console.error('❌ [POSInterface] Sale error:', err);
@@ -900,6 +906,7 @@ const POSInterface: React.FC = () => {
       }
       
       setError(msg);
+      toast.error(msg, "Checkout Failed");
     } finally {
       setIsSubmitting(false);
     }

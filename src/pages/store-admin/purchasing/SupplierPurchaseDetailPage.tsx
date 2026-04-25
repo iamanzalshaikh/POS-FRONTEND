@@ -16,7 +16,6 @@ import {
 import {
     getSupplierPurchase,
     createSupplierPayment,
-    updateSupplierPurchaseItemCost,
     type SupplierPurchase,
     type SupplierPurchasePayment
 } from "@/api/suppliers.api";
@@ -198,19 +197,19 @@ export default function SupplierPurchaseDetailPage() {
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                     className="flex-1 min-w-[280px]"
                 />
-                <MetricCard
-                    title="Settled Amount"
-                    value={num(purchase.paidAmount)}
+                <MetricCard 
+                    title="Settled Amount" 
+                    value={num(purchase.totalAmount) - Math.max(0, balance)} 
                     isCurrency={true}
-                    icon={CreditCard}
+                    icon={CreditCard} 
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                     className="flex-1 min-w-[280px]"
                 />
-                <MetricCard
-                    title="Remaining Debt"
-                    value={balance}
+                <MetricCard 
+                    title="Remaining Debt" 
+                    value={num(purchase.balance)} 
                     isCurrency={true}
-                    icon={Clock}
+                    icon={Clock} 
                     colorClass={balance > 0 ? "bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400" : "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"}
                     className="flex-1 min-w-[280px]"
                 />

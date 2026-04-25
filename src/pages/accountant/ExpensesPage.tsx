@@ -225,31 +225,55 @@ const ExpensesPage: React.FC = () => {
       }
     },
     {
-      header: "Amount",
+      header: "Total Amount",
+      cell: ({ row }) => (
+        <div className="text-center text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest tabular-nums">
+          {formatAmount(row.original.amount)}
+        </div>
+      )
+    },
+    {
+      header: "Paid Amount",
       cell: ({ row }) => {
-        const expense = row.original;
-        const isSupplierPurchase = expense.category === 'SUPPLIER_PURCHASE';
+        const expense = row.original as any;
+        let settled = expense.amount;
+
+        if (expense.category === 'SUPPLIER_PURCHASE') {
+          if (expense.supplierPurchase) {
+            const total = Number(expense.amount);
+            const bal = Number(expense.supplierPurchase.balance);
+            // Settled = Total - Debt (Debt is only positive balance)
+            settled = total - Math.max(0, bal);
+          } else {
+            settled = expense.paidAmount || 0;
+          }
+        }
 
         return (
-          <div className="flex flex-col items-center justify-center">
-            <div className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest tabular-nums">
-              {formatAmount(expense.amount)}
-            </div>
-            {isSupplierPurchase && (
-              <div className="flex flex-col mt-1 space-y-0.5">
-                <div className="text-[9px] font-medium text-slate-500 uppercase tracking-tight leading-tight">
-                  Total: {formatAmount(expense.amount)}
-                </div>
-                <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight leading-tight flex justify-center gap-1">
-                  <span>Paid:</span> {formatAmount(expense.paidAmount || 0)}
-                </div>
-                {(expense.amount - (expense.paidAmount || 0)) > 0 && (
-                  <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tight leading-tight">
-                    Remaining: {formatAmount(expense.amount - (expense.paidAmount || 0))}
-                  </div>
-                )}
-              </div>
-            )}
+          <div className={cn(
+            "text-center text-sm font-black uppercase tracking-widest tabular-nums",
+            settled > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"
+          )}>
+            {formatAmount(settled)}
+          </div>
+        );
+      }
+    },
+    {
+      header: "Remaining",
+      cell: ({ row }) => {
+        const expense = row.original as any;
+        // Use the linked purchase balance if available (accounts for returns), otherwise calculate
+        const remaining = expense.category === 'SUPPLIER_PURCHASE' 
+          ? (expense.supplierPurchase ? Number(expense.supplierPurchase.balance) : (expense.amount - (expense.paidAmount || 0))) 
+          : 0;
+
+        return (
+          <div className={cn(
+            "text-center text-sm font-black uppercase tracking-widest tabular-nums font-bold",
+            remaining > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-300 dark:text-slate-700"
+          )}>
+            {remaining > 0 ? formatAmount(remaining) : "SETTLED"}
           </div>
         );
       }

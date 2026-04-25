@@ -12,6 +12,7 @@ export interface Supplier {
   state?: string | null;
   country?: string | null;
   isActive: boolean;
+  isOpeningStockSupplier: boolean;
   createdAt: string;
   updatedAt: string;
   totalBalance?: number;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, User, Mail, Shield, AlertCircle, Loader2 } from 'lucide-react';
 import { usersApi } from '../../service/api';
+import { toast } from '@/lib/toast';
 
 const EditUserPage: React.FC = () => {
   const navigate = useNavigate();
@@ -67,12 +68,17 @@ const EditUserPage: React.FC = () => {
     try {
       const response = await usersApi.update(id, formData);
       if (response.data.success) {
+        toast.success("Administrator configuration updated successfully", "Sync Successful");
         navigate('/super-admin/admins');
       } else {
-        setError(response.data.message || 'Failed to update user');
+        const errorMsg = response.data.message || 'Failed to update user';
+        setError(errorMsg);
+        toast.error(errorMsg, "Action Failed");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error occurred during update');
+      const errorMsg = err.response?.data?.message || 'Error occurred during update';
+      setError(errorMsg);
+      toast.error(errorMsg, "Sync Error");
     } finally {
       setLoading(false);
     }

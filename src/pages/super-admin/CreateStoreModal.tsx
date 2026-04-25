@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Store, User, MapPin, Settings2, Loader2, AlertCircle } from 'lucide-react';
 import { storesApi } from '../../service/api';
 import { PAKISTAN_PROVINCES, PAKISTAN_CITIES } from '../../components/global-components/pakistan-geography';
+import { toast } from '@/lib/toast';
 
 interface CreateStoreModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onClose, on
     try {
       const response = await storesApi.create(formData);
       if (response.data.success) {
+        toast.success("Store Node Provisioned Successfully", "Provisioning Success");
         onSuccess();
         onClose();
         // Reset form
@@ -56,10 +58,14 @@ const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onClose, on
           adminName: '', adminEmail: '', adminPassword: '', seedSupermarket: true,
         });
       } else {
-        setError(response.data.message || 'Failed to create store');
+        const errorMsg = response.data.message || 'Failed to create store';
+        setError(errorMsg);
+        toast.error(errorMsg, "Provisioning Failed");
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error occurred during creation');
+      const errorMsg = err.response?.data?.message || 'Error occurred during creation';
+      setError(errorMsg);
+      toast.error(errorMsg, "Action Error");
     } finally {
       setLoading(false);
     }

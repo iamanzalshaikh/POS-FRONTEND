@@ -21,14 +21,17 @@ import {
 } from "lucide-react";
 
 // API
-import { getSuppliers, createSupplierPurchase } from "@/api/suppliers.api";
+import { getSuppliers, createSupplierPurchase, type Supplier } from "@/api/suppliers.api";
 import { fetchProducts } from "@/api/products.api";
 
 // Components & Utils
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/Label";
+import { Card, CardContent } from "@/components/ui/Card";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+
 type ProductRow = {
   key: string;
   productId: string;
@@ -78,7 +81,9 @@ export default function NewSupplierPurchasePage() {
   const suppliers = useMemo(() => {
     const d = supsRes?.data?.data || supsRes?.data;
     if (Array.isArray(d)) {
-      return d.filter((s: any) => s.isActive).map((s: any) => ({ id: s.id, name: s.name }));
+      return (d as Supplier[])
+        .filter((s) => s.isActive && !s.isOpeningStockSupplier)
+        .map((s) => ({ id: s.id, name: s.name }));
     }
     return [];
   }, [supsRes]);
@@ -265,13 +270,13 @@ export default function NewSupplierPurchasePage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">
                     Vendor / Supplier <span className="text-rose-500">*</span>
                   </label>
-                  <div className="relative flex items-center overflow-x-auto custom-scrollbar no-scrollbar">
+                  <div className="relative flex items-center">
                     <Truck className="absolute left-4 w-4 h-4 text-slate-400 pointer-events-none shrink-0" />
                     <select
                       required
                       value={supplierId}
                       onChange={(e) => setSupplierId(e.target.value)}
-                      className="h-12 w-full min-w-max pl-11 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all cursor-pointer appearance-none"
+                      className="h-12 w-full pl-11 pr-10 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm font-bold uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all cursor-pointer appearance-none"
                     >
                       <option value="">Select Vendor...</option>
                       {suppliers.map((s) => (
@@ -318,23 +323,7 @@ export default function NewSupplierPurchasePage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 pl-1">
-                  Initial Payment (Amount Paid Now)
-                </label>
-                <div className="relative">
-                  <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" />
-                  <Input
-                    type="number"
-                    min={0}
-                    max={totalAmount}
-                    value={paidAmount}
-                    onChange={(e) => setPaidAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="h-12 pl-11 bg-slate-50 border-slate-100 dark:bg-slate-800 dark:border-slate-700 rounded-xl font-black text-sm text-emerald-600 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                </div>
-              </div>
+           
             </div>
 
             {/* Right Section: Total & Action Group */}

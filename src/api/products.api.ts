@@ -54,6 +54,11 @@ export interface Product {
     id: string;
     name: string;
   };
+  supplierPurchaseItems?: Array<{
+    purchase: {
+      supplierId: string;
+    };
+  }>;
 }
 
 // ============================================================================

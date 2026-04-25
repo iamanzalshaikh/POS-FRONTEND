@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useQuery } from '@tanstack/react-query';
 import AddCategoryModal from "@/components/store-admin/AddCategoryModal"
-import { Plus, Search, Trash2 } from "lucide-react"
+import { Plus, Search, Trash2, Edit2 } from "lucide-react"
 import { deleteCategory, getCategories } from "@/api/category.api";
 import { toast } from '@/lib/toast';
 import { DataTable } from '@/components/global-components/data-table-2';
@@ -10,6 +10,7 @@ import { TableSkeleton } from "@/components/ui/skeletons/TableSkeleton";
 
 const ProductCategoriesPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -56,6 +57,11 @@ const ProductCategoriesPage = () => {
       toast.error(e.response?.data?.message || "Delete failed.", "Action Failed")
     }
   };
+  
+  const handleEdit = (c: any) => {
+    setSelectedCategory(c)
+    setIsModalOpen(true)
+  }
 
   const columns: ColumnDef<any>[] = [
     {
@@ -121,6 +127,14 @@ const ProductCategoriesPage = () => {
             <div className="flex justify-center items-center gap-2">
                 <button
                     type="button"
+                    onClick={() => handleEdit(row.original)}
+                    className="p-2.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
+                    title="Edit category"
+                >
+                    <Edit2 size={16} />
+                </button>
+                <button
+                    type="button"
                     onClick={() => handleDelete(row.original)}
                     className="p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
                     title="Delete category"
@@ -147,7 +161,10 @@ const ProductCategoriesPage = () => {
           <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mt-1 uppercase tracking-widest">Manage categorization and product hierarchy</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setSelectedCategory(null)
+            setIsModalOpen(true)
+          }}
           className="flex items-center gap-2 px-6 py-3 bg-[#262255] text-white rounded-2xl font-bold text-sm hover:scale-105 active:scale-95 transition-all shadow-lg shadow-indigo-900/20"
         >
           <Plus size={18} />
@@ -192,7 +209,11 @@ const ProductCategoriesPage = () => {
 
       <AddCategoryModal
         open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        category={selectedCategory}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedCategory(null)
+        }}
         onCategoryAdded={handleCategoryAdded}
       />
     </div>

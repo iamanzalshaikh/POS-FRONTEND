@@ -258,15 +258,15 @@ const DeviceSelection: React.FC = () => {
                         {device.deviceType || 'POS'} • {device.id.slice(-6).toUpperCase()}
                       </div>
                       {isInUse && (
-                        <div className="flex items-center space-x-1 mt-1.5 text-amber-700">
+                        <div className="flex items-center space-x-1 mt-1.5 text-slate-500">
                           <User size={12} />
-                          <span className="text-[10px] font-semibold">In use by {inUseBy}</span>
+                          <span className="text-[10px] font-semibold tracking-tight">Active session: {inUseBy}</span>
                         </div>
                       )}
                       {!isInUse && (
                         <div className="flex items-center space-x-1 mt-1.5 text-emerald-600">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          <span className="text-[10px] font-bold">Free</span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider">Available</span>
                         </div>
                       )}
                     </div>
@@ -291,15 +291,11 @@ const DeviceSelection: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Use This Device Button - disabled when in use */}
+                {/* Use This Device Button */}
                 <button
-                  disabled={!!selectingId || isInUse}
-                  onClick={() => !isInUse && handleUseDevice(device)}
-                  className={`inline-flex items-center justify-center space-x-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all active:scale-[0.98] disabled:cursor-not-allowed ${
-                    isInUse 
-                      ? 'bg-slate-300 text-slate-500 cursor-not-allowed' 
-                      : 'bg-emerald-600 text-white hover:bg-emerald-500 hover:shadow-md disabled:bg-emerald-400'
-                  }`}
+                  disabled={!!selectingId}
+                  onClick={() => handleUseDevice(device)}
+                  className="inline-flex items-center justify-center space-x-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all active:scale-[0.98] bg-emerald-600 text-white hover:bg-emerald-500 hover:shadow-md disabled:bg-emerald-400"
                 >
                   {selectingId === device.id ? (
                     <>

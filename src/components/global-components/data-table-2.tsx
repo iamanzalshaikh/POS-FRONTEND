@@ -287,10 +287,10 @@ function DataTableComponent<TData, TValue>({
             {/* Table wrapper with vertical and horizontal scroll */}
             <div className="rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-none bg-white dark:bg-slate-900 relative overflow-hidden">
                 <div 
-                    className="overflow-auto custom-scrollbar"
+                    className="overflow-x-auto overflow-y-auto custom-scrollbar"
                     style={{ maxHeight: maxHeight }}
                 >
-                    <Table className="min-w-full">
+                    <Table className="min-w-full md:min-w-[1000px]">
                         <TableHeader className="bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 sticky top-0 z-30 transition-colors">
                             {table.getHeaderGroups().map((headerGroup) => (
                                 <TableRow key={headerGroup.id} className="bg-muted/50">
@@ -372,7 +372,6 @@ function DataTableComponent<TData, TValue>({
                     </TableBody>
                 </Table>
             </div>
-        </div>
 
             {/* Pagination Controls */}
             {!hidePagination && (
@@ -436,6 +435,8 @@ function DataTableComponent<TData, TValue>({
 
             {children}
         </div>
+
+    </div>
     )
 }
 

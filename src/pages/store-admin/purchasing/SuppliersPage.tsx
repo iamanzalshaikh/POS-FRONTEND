@@ -107,6 +107,16 @@ export default function SuppliersPage() {
             )
         },
         {
+            header: "Company Name",
+            accessorKey: "companyName",
+            meta: { align: 'center' },
+            cell: ({ row }) => (
+                <div className="font-bold text-[10px] text-slate-500 dark:text-slate-400 tracking-[0.05em]">
+                    {row.original.companyName || "—"}
+                </div>
+            )
+        },
+        {
             header: "Contact Phone",
             accessorKey: "phone",
             meta: { align: 'center' },
@@ -115,34 +125,6 @@ export default function SuppliersPage() {
                     {row.original.phone || "—"}
                 </div>
             )
-        },
-        {
-            header: "Outstanding Balance",
-            accessorKey: "totalBalance",
-            meta: { align: 'center' },
-            cell: ({ row }) => {
-                const supplier = row.original;
-                const balance = Number(supplier.totalBalance || 0);
-                
-                return (
-                    <div className="flex flex-col items-center">
-                        <div className={cn(
-                            "font-black text-xs tabular-nums text-center",
-                            balance > 0 ? "text-rose-500" : "text-emerald-500"
-                        )}>
-                            ₨ {balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </div>
-                        <div className="flex flex-col mt-1">
-                            <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight leading-tight">
-                                Payable: ₨ {(Number(supplier.supplierPayable || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </span>
-                            <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight leading-tight">
-                                Paid: ₨ {(Number(supplier.supplierPaid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </span>
-                        </div>
-                    </div>
-                );
-            }
         },
         {
             header: "Status",
@@ -303,7 +285,7 @@ export default function SuppliersPage() {
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
-                    title="Dormant Accounts" 
+                    title="Inactive Accounts" 
                     value={list.filter(s => !s.isActive).length} 
                     icon={ShieldAlert} 
                     colorClass="bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400"

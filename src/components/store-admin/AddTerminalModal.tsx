@@ -4,6 +4,7 @@ import { X, Monitor, CheckCircle2, AlertCircle, Cpu } from 'lucide-react';
 import { terminalsApi } from '../../service/api';
 import { getDeviceFingerprint } from '../../utils/fingerprint';
 import { cn } from '@/lib/utils';
+import { toast } from '@/lib/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface AddTerminalModalProps {
@@ -48,7 +49,9 @@ export default function AddTerminalModal({ isOpen, onClose, onSuccess }: AddTerm
           }
         } catch (err) {
           setStep('error');
-          setError((err as any)?.response?.data?.message || 'Failed to sync with device.');
+          const errorMsg = (err as any)?.response?.data?.message || 'Failed to sync with device.';
+          setError(errorMsg);
+          toast.error(errorMsg, "Device Sync Failed");
         }
       };
       run();
@@ -69,16 +72,20 @@ export default function AddTerminalModal({ isOpen, onClose, onSuccess }: AddTerm
         deviceFingerprint: fingerprint,
       });
       const data = res.data?.data;
-      if (data?.alreadyRegistered) {
-        setExistingName(data.terminal?.deviceName || 'Unknown');
-        setStep('already');
-      } else {
-        setStep('success');
-        onSuccess();
-      }
-    } catch (err) {
-      setError((err as any)?.response?.data?.message || 'Terminal registration failure.');
-    } finally {
+        if (data?.alreadyRegistered) {
+          setExistingName(data.terminal?.deviceName || 'Unknown');
+          setStep('already');
+          toast.info("This device is already registered", "Device Found");
+        } else {
+          setStep('success');
+          toast.success(`Terminal "${terminalName}" linked successfully`, "Hardware Registered");
+          onSuccess();
+        }
+      } catch (err) {
+        const errorMsg = (err as any)?.response?.data?.message || 'Terminal registration failure.';
+        setError(errorMsg);
+        toast.error(errorMsg, "Registration Failed");
+      } finally {
       setLoading(false);
     }
   };
