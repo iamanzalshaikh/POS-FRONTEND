@@ -246,22 +246,11 @@ export default function AddStaffModal({ isOpen, onClose, onAdd, editMember, onEd
                                             className="w-full pl-11 pr-10 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none transition-all font-semibold text-sm appearance-none cursor-pointer text-slate-900 dark:text-white"
                                         >
                                             <option value="" disabled>Select Terminal</option>
-                                            {terminals.map(t => {
-                                                const isTaken = allStaff.some(s => 
-                                                    s.id !== editMember?.id && 
-                                                    s.assignedTerminals?.some(at => at.id === t.id)
-                                                );
-                                                return (
-                                                    <option 
-                                                        key={t.id} 
-                                                        value={t.id} 
-                                                        disabled={isTaken}
-                                                        className={isTaken ? "text-slate-300 italic" : ""}
-                                                    >
-                                                        {t.deviceName} {isTaken ? "(Already Taken)" : ""}
-                                                    </option>
-                                                );
-                                            })}
+                                            {terminals.map(t => (
+                                                <option key={t.id} value={t.id}>
+                                                    {t.deviceName}
+                                                </option>
+                                            ))}
                                         </select>
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round"/></svg>

@@ -164,7 +164,7 @@ const POSInterface: React.FC = () => {
   const refreshSequence = useCallback(async () => {
     if (!isOnline) return;
     try {
-      const res = await getSalesTransactions({ limit: 1 });
+      const res = await getSalesTransactions({ limit: 1, deviceId });
       const lastSale = res?.[0] || res?.data?.[0];
       if (lastSale?.invoiceNumber) {
         const seqStr = lastSale.invoiceNumber.slice(-6);
@@ -781,13 +781,15 @@ const POSInterface: React.FC = () => {
         // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
         console.log('🔴 [POSInterface] OFFLINE MODE - Saving sale locally...');
 
-        // 🔀 INTERLEAVING: Avoid collisions by stepping based on total terminals
-        // nextSeq = 100 + (0 * 4) + 1 = 101 (Terminal 1)
-        // nextSeq = 100 + (0 * 4) + 2 = 102 (Terminal 2)
-        const nextSeq = lastSequence + (offlineSyncCount * totalLanes) + terminalLane;
         const newOfflineCount = offlineSyncCount + 1;
         setOfflineSyncCount(newOfflineCount);
         localStorage.setItem('pos-offline-count', newOfflineCount.toString());
+
+        // 🔀 INTERLEAVING: Avoid collisions by stepping based on total terminals.
+        // Formula: Next = Last + (Count * TotalLanes). 
+        // This ensures Lane 1 stays 1, 3, 5 and Lane 2 stays 2, 4, 6.
+        const currentLastSeq = lastSequence > 0 ? lastSequence : (terminalLane - totalLanes);
+        const nextSeq = currentLastSeq + (newOfflineCount * totalLanes);
         
         const tempId = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         const invoiceNumber = String(nextSeq).padStart(6, '0');

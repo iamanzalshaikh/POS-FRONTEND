@@ -57,8 +57,24 @@ const DeviceSelection: React.FC = () => {
             console.log('🧪 [TEST MODE] Simulating no active devices');
             setDevices([]);
           } else {
-            // Filter and show only active devices
-            setDevices(list.filter((d) => d.isActive));
+            // Keep the active devices list
+            const activeOnes = list.filter((d) => d.isActive);
+            
+            // 🛡️ SECURITY: Filter by user's assigned terminals if applicable
+            // If user has assignedTerminals, only show those.
+            const assignedIds = user?.assignedTerminals?.map(t => t.id) || [];
+            
+            if (assignedIds.length > 0) {
+              const userAssigned = activeOnes.filter(d => assignedIds.includes(d.id));
+              setDevices(userAssigned);
+              
+              // Store the full active list in a hidden ref or state if needed for lane calculation
+              // Actually, we can just pass the full list to handleUseDevice or calculate it here.
+              (window as any)._allActiveDevices = activeOnes; 
+            } else {
+              setDevices(activeOnes);
+              (window as any)._allActiveDevices = activeOnes;
+            }
           }
         } else {
           setError(res.data?.message || 'Failed to load devices');
@@ -80,10 +96,11 @@ const DeviceSelection: React.FC = () => {
    * - Navigate to POS Terminal
    */
   const handleUseDevice = async (device: Device) => {
-    // 🔀 INTERLEAVING LOGIC: Determine this terminal's 'lane' among all active terminals.
-    // We sort by ID to ensure stable lane numbers across all cashier logins.
-    const activeDevices = devices.filter(d => d.isActive);
-    const sortedDevices = [...activeDevices].sort((a, b) => a.id.localeCompare(b.id));
+    // 🔀 INTERLEAVING LOGIC: Determine this terminal's 'lane' among all active terminals in the store.
+    // IMPORTANT: We use the full list of active terminals (not just the filtered ones) 
+    // to ensure Lane 1, Lane 2, etc. remain stable for everyone.
+    const allActive = (window as any)._allActiveDevices || devices;
+    const sortedDevices = [...allActive].sort((a, b) => a.id.localeCompare(b.id));
     const laneIndex = sortedDevices.findIndex(d => d.id === device.id);
     
     // Lane is 1-based (Terminal 1, Terminal 2, etc.)
