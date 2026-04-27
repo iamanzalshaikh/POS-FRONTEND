@@ -207,7 +207,7 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                                         </td>
                                         <td className="px-8 py-5">
                                             <div className={`inline-flex px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-[2px] leading-tight ${style.bg} ${style.text} ${style.border}`}>
-                                                {log.action.replace(/_/g, ' ')}
+                                                {(log.action || 'ACTION').replace(/_/g, ' ')}
                                             </div>
                                         </td>
                                         <td className="px-8 py-5 hidden xl:table-cell">
@@ -255,14 +255,19 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                                                         );
                                                     }
                                                     
-                                                    if (log.action === 'CREATE_EXPENSE' || log.action === 'UPDATE_EXPENSE') {
+                                                    if (log.action === 'CREATE_EXPENSE' || log.action === 'UPDATE_EXPENSE' || log.action === 'DELETE_EXPENSE') {
+                                                        const isDelete = log.action === 'DELETE_EXPENSE';
+                                                        const amt = isDelete ? log.oldValue?.amount : data.amount;
+                                                        const desc = isDelete ? (log.oldValue?.description || 'Permanently Deleted') : (data.description || 'Expense Entry');
+                                                        const cat = isDelete ? log.oldValue?.category : data.category;
+                                                        
                                                         return (
                                                             <>
                                                                 <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                                                    {data.description || 'Expense Entry'}
+                                                                    {desc}
                                                                 </span>
-                                                                <span className="text-[10px] font-black tracking-widest uppercase text-purple-600 dark:text-purple-400 mt-0.5">
-                                                                    {data.amount ? `Rs ${data.amount}` : 'N/A'} — {data.category || 'General'}
+                                                                <span className={`text-[10px] font-black tracking-widest uppercase mt-0.5 ${isDelete ? 'text-rose-600 dark:text-rose-400' : 'text-purple-600 dark:text-purple-400'}`}>
+                                                                    {amt ? `${isDelete ? 'Deleted: ' : ''}Rs ${amt}` : 'N/A'} — {cat || 'General'}
                                                                 </span>
                                                             </>
                                                         );
@@ -307,10 +312,23 @@ const ActivityLogsTable: React.FC<ActivityLogsTableProps> = ({
                                                         );
                                                     }
 
+                                                    if (log.action.includes('UPDATE_SUPPLIER_PURCHASE')) {
+                                                        return (
+                                                            <>
+                                                                <span className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    Purchase Adjusted
+                                                                </span>
+                                                                <span className="text-[10px] font-black tracking-widest uppercase text-amber-600 dark:text-amber-400 mt-0.5">
+                                                                    {data.oldPrice ? `Cost: Rs ${data.oldPrice} → Rs ${data.newPrice}` : 'Quantity/Cost Updated'}
+                                                                </span>
+                                                            </>
+                                                        );
+                                                    }
+
                                                     return (
                                                         <>
                                                             <span className="text-sm font-bold text-slate-900 dark:text-white">
-                                                                {log.entity} Activity
+                                                                {(log.entity || 'System').replace(/_/g, ' ')} Activity
                                                             </span>
                                                             <span className="text-[10px] font-black tracking-widest uppercase text-slate-400 mt-0.5 font-mono">
                                                                 ID: {log.entityId || 'N/A'}

@@ -62,7 +62,7 @@ function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string
 
 const AccountantDashboard: React.FC = () => {
   const accountantMenu = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/accountant' },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/accountant', exact: true },
     {
       name: 'Purchasing',
       icon: Truck,
