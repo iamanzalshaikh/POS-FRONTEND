@@ -1,8 +1,9 @@
-import { PanelLeftOpen, PanelLeftClose, User, LogOut, Settings, CircleUser } from 'lucide-react';
+import { PanelLeftOpen, PanelLeftClose, User, LogOut, Settings, CircleUser, Monitor } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ModeToggle } from '@/components/mode-toggle';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuthStore } from '@/store/useAuthStore';
+import { useDeviceStore } from '@/store/useDeviceStore';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -25,6 +26,7 @@ export default function TopNavbar({
 }: TopNavbarProps) {
     const { collapsed, toggle, openMobile } = useSidebar();
     const { user, logout } = useAuthStore();
+    const { deviceName } = useDeviceStore();
     const navigate = useNavigate();
 
     const handleProfileClick = () => {
@@ -79,9 +81,22 @@ export default function TopNavbar({
                 <div className="flex items-center gap-3 pl-2">
                     <div className="text-right hidden sm:block">
                         <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{branchLabel}</p>
-                        <div className="flex items-center justify-end gap-1.5 mt-0.5">
-                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-200"></span>
-                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold tracking-widest uppercase">ONLINE</p>
+                        <div className="flex items-center justify-end gap-2 mt-0.5">
+                            {deviceName && (
+                                <>
+                                    <div className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-md border border-indigo-100 dark:border-indigo-800">
+                                        <Monitor size={10} className="text-indigo-600 dark:text-indigo-400" />
+                                        <span className="text-[9px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest">
+                                            {deviceName}
+                                        </span>
+                                    </div>
+                                    <span className="w-1 h-1 bg-slate-300 dark:bg-slate-600 rounded-full"></span>
+                                </>
+                            )}
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-sm shadow-emerald-200"></span>
+                                <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold tracking-widest uppercase">ONLINE</p>
+                            </div>
                         </div>
                     </div>
                     

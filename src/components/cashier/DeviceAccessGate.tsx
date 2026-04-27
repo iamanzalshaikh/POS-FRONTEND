@@ -89,26 +89,34 @@ const DeviceAccessGate: React.FC<DeviceAccessGateProps> = ({ children }) => {
         const allDevices = (devicesRes.data.data?.devices || devicesRes.data.data || []) as Device[];
         const activeDevices = allDevices.filter((d) => d.isActive);
         
-        setAvailableDevices(activeDevices);
+        // 🛡️ SECURITY: Filter by user's assigned terminals
+        const assignedIds = user?.assignedTerminals?.map(t => t.id) || [];
+        const userAssigned = assignedIds.length > 0 
+          ? activeDevices.filter(d => assignedIds.includes(d.id))
+          : activeDevices;
+
+        setAvailableDevices(userAssigned);
         setLastChecked(new Date());
 
-        // CRITICAL FIX: If we have a stored deviceId, verify it still exists and is active
+        // CRITICAL FIX: If we have a stored deviceId, verify it still exists, is active, AND is still assigned to the user
         if (deviceId) {
             const currentDevice = activeDevices.find(d => d.id === deviceId);
-            if (!currentDevice) {
-                console.warn('[DeviceGate] Persistent device is now inactive or deleted. Clearing...');
+            const isStillAssigned = assignedIds.length === 0 || assignedIds.includes(deviceId);
+
+            if (!currentDevice || !isStillAssigned) {
+                console.warn('[DeviceGate] Persistent device is now inactive, deleted, or unassigned. Clearing...');
                 clearDevice();
                 setHasDevice(false);
             }
         }
         
-        // Auto-select if only one device available
-        if (activeDevices.length === 1 && !deviceId && !isSelecting) {
-          console.log('[DeviceGate] Auto-selecting single device');
-          handleSelectDevice(activeDevices[0]);
+        // Auto-select if only one assigned device available
+        if (userAssigned.length === 1 && !deviceId && !isSelecting) {
+          console.log('[DeviceGate] Auto-selecting single assigned device');
+          handleSelectDevice(userAssigned[0]);
         }
       }
-    }, [devicesRes, deviceId, isSelecting, clearDevice]);
+    }, [devicesRes, deviceId, isSelecting, clearDevice, user?.assignedTerminals]);
 
   /**
    * Handle device selection

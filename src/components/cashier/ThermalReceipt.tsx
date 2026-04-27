@@ -15,35 +15,41 @@ const thermalPrintStyles = `
     margin: 0;
   }
   
-  body {
-    width: 80mm;
-    margin: 0;
-    padding: 0;
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
     background: white !important;
-    overflow: hidden;
-    font-family: "Helvetica Neue", Arial, sans-serif !important;
-    line-height: 1.2 !important;
+    overflow: visible !important;
+  }
+
+  /* Override any h-screen or fixed heights in the app tree */
+  div {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
   /* Hide everything on the POS screen except this receipt */
   body * {
-    visibility: hidden;
+    visibility: hidden !important;
   }
 
   #direct-thermal-receipt, #direct-thermal-receipt * {
-    visibility: visible;
+    visibility: visible !important;
   }
 
   #direct-thermal-receipt {
     width: 80mm !important;
     margin: 0 !important;
-    padding: 2mm 3mm !important;
+    padding: 2mm 3mm 0mm 3mm !important;
     display: block !important;
-    position: absolute;
-    top: 0;
-    left: 0;
-    box-sizing: border-box;
-    visibility: visible !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    box-sizing: border-box !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .print-hidden {
@@ -193,9 +199,9 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ sale }) => {
   const items = sale.saleItems || sale.items || [];
 
   return (
-    <div id="direct-thermal-receipt">
+    <div id="direct-thermal-receipt" style={{ breakInside: 'avoid' }}>
       <style>{thermalPrintStyles}</style>
-      <div className="bg-white">
+      <div className="bg-white" style={{ margin: 0, padding: 0 }}>
         {/* Store Info Header */}
         <div className="mb-4 pb-4 border-b-2 border-slate-300">
           <div className="flex flex-col items-center text-center">
@@ -421,11 +427,11 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({ sale }) => {
         <div className="receipt-divider" />
 
         {/* Footer */}
-        <div className="mt-8 pt-4 border-slate-200 text-center">
+        <div className="mt-4 pt-2 text-center" style={{ breakInside: 'avoid' }}>
           <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.1em] whitespace-nowrap" style={{ fontSize: '6.5pt' }}>
             Software by <span className="text-slate-900">Elsa DevOps Technology</span>
           </p>
-          <div className="mt-2 text-[9px] font-bold text-slate-400 space-x-4" style={{ fontSize: '6pt' }}>
+          <div className="mt-1 text-[9px] font-bold text-slate-400 flex justify-center gap-3" style={{ fontSize: '6pt' }}>
             <span className="inline-flex items-center gap-1">
               <Phone size={10} className="inline opacity-50" /> 03128289654
             </span>
