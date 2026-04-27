@@ -1,21 +1,21 @@
-import React, { useState, useMemo } from "react";
+//import React, { useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   getStaffById, 
   getPayroll, 
-  deleteStaff as deleteStaffApi,
+  //deleteStaff as deleteStaffApi,
   fetchStaffMemberById 
 } from "@/api/staff.api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/badge";
+//import { Badge } from "@/components/ui/badge";
 import { 
   Wallet, 
   Calendar, 
-  Users, 
+  //Users, 
   Activity, 
-  Trash2, 
+  //Trash2, 
   Mail, 
   ChevronRight,
   Phone, 
@@ -28,11 +28,11 @@ import {
   ArrowLeft,
   FileText,
   ShieldCheck,
-  Heart
+  //Heart
 } from "lucide-react";
 import { formatAmount, formatDate } from "@/utils/format";
 import { StaffDetailSkeleton } from "@/components/ui/skeletons/StaffDetailSkeleton";
-import { toast } from "@/lib/toast";
+//import { toast } from "@/lib/toast";
 
 const getMonthYearString = (year: number, month: number) => {
   const date = new Date(year, month - 1);
@@ -318,36 +318,48 @@ export default function StaffDetail() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-slate-800/50 border-y border-slate-100 dark:border-slate-800">
-                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Payment Cycle</th>
-                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest text-center">Settled Assets</th>
-                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest text-center">Gross / Ded.</th>
-                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Registry Hub</th>
+                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest w-16">Seq.</th>
+                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest">Month</th>
+                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest text-center">Base Salary</th>
+                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest text-center">Bonus</th>
+                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest text-center">Deductions</th>
+                <th className="px-10 py-5 text-[9px] font-black uppercase text-slate-400 tracking-widest text-center">Total Paid</th>
                 <th className="px-10 py-5 text-right text-[9px] font-black uppercase text-slate-400 tracking-widest">Document</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {history.length > 0 ? (
-                history.map((record) => (
+                history.map((record, index) => (
                   <tr key={record.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors group">
+                    <td className="px-10 py-6 whitespace-nowrap">
+                      <span className="text-[10px] font-black text-slate-400 tabular-nums">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                    </td>
                     <td className="px-10 py-6 whitespace-nowrap">
                       <div className="inline-flex items-center rounded-2xl px-4 py-1.5 text-[10px] font-black bg-indigo-500/10 text-indigo-600 border border-indigo-500/10 uppercase tracking-widest">
                         {getMonthYearString(record.year, record.month)}
                       </div>
                     </td>
                     <td className="px-10 py-6 text-center tabular-nums">
+                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                        {formatAmount(record.baseSalary)}
+                      </span>
+                    </td>
+                    <td className="px-10 py-6 text-center tabular-nums">
+                      <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                        {formatAmount(record.bonus || 0)}
+                      </span>
+                    </td>
+                    <td className="px-10 py-6 text-center tabular-nums">
+                      <span className="text-sm font-black text-rose-500">
+                        {record.deductions > 0 ? `-${formatAmount(record.deductions)}` : '0.00'}
+                      </span>
+                    </td>
+                    <td className="px-10 py-6 text-center tabular-nums">
                       <span className="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                         {formatAmount(record.amountPaid)}
                       </span>
-                    </td>
-                    <td className="px-10 py-6 text-center whitespace-nowrap">
-                      <span className="text-xs font-black text-slate-900 dark:text-white tabular-nums">{formatAmount(record.baseSalary)}</span>
-                      {record.deductions > 0 && (
-                        <span className="text-[10px] font-black text-rose-500 ml-2">-{formatAmount(record.deductions)}</span>
-                      )}
-                    </td>
-                    <td className="px-10 py-6">
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{record.paymentMethod || 'BANK_TRANSFER'}</div>
-                      <div className="text-[9px] text-slate-300 mt-1 font-mono uppercase tracking-tighter">REF: {record.receiptNumber || record.id.slice(0, 8)}</div>
                     </td>
                     <td className="px-10 py-6 text-right">
                       <Button
