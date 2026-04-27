@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Monitor, Wifi, WifiOff, Clock, LogOut, Loader2, AlertCircle, User } from 'lucide-react';
+import { Monitor, Wifi, WifiOff, Clock, LogOut, Loader2, AlertCircle, User, Check, Lock, ArrowRight, ChevronRight } from 'lucide-react';
 import { devicesApi } from '../../service/api';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -34,7 +34,7 @@ const DeviceSelection: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectingId, setSelectingId] = useState<string | null>(null);
 
-  const { setDevice } = useDeviceStore();
+  const { deviceId, setDevice } = useDeviceStore();
   const { logout, user } = useAuthStore();
   const navigate = useNavigate();
 
@@ -247,16 +247,20 @@ const DeviceSelection: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {devices.map((device) => {
             const online = isDeviceOnline(device);
+            const isCurrentDevice = device.id === deviceId;
             const isInUse = !!device.currentUserId;
             const inUseBy = device.currentUser?.name || 'Another cashier';
+            const isOtherTerminalLocked = !!deviceId && !isCurrentDevice;
             
             return (
               <div
                 key={device.id}
                 className={`group flex flex-col justify-between rounded-2xl border p-5 shadow-sm transition-all duration-200 ${
-                  isInUse 
+                  isCurrentDevice
+                    ? 'border-emerald-500 bg-emerald-50/30'
+                    : isInUse 
                     ? 'border-slate-200 bg-slate-50/80 opacity-90' 
-                    : 'border-slate-200 bg-white hover:border-emerald-500/60 hover:shadow-lg hover:shadow-emerald-500/10'
+                    : 'border-slate-200 bg-white hover:border-emerald-500/60 hover:shadow-lg'
                 }`}
               >
                 {/* Header: Icon + Name + Status */}
@@ -268,8 +272,13 @@ const DeviceSelection: React.FC = () => {
                       <Monitor size={20} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-900">
+                      <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
                         {device.deviceName || 'POS Terminal'}
+                        {isCurrentDevice && (
+                          <span className="flex items-center gap-1 text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full uppercase tracking-tighter font-black">
+                            <Check size={8} /> Active
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] font-mono text-slate-500">
                         {device.deviceType || 'POS'} • {device.id.slice(-6).toUpperCase()}
@@ -309,25 +318,43 @@ const DeviceSelection: React.FC = () => {
                 </div>
 
                 {/* Use This Device Button */}
-                <button
-                  disabled={!!selectingId}
-                  onClick={() => handleUseDevice(device)}
-                  className="inline-flex items-center justify-center space-x-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all active:scale-[0.98] bg-emerald-600 text-white hover:bg-emerald-500 hover:shadow-md disabled:bg-emerald-400"
-                >
-                  {selectingId === device.id ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Attaching...</span>
-                    </>
-                  ) : isInUse ? (
-                    <span>Unavailable</span>
-                  ) : (
-                    <>
-                      <Wifi size={16} />
-                      <span>Use This Device</span>
-                    </>
-                  )}
-                </button>
+                {isCurrentDevice ? (
+                  <button
+                    onClick={() => navigate('/cashier/terminal')}
+                    className="w-full inline-flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700 transition-all shadow-sm"
+                  >
+                    <ArrowRight size={16} />
+                    <span>Resume Terminal</span>
+                  </button>
+                ) : isOtherTerminalLocked ? (
+                  <div className="w-full inline-flex items-center justify-center space-x-2 py-2.5 rounded-xl bg-slate-100 text-sm font-bold text-slate-400 cursor-not-allowed">
+                    <Lock size={16} />
+                    <span>Other Terminal Active</span>
+                  </div>
+                ) : (
+                  <button
+                    disabled={!!selectingId || isInUse}
+                    onClick={() => handleUseDevice(device)}
+                    className="w-full inline-flex items-center justify-center space-x-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm transition-all active:scale-[0.98] bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    {selectingId === device.id ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Attaching...</span>
+                      </>
+                    ) : isInUse ? (
+                      <>
+                        <Lock size={16} />
+                        <span>Unavailable</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronRight size={16} />
+                        <span>Connect Terminal</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             );
           })}

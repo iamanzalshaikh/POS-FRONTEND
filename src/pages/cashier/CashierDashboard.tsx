@@ -54,7 +54,7 @@ const CashierDashboard: React.FC = () => {
     { name: 'Offline Sales', icon: Clock, path: '/cashier/offline-sales' },
     { name: 'Returns / Refunds', icon: RotateCcw, path: '/cashier/returns' },
     { name: 'Products', icon: Package, path: '/cashier/products' },
-    { name: 'Inventory Check', icon: Package, path: '/cashier/inventory' },
+    // { name: 'Inventory Check', icon: Package, path: '/cashier/inventory' },
     { name: 'Audit Logs', icon: ShieldCheck, path: '/cashier/audit-logs' },
   ];
 
