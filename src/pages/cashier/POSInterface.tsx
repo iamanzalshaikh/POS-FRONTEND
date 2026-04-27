@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { fetchProducts, getProductByBarcode } from '../../api/products.api';
 import { createSale, getSalesTransactions } from '../../api/sales.api';
+import { devicesApi } from '../../service/api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useDeviceStore } from '../../store/useDeviceStore';
 import { toast } from "@/lib/toast";
@@ -104,7 +105,7 @@ function parseProductTaxPct(product: {
 const POSInterface: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const { deviceId, terminalLane, totalLanes } = useDeviceStore();
+  const { deviceId, terminalLane, totalLanes, setDevice } = useDeviceStore();
   const displayTerminalName = user?.assignedTerminals?.[0]?.deviceName ?? null;
   
   // Use online status hook with auto-sync
@@ -164,6 +165,7 @@ const POSInterface: React.FC = () => {
   const refreshSequence = useCallback(async () => {
     if (!isOnline) return;
     try {
+      // 1. Refresh Sequence from last sale
       const res = await getSalesTransactions({ limit: 1, deviceId });
       const lastSale = res?.[0] || res?.data?.[0];
       if (lastSale?.invoiceNumber) {
@@ -173,15 +175,35 @@ const POSInterface: React.FC = () => {
           console.log('🔄 [POSInterface] Sequence refreshed:', seq);
           setLastSequence(seq);
           localStorage.setItem('pos-last-sequence', seq.toString());
-          // Reset offline count when sequence is refreshed from server
           setOfflineSyncCount(0);
           localStorage.setItem('pos-offline-count', '0');
+        }
+      }
+
+      // 2. SELF-HEALING: Refresh Lane and Total Lanes from server
+      // This ensures if a new terminal was added, we pick up the new interleaving rules.
+      const devicesRes = await devicesApi.getAll();
+      const list = devicesRes.data?.data || devicesRes.data || [];
+      if (Array.isArray(list)) {
+        const activeOnes = list.filter((d: any) => d.isActive);
+        const sorted = [...activeOnes].sort((a, b) => a.id.localeCompare(b.id));
+        const idx = sorted.findIndex((d: any) => d.id === deviceId);
+        const newLane = idx !== -1 ? idx + 1 : 1;
+        const newTotal = Math.max(1, sorted.length);
+
+        if (newLane !== terminalLane || newTotal !== totalLanes) {
+          console.log(`🔄 [POSInterface] Lane info self-healed: Lane ${newLane} of ${newTotal}`);
+          setDevice({
+            deviceId: deviceId!,
+            terminalLane: newLane,
+            totalLanes: newTotal
+          });
         }
       }
     } catch (err) {
       console.warn('⚠️ [POSInterface] Sequence refresh failed:', err);
     }
-  }, [isOnline]);
+  }, [isOnline, deviceId, terminalLane, totalLanes, setDevice]);
 
   useEffect(() => {
     refreshSequence();
@@ -785,12 +807,20 @@ const POSInterface: React.FC = () => {
         setOfflineSyncCount(newOfflineCount);
         localStorage.setItem('pos-offline-count', newOfflineCount.toString());
 
-        // 🔀 INTERLEAVING: Avoid collisions by stepping based on total terminals.
-        // Formula: Next = Last + (Count * TotalLanes). 
-        // This ensures Lane 1 stays 1, 3, 5 and Lane 2 stays 2, 4, 6.
-        const currentLastSeq = lastSequence > 0 ? lastSequence : (terminalLane - totalLanes);
-        const nextSeq = currentLastSeq + (newOfflineCount * totalLanes);
+        // 🔀 INTERLEAVING: Ensure offline sales follow the same (Sequence - 1) * Total + Lane rule.
+        // Simplest way: Next Invoice = Previous Invoice + TotalLanes
+        let nextSeq: number;
+        if (lastSequence > 0) {
+          nextSeq = lastSequence + totalLanes;
+        } else {
+          // First sale ever on this terminal
+          nextSeq = terminalLane;
+        }
         
+        // Update local sequence for the next offline sale
+        setLastSequence(nextSeq);
+        localStorage.setItem('pos-last-sequence', nextSeq.toString());
+
         const tempId = `OFF-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
         const invoiceNumber = String(nextSeq).padStart(6, '0');
 

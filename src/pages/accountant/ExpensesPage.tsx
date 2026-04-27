@@ -422,7 +422,7 @@ const ExpensesPage: React.FC = () => {
                 className="h-10 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all min-w-[140px]"
               >
                 <option value="ALL">All Categories</option>
-                {EXPENSE_CATEGORIES.filter(c => c.value !== 'SALARIES').map((cat) => (
+                {EXPENSE_CATEGORIES.filter(c => !['SALARIES', 'SUPPLIER_PURCHASE'].includes(c.value)).map((cat) => (
                   <option key={cat.value} value={cat.value}>
                     {cat.label}
                   </option>
