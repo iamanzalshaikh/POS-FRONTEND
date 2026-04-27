@@ -385,7 +385,7 @@ const MonthlyCloseReport: React.FC = () => {
                 
                 <div className="space-y-5">
                    <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Valuation</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Stock</span>
                       <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight">{formatCurrency(closeData.inventory.stockValuation)}</span>
                    </div>
                    <div className="flex justify-between items-center">

@@ -198,7 +198,7 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
                   className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-800 rounded-2xl text-[12px] font-bold text-slate-900 dark:text-white appearance-none focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 transition-all disabled:opacity-50"
                 >
                   <option value="">Select category</option>
-                  {EXPENSE_CATEGORIES.map((cat) => (
+                  {EXPENSE_CATEGORIES.filter(cat => cat.value !== 'SALARIES' && cat.value !== 'SUPPLIER_PURCHASE').map((cat) => (
                     <option key={cat.value} value={cat.value}>
                       {cat.label}
                     </option>
