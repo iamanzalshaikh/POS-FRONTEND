@@ -34,21 +34,28 @@ export type AccountantPeriodPreset = 'today' | 'week' | 'month';
 
 function getPeriodForPreset(preset: AccountantPeriodPreset): { startDate: string; endDate: string } {
   const today = new Date();
-  const endDate = toLocalYMD(today);
+  const todayStr = toLocalYMD(today);
+  
   if (preset === 'today') {
     return { 
-      startDate: endDate, 
-      endDate 
+      startDate: todayStr, 
+      endDate: todayStr 
     };
   }
+  
   if (preset === 'week') {
-    // Return last 7 days (including today)
+    // Show last 7 days AND next 7 days to capture upcoming/logged expenses
     const start = new Date(today);
     start.setDate(start.getDate() - 6);
-    return { startDate: toLocalYMD(start), endDate };
+    const end = new Date(today);
+    end.setDate(end.getDate() + 7);
+    return { startDate: toLocalYMD(start), endDate: toLocalYMD(end) };
   }
+  
+  // Monthly: Start of current month to end of current month
   const start = new Date(today.getFullYear(), today.getMonth(), 1);
-  return { startDate: toLocalYMD(start), endDate };
+  const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return { startDate: toLocalYMD(start), endDate: toLocalYMD(end) };
 }
 
 const AccountantDashboardHome: React.FC = () => {
@@ -107,7 +114,7 @@ const AccountantDashboardHome: React.FC = () => {
     return [
       { name: 'COGS', value: summary.cogs, color: '#2563eb' },
       { name: 'Operating', value: summary.operatingExpenses, color: '#10b981' },
-      { name: 'Salaries', value: summary.salaries, color: '#f59e0b' },
+      { name: 'Salaries', value: summary.expenseBreakdown.payrollExpenses, color: '#f59e0b' },
       { name: 'Sourcing Paid', value: summary.totalStockPaid, color: '#8b5cf6' },
     ].filter(r => r.value > 0);
   }, [summary]);
@@ -117,7 +124,7 @@ const AccountantDashboardHome: React.FC = () => {
      
      // Card 11 calculation: Operating + Staff Payroll + Supplier Cash Paid
      const totalExpenses = (summary.operatingExpenses || 0) + 
-                          (summary.salaries || 0) + 
+                          (summary.expenseBreakdown?.payrollExpenses || 0) + 
                           (summary.totalStockPaid || 0);
      
      // Card 12 calculation: Total Revenue (Card 10) - Total Expense (Card 11)
@@ -203,10 +210,10 @@ const AccountantDashboardHome: React.FC = () => {
         />
         <MetricCard
           title="Staff Payroll"
-          value={summary?.salaries ?? 0}
+          value={summary?.expenseBreakdown?.payrollExpenses ?? 0}
           isCurrency={true}
           icon={Wallet}
-          subtitle={`Source: ${summary?.salariesSource || 'N/A'}`}
+          subtitle={summary?.expenseBreakdown?.advancePayments > 0 ? `Excl. ${formatCurrency(summary.expenseBreakdown.advancePayments)} Advance` : `Source: ${summary?.salariesSource || 'N/A'}`}
           colorClass="bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50"
         />
         <MetricCard

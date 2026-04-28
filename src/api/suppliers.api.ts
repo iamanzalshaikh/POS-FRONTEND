@@ -11,6 +11,7 @@ export interface Supplier {
   city?: string | null;
   state?: string | null;
   country?: string | null;
+  displayId?: string | null;
   isActive: boolean;
   isOpeningStockSupplier: boolean;
   createdAt: string;

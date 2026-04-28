@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, DollarSign, Calendar, FileText, Calculator, CheckCircle2, Loader2, AlertCircle, User } from 'lucide-react';
-import { getStaff, createPayroll, getPayroll, type StaffMember } from '../../api/staff.api';
+import { X, DollarSign, Calendar,Info, FileText, Calculator, CheckCircle2, Loader2, AlertCircle, User } from 'lucide-react';
+import { getStaff, createPayroll, getPayroll, getStaffPayrollHistory, type StaffMember } from '../../api/staff.api';
 import EnhancedCalendar from '../global-components/Calendar/EnhancedCalendar';
 import { toast } from '@/lib/toast';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // TYPES
@@ -19,6 +20,8 @@ export interface ProcessSalaryFormData {
   bonus: string;
   deductions: string;
   paymentMethod: string;
+  paymentType: 'FULL' | 'HALF' | 'CUSTOM';
+  customAmount: string;
 }
 
 export interface ProcessSalaryFormProps {
@@ -52,6 +55,8 @@ const EMPTY_FORM: ProcessSalaryFormData = {
   bonus: '',
   deductions: '',
   paymentMethod: 'CASH',
+  paymentType: 'FULL',
+  customAmount: '',
 };
 
 // ============================================================================
@@ -116,7 +121,7 @@ interface SelectProps {
   label: string;
   value: string;
   onChange: (val: string) => void;
-  options: readonly { value: string | number; label: string }[];
+  options: readonly { value: string | number; label: string; disabled?: boolean }[];
   required?: boolean;
   error?: string;
   icon?: React.ComponentType<{ size: number; className?: string }>;
@@ -153,7 +158,7 @@ const SelectField = React.memo(function SelectField({
         >
           <option value="">{placeholder || `Select ${label.toLowerCase()}`}</option>
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value} disabled={opt.disabled}>{opt.label}</option>
           ))}
         </select>
         <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
@@ -193,6 +198,7 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
   // Duplicate check state
   const [existingPayroll, setExistingPayroll] = useState<{ id: string; amountPaid: number; status: string } | null>(null);
   const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [yearlyStatus, setYearlyStatus] = useState<Record<number, string>>({});
 
   // Fetch active staff on open
   useEffect(() => {
@@ -269,6 +275,33 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
     checkExistingPayroll();
   }, [formData.staffId, formData.month, formData.year]);
 
+  // Fetch yearly status when staff or year changes
+  useEffect(() => {
+    if (!formData.staffId || !formData.year) {
+      setYearlyStatus({});
+      return;
+    }
+
+    const fetchYearlyStatus = async () => {
+      try {
+        const response = await getStaffPayrollHistory(formData.staffId, { year: formData.year });
+        if (response.success) {
+          const statusMap: Record<number, string> = {};
+          response.data.records.forEach((record: any) => {
+            if (record.year === formData.year) {
+              statusMap[record.month] = record.status;
+            }
+          });
+          setYearlyStatus(statusMap);
+        }
+      } catch (err) {
+        console.error('Failed to fetch yearly status:', err);
+      }
+    };
+
+    fetchYearlyStatus();
+  }, [formData.staffId, formData.year]);
+
   // Calculated values
   const calculations = useMemo(() => {
     const baseSalary = Number(selectedStaff?.baseSalary || selectedStaff?.monthlySalary || 0);
@@ -276,6 +309,14 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
     const deductions = Number(formData.deductions) || 0;
     const grossSalary = baseSalary + bonus;
     const netSalary = grossSalary - deductions;
+    const remainingToPay = netSalary - (existingPayroll?.amountPaid || 0);
+    
+    let amountToPay = remainingToPay;
+    if (formData.paymentType === 'HALF') {
+      amountToPay = netSalary / 2;
+    } else if (formData.paymentType === 'CUSTOM') {
+      amountToPay = Number(formData.customAmount) || 0;
+    }
 
     return {
       baseSalary,
@@ -283,8 +324,10 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
       deductions,
       grossSalary,
       netSalary,
+      amountToPay,
+      remainingToPay,
     };
-  }, [selectedStaff, formData.bonus, formData.deductions]);
+  }, [selectedStaff, formData.bonus, formData.deductions, formData.paymentType, formData.customAmount, existingPayroll]);
 
   // Field update callbacks
   const updateStaffId = useCallback((v: string) => setFormData((p) => ({ ...p, staffId: v })), []);
@@ -299,6 +342,8 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
   const updateNotes = useCallback((v: string) => setFormData((p) => ({ ...p, notes: v })), []);
   const updateBonus = useCallback((v: string) => setFormData((p) => ({ ...p, bonus: v })), []);
   const updateDeductions = useCallback((v: string) => setFormData((p) => ({ ...p, deductions: v })), []);
+  const updatePaymentType = useCallback((v: string) => setFormData((p) => ({ ...p, paymentType: v as 'FULL' | 'HALF' | 'CUSTOM' })), []);
+  const updateCustomAmount = useCallback((v: string) => setFormData((p) => ({ ...p, customAmount: v })), []);
 
   // Validation
   const validate = useCallback(() => {
@@ -308,6 +353,19 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
     if (!formData.month) e.month = 'Select month';
     if (!formData.year) e.year = 'Select year';
     if (!formData.paymentDate) e.paymentDate = 'Payment date is required';
+    
+    if (formData.paymentMethod !== 'CASH' && !formData.referenceNumber) {
+      e.referenceNumber = 'Transaction ID / Ref No is required for bank payments';
+    }
+    
+    if (formData.paymentType === 'CUSTOM') {
+      const amt = Number(formData.customAmount);
+      if (!formData.customAmount || isNaN(amt) || amt <= 0) {
+        e.customAmount = 'Please enter a valid amount';
+      } else if (amt > calculations.remainingToPay + 0.01) {
+        e.customAmount = `Amount cannot exceed remaining balance (PKR ${calculations.remainingToPay.toLocaleString()})`;
+      }
+    }
 
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -333,6 +391,8 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
         paymentMethod: formData.paymentMethod,
         referenceNumber: formData.referenceNumber || undefined,
         notes: formData.notes || undefined,
+        paymentType: formData.paymentType,
+        amountPaid: formData.paymentType === 'CUSTOM' ? Number(formData.customAmount) : undefined,
       };
 
       await createPayroll(payload);
@@ -351,11 +411,42 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
     if (!isSubmitting) onClose();
   }, [isSubmitting, onClose]);
 
+  const monthOptions = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    return MONTHS.map((m) => {
+      const status = yearlyStatus[m.value];
+      let statusLabel = '';
+      
+      if (status === 'PAID') {
+        statusLabel = '(Paid)';
+      } else if (status === 'PARTIAL') {
+        statusLabel = '(Partial)';
+      } else if (status === 'UNPAID') {
+        statusLabel = '(Unpaid)';
+      } else {
+        // Only show (N/A) if it's a strictly past month and year
+        const isPast = formData.year < currentYear || (formData.year === currentYear && m.value < currentMonth);
+        if (isPast) {
+          statusLabel = '(N/A)';
+        }
+      }
+      
+      return {
+        value: m.value,
+        label: `${m.label} ${formData.staffId && statusLabel ? statusLabel : ''}`.trim(),
+        disabled: status === 'PAID',
+      };
+    });
+  }, [yearlyStatus, formData.staffId, formData.year]);
+
   if (!isOpen) return null;
 
   const yearOptions = [];
   const currentYear = new Date().getFullYear();
-  for (let y = currentYear - 1; y <= currentYear + 1; y++) {
+  for (let y = currentYear; y <= currentYear + 2; y++) {
     yearOptions.push({ value: y, label: String(y) });
   }
 
@@ -438,7 +529,7 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
                   label="Month"
                   value={String(formData.month)}
                   onChange={updateMonth}
-                  options={MONTHS}
+                  options={monthOptions}
                   required
                   error={errors.month}
                   icon={Calendar}
@@ -512,15 +603,46 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
                   error={errors.paymentMethod}
                   icon={DollarSign}
                 />
+                <SelectField
+                  label="Payment Type"
+                  value={formData.paymentType}
+                  onChange={updatePaymentType}
+                  options={[
+                    { value: 'FULL', label: 'Full Payment (100%)' },
+                    { value: 'HALF', label: 'Half Payment (50%)' },
+                    { value: 'CUSTOM', label: 'Custom Amount' },
+                  ]}
+                  required
+                  icon={DollarSign}
+                />
+              </div>
+
+              {formData.paymentType === 'CUSTOM' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-in slide-in-from-top-2 duration-300">
+                  <TextField
+                    label="Enter Amount (PKR)"
+                    type="number"
+                    value={formData.customAmount}
+                    onChange={updateCustomAmount}
+                    placeholder="0.00"
+                    icon={DollarSign}
+                    required
+                    error={errors.customAmount}
+                  />
+                  <div className="hidden md:block" />
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <TextField
                   label="Reference Number"
                   value={formData.referenceNumber}
                   onChange={updateReferenceNumber}
                   placeholder="Enter reference..."
                   icon={FileText}
+                  required={formData.paymentMethod !== 'CASH'}
+                  error={errors.referenceNumber}
                 />
-              </div>
-              <div className="grid grid-cols-1">
                 <TextField
                   label="Any Notes"
                   value={formData.notes}
@@ -540,11 +662,25 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
                 </h3>
 
                 {existingPayroll && (
-                  <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl animate-in zoom-in-95">
+                  <div className={cn(
+                    "mb-6 p-4 rounded-2xl animate-in zoom-in-95 border",
+                    existingPayroll.status === 'PAID' 
+                      ? "bg-rose-500/10 border-rose-500/20" 
+                      : "bg-amber-500/10 border-amber-500/20"
+                  )}>
                     <div className="flex items-start gap-3">
-                      <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={18} />
-                      <div className="text-[10px] font-bold text-rose-200 uppercase tracking-widest leading-normal">
-                        CRITICAL: Record already exists for this cycle. Entry is blocked to prevent duplicate disbursement.
+                      {existingPayroll.status === 'PAID' ? (
+                        <AlertCircle className="text-rose-500 shrink-0 mt-0.5" size={18} />
+                      ) : (
+                        <Info className="text-amber-500 shrink-0 mt-0.5" size={18} />
+                      )}
+                      <div className={cn(
+                        "text-[10px] font-bold uppercase tracking-widest leading-normal",
+                        existingPayroll.status === 'PAID' ? "text-rose-200" : "text-amber-200"
+                      )}>
+                        {existingPayroll.status === 'PAID' 
+                          ? "CRITICAL: Record already exists for this cycle. Entry is blocked to prevent duplicate disbursement."
+                          : `PENDING BALANCE: PKR ${calculations.remainingToPay.toLocaleString()} remains for this cycle. You can pay the balance now.`}
                       </div>
                     </div>
                   </div>
@@ -564,8 +700,13 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
                   <div className="col-span-2 md:col-span-1 border-l border-white/10 pl-0 md:pl-8 flex flex-col justify-center">
                     <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.15em] mb-1">Total to Pay</p>
                     <p className="text-2xl font-black text-white tabular-nums tracking-tighter">
-                      PKR {calculations.netSalary.toLocaleString()}
+                      PKR {calculations.amountToPay.toLocaleString()}
                     </p>
+                    {formData.paymentType === 'HALF' && (
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                        (50% of {calculations.netSalary.toLocaleString()})
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -584,9 +725,9 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
             </button>
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || !formData.staffId || !!existingPayroll}
+              disabled={isSubmitting || !formData.staffId || existingPayroll?.status === 'PAID'}
               className={`flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white transition-all active:scale-95 flex items-center justify-center gap-3 shadow-xl ${
-                isSubmitting || !!existingPayroll 
+                isSubmitting || existingPayroll?.status === 'PAID' 
                   ? 'bg-slate-400 border-b-4 border-slate-500 cursor-not-allowed' 
                   : 'bg-emerald-600 border-b-4 border-emerald-800 hover:bg-emerald-700 shadow-emerald-500/20'
               }`}
@@ -596,10 +737,15 @@ const ProcessSalaryForm: React.FC<ProcessSalaryFormProps> = ({
                   <Loader2 size={16} className="animate-spin" />
                   <span>Saving...</span>
                 </>
-              ) : existingPayroll ? (
+              ) : existingPayroll?.status === 'PAID' ? (
                 <>
                   <XCircle size={16} />
                   <span>Already Paid</span>
+                </>
+              ) : existingPayroll?.status === 'PARTIAL' ? (
+                <>
+                  <CheckCircle2 size={16} />
+                  <span>Pay Balance</span>
                 </>
               ) : (
                 <>

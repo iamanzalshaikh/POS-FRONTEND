@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { 
   getPayrollById, 
+  getStaffPayrollHistory,
   type PayrollRecord 
 } from '../../api/staff.api'
 import { Button } from "@/components/ui/button"
@@ -35,6 +36,7 @@ export default function StaffSalaryReceipt() {
     const [printType, setPrintType] = useState<'none' | 'pdf' | 'thermal'>('none')
     const [loading, setLoading] = useState(true);
     const [record, setRecord] = useState<PayrollRecord | null>(null);
+    const [history, setHistory] = useState<PayrollRecord[]>([]);
 
     useEffect(() => {
         const fetchRecord = async () => {
@@ -43,6 +45,19 @@ export default function StaffSalaryReceipt() {
                 const response = await getPayrollById(payrollId);
                 if (response.success) {
                     setRecord(response.data);
+                    
+                    // Fetch full history for this staff member to show partial payments breakdown
+                    const histRes = await getStaffPayrollHistory(response.data.staffId, {
+                      month: response.data.month,
+                      year: response.data.year
+                    });
+                    if (histRes.success) {
+                      // FILTER to only include same month and year as the current record
+                      const filteredHistory = histRes.data.records.filter((h: any) => 
+                        h.month === response.data.month && h.year === response.data.year
+                      );
+                      setHistory(filteredHistory);
+                    }
                 } else {
                     toast.error('Record not found');
                 }
@@ -242,6 +257,7 @@ export default function StaffSalaryReceipt() {
                             <tr className="bg-[#ffffff]">
                                 <td className="border border-[#000000] px-3 py-2 text-sm text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '500' }}>
                                     Basic Salary - {MONTHS_LIST[record.month - 1]} {record.year}
+                                    
                                 </td>
                                 <td className="border border-[#000000] px-3 py-2 text-right text-sm font-bold text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '600' }}>
                                     {safeFormatCurrency(record.baseSalary)}
@@ -271,15 +287,57 @@ export default function StaffSalaryReceipt() {
                                     </td>
                                 </tr>
                             )}
+
+                            {/* Previous Payments History */}
+                            {history.filter(h => h.id !== record.id).map((h) => (
+                                <tr key={h.id} className="bg-[#ffffff]">
+                                    <td className="border border-[#000000] px-3 py-2 text-sm text-slate-500 italic" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '400' }}>
+                                        Already Paid ({new Date(h.paymentDate || '').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')})
+                                    </td>
+                                    <td className="border border-[#000000] px-3 py-2 text-right text-sm font-bold text-slate-400" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '600' }}>
+                                        {safeFormatCurrency(h.amountPaid)}
+                                    </td>
+                                </tr>
+                            ))}
+
+                            {/* Amount Paid (This Slip) */}
+                            <tr className="bg-slate-50/50">
+                                <td className="border border-[#000000] px-3 py-2 text-sm font-bold text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '600' }}>
+                                    AMOUNT PAID 
+                                    {record.status === 'PARTIAL' && record.paymentDate && (
+                                        <span className="ml-1 text-slate-500 font-bold">
+                                            ({new Date(record.paymentDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-')})
+                                        </span>
+                                    )}
+                                    
+                                </td>
+                                <td className="border border-[#000000] px-3 py-2 text-right text-sm font-bold text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '700' }}>
+                                    
+                                    {safeFormatCurrency(record.amountPaid)}
+                                </td>
+                            </tr>
+
+                            {/* Remaining Amount (Only for partial) */}
+                            {record.status === 'PARTIAL' && (
+                                <tr className="bg-white">
+                                    <td className="border border-[#000000] px-3 py-2 text-sm font-bold text-rose-600" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '600' }}>
+                                        REMAINING AMOUNT
+                                    </td>
+                                    <td className="border border-[#000000] px-3 py-2 text-right text-sm font-bold text-rose-600" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '700' }}>
+                                        {safeFormatCurrency(Number(record.netSalary) - Number(record.amountPaid))}
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                         <tfoot>
                             <tr className="bg-[#f3f4f6]">
-                                <td className="border border-[#000000] px-3 py-2 text-xs font-bold uppercase text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '600' }}>NET SALARY PAID</td>
-                                <td className="border border-[#000000] px-3 py-2 text-right text-sm font-bold text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '600' }}>
-                                    {safeFormatCurrency(record.netSalary)}
+                                <td className="border border-[#000000] px-3 py-2 text-xs font-bold uppercase text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '700' }}>REMAINING BALANCE</td>
+                                <td className="border border-[#000000] px-3 py-2 text-right text-sm font-bold text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '700' }}>
+                                    {record.status === 'PAID' ? 'RS 0' : safeFormatCurrency(Number(record.netSalary) - history.reduce((sum, h) => sum + Number(h.amountPaid), 0))}
                                 </td>
                             </tr>
                         </tfoot>
+
                     </table>
                 </div>
 
@@ -288,9 +346,11 @@ export default function StaffSalaryReceipt() {
                     <p className="text-[11px] text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '400' }}>
                         <span className="font-bold">Method:</span> {paymentMethod}
                     </p>
-                    <p className="text-[11px] text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '400' }}>
-                        <span className="font-bold">Ref No:</span> {record.referenceNumber || 'INTERNAL'}
-                    </p>
+                    {paymentMethod !== 'CASH' && (
+                        <p className="text-[11px] text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '400' }}>
+                            <span className="font-bold">Ref No:</span> {record.referenceNumber || 'INTERNAL'}
+                        </p>
+                    )}
                     <p className="text-[11px] text-[#000000]" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: '400' }}>
                         <span className="font-bold">Status:</span> PAID
                     </p>

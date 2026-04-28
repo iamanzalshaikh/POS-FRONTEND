@@ -92,7 +92,7 @@ export default function SuppliersPage() {
             header: "ID",
             cell: ({ row }) => (
                 <div className="flex justify-center uppercase tracking-widest text-[11px] font-black text-slate-400">
-                    {row.original.id.slice(-4)}
+                    {row.original.displayId || row.original.id.slice(-4)}
                 </div>
             )
         },

@@ -348,7 +348,7 @@ const ExpensesPage: React.FC = () => {
         }}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Today's Expenses"
           value={formatAmount(summary.today)}
@@ -367,7 +367,6 @@ const ExpensesPage: React.FC = () => {
           value={formatAmount(summary.paid)}
           icon={Wallet}
           colorClass="bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400"
-          subtitle="Cash Paid Out"
         />
         <MetricCard
           title="Pending Payables"
