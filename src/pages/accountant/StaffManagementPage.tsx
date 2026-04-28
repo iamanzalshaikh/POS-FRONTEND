@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -151,7 +151,9 @@ const StaffManagementPage: React.FC = () => {
       refetchData();
     } catch (err: any) {
       const message = err.response?.data?.message || 'Failed to sync staff record with registry';
-      toast.error(message);
+      if (!message.toLowerCase().includes('cnic')) {
+        toast.error(message);
+      }
       throw new Error(message);
     } finally {
       setIsSubmitting(false);

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, CheckCircle2, AlertCircle, User, Phone, Mail, Calendar, MapPin, DollarSign, Briefcase, Heart } from 'lucide-react';
+import { X, Loader2, CheckCircle2, AlertCircle, User, Phone, Mail, MapPin, DollarSign, Briefcase, Heart } from 'lucide-react';
 import EnhancedCalendar from '../global-components/Calendar/EnhancedCalendar';
 import { validatePakistanMobile, formatPakistanMobile } from '../../utils/validation';
 
@@ -287,7 +287,16 @@ const StaffForm: React.FC<StaffFormProps> = ({
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-      await onSubmit(formData);
+      try {
+        await onSubmit(formData);
+      } catch (error: any) {
+        const msg = error.message || '';
+        if (msg.toLowerCase().includes('cnic')) {
+          setErrors(prev => ({ ...prev, cnic: msg }));
+        } else {
+          // If it's a different error, you could handle it or leave it to the global toast
+        }
+      }
     }
   }, [formData, validate, onSubmit]);
 
