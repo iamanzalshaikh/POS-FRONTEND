@@ -97,10 +97,12 @@ export default function SupplierPurchasesListPage() {
         const totalAmount = rows.reduce((acc: number, r: any) => acc + num(r.totalAmount), 0);
         const totalBalance = rows.reduce((acc: number, r: any) => acc + num(r.balance), 0);
         const totalReturns = rows.reduce((acc: number, r: any) => acc + num(r.returnAmount), 0);
+        const totalPaid = rows.reduce((acc: number, r: any) => acc + num(r.paidAmount), 0);
         return {
             totalAmount,
             totalBalance,
-            totalReturns
+            totalReturns,
+            totalPaid
         };
     }, [rows, purchasesRes]);
 
@@ -284,11 +286,11 @@ export default function SupplierPurchasesListPage() {
                     colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
                 />
                 <MetricCard 
-                    title="Procured Value" 
-                    value={metrics.totalAmount} 
+                    title="Amount Paid" 
+                    value={metrics.totalPaid} 
                     isCurrency={true}
                     icon={Wallet} 
-                    colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
+                    colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
                 />
                 <MetricCard 
                     title="Total Returns" 

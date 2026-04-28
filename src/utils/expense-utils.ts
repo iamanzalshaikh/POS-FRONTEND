@@ -24,6 +24,10 @@ export interface Expense {
   customCategory?: { id: string; name: string };
   subcategory?: { id: string; name: string };
   paidAmount?: number;
+  supplierPurchase?: {
+    id: string;
+    balance: number | string;
+  };
 }
 
 export interface ExpenseSummary {
@@ -124,10 +128,14 @@ export const getExpenseSummary = (expenses: Expense[]): ExpenseSummary => {
 
   const remaining = expenses.reduce((sum, e) => {
     if (e.category === 'SUPPLIER_PURCHASE') {
-      const total = Number(e.amount || 0);
-      const alreadyPaid = Number(e.paidAmount || 0);
-      // Only count positive debt, ignore credits (overpayments)
-      const balance = total - alreadyPaid;
+      let balance = 0;
+      if (e.supplierPurchase) {
+        balance = Number(e.supplierPurchase.balance);
+      } else {
+        const total = Number(e.amount || 0);
+        const alreadyPaid = Number(e.paidAmount || 0);
+        balance = total - alreadyPaid;
+      }
       return sum + (balance > 0 ? balance : 0);
     }
     return sum;

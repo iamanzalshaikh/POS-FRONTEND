@@ -224,22 +224,7 @@ export default function ProductsManagementPage() {
                 );
             }
         },
-        {
-            header: "Status",
-            accessorKey: "isActive",
-            cell: ({ row }) => (
-                <div className="flex justify-center text-center">
-                    <span className={cn(
-                        "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                        row.original.isActive 
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-950/30 dark:border-emerald-900/50" 
-                            : "bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-950/30 dark:border-rose-900/50"
-                    )}>
-                        {row.original.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                </div>
-            )
-        },
+       
         {
             header: "In Stock",
             cell: ({ row }) => {

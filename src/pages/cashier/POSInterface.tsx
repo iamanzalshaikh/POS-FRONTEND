@@ -807,14 +807,10 @@ const POSInterface: React.FC = () => {
         setOfflineSyncCount(newOfflineCount);
         localStorage.setItem('pos-offline-count', newOfflineCount.toString());
 
-        // 🔀 INTERLEAVING: Ensure offline sales follow the same (Sequence - 1) * Total + Lane rule.
-        // Simplest way: Next Invoice = Previous Invoice + TotalLanes
-        let nextSeq: number;
-        if (lastSequence > 0) {
-          nextSeq = lastSequence + totalLanes;
-        } else {
-          // First sale ever on this terminal
-          nextSeq = terminalLane;
+        // 🔀 INTERLEAVING: Ensure offline sales follow the same (Sequence - terminalLane) % TotalLanes === 0 rule.
+        let nextSeq = lastSequence + 1;
+        while ((nextSeq - terminalLane) % totalLanes !== 0) {
+          nextSeq++;
         }
         
         // Update local sequence for the next offline sale

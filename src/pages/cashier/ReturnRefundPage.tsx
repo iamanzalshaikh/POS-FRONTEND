@@ -167,6 +167,21 @@ const ReturnRefundPage: React.FC = () => {
     );
   };
 
+  const handleDirectQuantityChange = (saleItemId: string, value: string) => {
+    const numericValue = parseInt(value, 10);
+    if (isNaN(numericValue)) return;
+    
+    setReturnItems((prev) =>
+      prev.map((item) => {
+        if (item.saleItemId === saleItemId) {
+          const newQuantity = Math.max(0, Math.min(item.maxReturnQuantity, numericValue));
+          return { ...item, returnQuantity: newQuantity };
+        }
+        return item;
+      })
+    );
+  };
+
   const totalReturnSubtotal = returnItems.reduce((sum, item) => sum + (Number(item.returnQuantity) * Number(item.unitPrice)), 0);
   
   // Decide if we use Line-Item or Pro-rata logic
@@ -196,6 +211,7 @@ const ReturnRefundPage: React.FC = () => {
       const itemsToRefund = returnItems
         .filter(item => item.returnQuantity > 0)
         .map(item => ({
+          saleItemId: item.saleItemId,
           productId: item.productId,
           quantity: item.returnQuantity
         }));
@@ -325,7 +341,15 @@ const ReturnRefundPage: React.FC = () => {
                                     disabled={item.maxReturnQuantity === 0}
                                     className="w-8 h-8 flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 transition-all disabled:opacity-30"
                                 >-</button>
-                                <span className="text-xs font-black w-4 text-center">{item.returnQuantity}</span>
+                                <input 
+                                    type="number"
+                                    value={item.returnQuantity}
+                                    onChange={(e) => handleDirectQuantityChange(item.saleItemId, e.target.value)}
+                                    disabled={item.maxReturnQuantity === 0}
+                                    min="0"
+                                    max={item.maxReturnQuantity}
+                                    className="text-xs font-black w-12 text-center bg-transparent outline-none disabled:opacity-50 appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                />
                                 <button 
                                     onClick={() => handleQuantityChange(item.saleItemId, 1)} 
                                     disabled={item.maxReturnQuantity === 0}

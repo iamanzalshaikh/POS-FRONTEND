@@ -6,6 +6,7 @@ import { fetchProducts } from '@/api/products.api';
 import { fetchInventoryLogs } from '@/api/inventory.api';
 import { getAuditLogs } from '@/api/reports.api';
 import { Skeleton } from '@/components/ui/skeleton';
+import { RefreshCw } from 'lucide-react';
 
 const StockAdjustmentPage = () => {
     const queryClient = useQueryClient();
@@ -94,14 +95,24 @@ const StockAdjustmentPage = () => {
     return (
         <div className="animate-in fade-in duration-500 space-y-10">
             {/* Header Area */}
-            <div>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
-                    <span>Inventory</span>
-                    <span>/</span>
-                    <span className="text-blue-600">Stock Adjustment</span>
+            <div className="flex justify-between items-start">
+                <div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
+                        <span>Inventory</span>
+                        <span>/</span>
+                        <span className="text-blue-600">Stock Adjustment</span>
+                    </div>
+                    <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Stock Adjustment</h1>
+                    <p className="text-slate-500 dark:text-slate-400 font-bold">Manage inventory adjustments and reasons.</p>
                 </div>
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-2">Stock Adjustment</h1>
-                <p className="text-slate-500 dark:text-slate-400 font-bold">Manage inventory adjustments and reasons.</p>
+                <button 
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50 shadow-sm"
+                >
+                    <RefreshCw size={16} className={`text-slate-500 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300">Refresh Data</span>
+                </button>
             </div>
 
             <div className="space-y-12">
