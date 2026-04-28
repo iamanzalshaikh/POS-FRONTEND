@@ -239,14 +239,7 @@ const ExpensesPage: React.FC = () => {
         let settled = expense.amount;
 
         if (expense.category === 'SUPPLIER_PURCHASE') {
-          if (expense.supplierPurchase) {
-            const total = Number(expense.amount);
-            const bal = Number(expense.supplierPurchase.balance);
-            // Settled = Total - Debt (Debt is only positive balance)
-            settled = total - Math.max(0, bal);
-          } else {
-            settled = expense.paidAmount || 0;
-          }
+          settled = expense.paidAmount || 0;
         }
 
         return (
@@ -263,7 +256,6 @@ const ExpensesPage: React.FC = () => {
       header: "Remaining",
       cell: ({ row }) => {
         const expense = row.original as any;
-        // Use the linked purchase balance if available (accounts for returns), otherwise calculate
         const remaining = expense.category === 'SUPPLIER_PURCHASE' 
           ? (expense.supplierPurchase ? Number(expense.supplierPurchase.balance) : (expense.amount - (expense.paidAmount || 0))) 
           : 0;
@@ -369,12 +361,7 @@ const ExpensesPage: React.FC = () => {
           icon={Calendar}
           colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
         />
-        <MetricCard
-          title="Total Expenses"
-          value={formatAmount(summary.total)}
-          icon={TrendingUp}
-          colorClass="bg-indigo-50 text-indigo-600 dark:bg-indigo-950/50 dark:text-indigo-400"
-        />
+        
         <MetricCard
           title="Supplier Paid"
           value={formatAmount(summary.paid)}

@@ -177,6 +177,7 @@ export default function SupplierPurchaseDetailPage() {
     }
 
     const payments = (purchase.payments || []) as SupplierPurchasePayment[];
+    const totalPaidAmount = payments.reduce((sum, p) => sum + num(p.amount), 0);
 
     return (
         <div className="animate-fade-in space-y-10 max-w-[1600px] pb-10 mx-auto px-4 sm:px-6 lg:px-8">
@@ -226,8 +227,8 @@ export default function SupplierPurchaseDetailPage() {
                     className="flex-1 min-w-[280px]"
                 />
                 <MetricCard 
-                    title="Settled Amount" 
-                    value={num(purchase.totalAmount) - Math.max(0, balance)} 
+                    title="Total Paid" 
+                    value={totalPaidAmount} 
                     isCurrency={true}
                     icon={CreditCard} 
                     colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"

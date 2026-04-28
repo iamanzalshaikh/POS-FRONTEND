@@ -82,7 +82,7 @@ export default function TopNavbar({
                     <div className="text-right hidden sm:block">
                         <p className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">{branchLabel}</p>
                         <div className="flex items-center justify-end gap-2 mt-0.5">
-                            {deviceName && (
+                            {deviceName && user?.role === 'CASHIER' && (
                                 <>
                                     <div className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-md border border-indigo-100 dark:border-indigo-800">
                                         <Monitor size={10} className="text-indigo-600 dark:text-indigo-400" />
