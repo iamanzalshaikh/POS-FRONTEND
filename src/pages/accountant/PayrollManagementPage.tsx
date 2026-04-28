@@ -15,11 +15,14 @@ import {
   FileText,
   XCircle,
   Printer,
+  TrendingUp,
+  CreditCardIcon,
 } from 'lucide-react';
 import {
   getPayroll,
   updatePayroll,
   getStaffPayrollHistory,
+  getStaffSummary,
   type PayrollRecord,
   type PayrollStatus,
   type UpdatePayrollData,
@@ -139,9 +142,33 @@ const PayrollManagementPage: React.FC = () => {
     }
   };
 
-  const totalPaid = payrollRecords.reduce((sum, r) => sum + r.amountPaid, 0);
-  const totalNetSalary = payrollRecords.reduce((sum, r) => sum + r.netSalary, 0);
-  const totalPending = totalNetSalary - totalPaid;
+  // Stats Queries
+  const { data: staffSummaryRes } = useQuery({
+    queryKey: ['staff-summary'],
+    queryFn: () => getStaffSummary(),
+  });
+
+  // Use Backend Stats for accuracy (sums across all pages)
+  const stats = useMemo(() => {
+    const backendStats = (payrollRes as any)?.data?.stats;
+    const totalLiability = staffSummaryRes?.success ? Number(staffSummaryRes.data.totalMonthlySalary) : 0;
+    
+    if (backendStats) {
+      return {
+        totalLiability,
+        paidCurrent: backendStats.totalPaidCurrent,
+        paidAdvance: backendStats.totalPaidAdvance,
+        remaining: Math.max(0, totalLiability - backendStats.totalPaidCurrent)
+      };
+    }
+
+    return {
+      totalLiability,
+      paidCurrent: 0,
+      paidAdvance: 0,
+      remaining: totalLiability
+    };
+  }, [staffSummaryRes, payrollRes]);
 
   const columns: ColumnDef<PayrollRecord>[] = [
     {
@@ -175,10 +202,15 @@ const PayrollManagementPage: React.FC = () => {
     {
       header: "Period",
       cell: ({ row }) => (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-1">
           <span className="px-3 py-1.5 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-xl text-[9px] font-black uppercase tracking-[2px]">
             {MONTHS[row.original.month - 1]} {row.original.year}
           </span>
+          {row.original.isFuturePayment && (
+            <span className="text-[7px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 dark:bg-blue-900/20 px-1.5 py-0.5 rounded-md border border-blue-100 dark:border-blue-800">
+              [Advance]
+            </span>
+          )}
         </div>
       )
     },
@@ -197,6 +229,20 @@ const PayrollManagementPage: React.FC = () => {
           {formatAmount(row.original.amountPaid)}
         </div>
       )
+    },
+    {
+      header: "Remaining",
+      cell: ({ row }) => {
+        // Since we now have multiple records, "Remaining" on a specific receipt 
+        // should ideally be (Net Salary - All payments made including this one).
+        // However, calculating this accurately in the list without an extra field in the model is tricky.
+        // For now, we'll show a simplified balance if possible, or just the global status.
+        return (
+          <div className="text-center text-rose-500 dark:text-rose-400 text-[11px] font-black uppercase tracking-widest tabular-nums font-bold">
+            {row.original.status === 'PAID' ? '0.00' : formatAmount(row.original.netSalary - row.original.amountPaid)}
+          </div>
+        );
+      }
     },
     {
       header: "Status",
@@ -246,22 +292,28 @@ const PayrollManagementPage: React.FC = () => {
         }}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Salary to Pay"
-          value={formatCurrency(totalNetSalary)}
-          icon={DollarSign}
+          value={formatCurrency(stats.totalLiability)}
+          icon={CreditCardIcon}
           colorClass="bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
         />
         <MetricCard
           title="Paid Already"
-          value={formatCurrency(totalPaid)}
+          value={formatCurrency(stats.paidCurrent)}
           icon={CheckCircle2}
           colorClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
         />
         <MetricCard
+          title="Advance Payments"
+          value={formatCurrency(stats.paidAdvance)}
+          icon={Plus}
+          colorClass="bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400"
+        />
+        <MetricCard
           title="Remaining Balance"
-          value={formatCurrency(totalPending)}
+          value={formatCurrency(stats.remaining)}
           icon={AlertCircle}
           colorClass="bg-slate-900 text-white dark:bg-slate-800 dark:text-white"
         />

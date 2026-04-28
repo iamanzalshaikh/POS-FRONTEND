@@ -93,6 +93,7 @@ export interface PayrollRecord {
   notes: string | null;
   expenseId?: string | null;
   processedById?: string | null;
+  isFuturePayment: boolean;
   createdAt: string;
   updatedAt: string;
   staff?: {
@@ -127,6 +128,8 @@ export interface CreatePayrollData {
   paymentMethod?: string;
   referenceNumber?: string;
   notes?: string;
+  paymentType?: 'FULL' | 'HALF' | 'CUSTOM';
+  amountPaid?: number;
 }
 
 export interface UpdatePayrollData {
@@ -321,6 +324,7 @@ export const getPayroll = async (params?: {
     data: {
       items: normalized,
       pagination,
+      stats: root?.stats,
     },
   };
 };
