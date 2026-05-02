@@ -7,9 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { offlineSync, type SyncProgress } from '../services/offline-sync.service';
 
 export const useOnlineStatus = () => {
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true
-  );
+  const [isOnline, setIsOnline] = useState<boolean>(true); // Hardcoded to true
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
   const [pendingCount, setPendingCount] = useState<number>(0);
   
@@ -28,17 +26,16 @@ export const useOnlineStatus = () => {
 
   // Handle online status change
   const handleOnline = useCallback(async () => {
-    console.log('🟢 [useOnlineStatus] Connection restored, triggering sync...');
+    console.log('🟢 [useOnlineStatus] Connection restored');
     setIsOnline(true);
 
-    // Auto-sync when back online
+    // Auto-sync disabled
+    /*
     try {
-      // Create subscription and store in ref
       progressUnsubscribeRef.current = offlineSync.subscribeProgress((progress) => {
         setSyncProgress({ ...progress });
 
         if (progress.status === 'completed' || progress.status === 'error') {
-          // Unsubscribe using ref (safe - already initialized)
           if (progressUnsubscribeRef.current) {
             progressUnsubscribeRef.current();
             progressUnsubscribeRef.current = null;
@@ -52,6 +49,7 @@ export const useOnlineStatus = () => {
     } catch (error) {
       console.error('Auto-sync failed:', error);
     }
+    */
   }, [updatePendingCount]);
 
   const handleOffline = useCallback(() => {
@@ -61,25 +59,26 @@ export const useOnlineStatus = () => {
 
   useEffect(() => {
     // Set initial state
-    setIsOnline(navigator.onLine);
-    updatePendingCount();
+    setIsOnline(true); // navigator.onLine
+    // updatePendingCount();
 
     // Add event listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Subscribe to sync progress - store in ref for safe access
+    // Subscribe to sync progress - DISABLED
+    /*
     progressUnsubscribeRef.current = offlineSync.subscribeProgress((progress) => {
       setSyncProgress({ ...progress });
 
       if (progress.status === 'completed' || progress.status === 'error') {
-        // Delay cleanup to avoid state updates during render
         setTimeout(() => {
           setSyncProgress(null);
           updatePendingCount();
         }, 3000);
       }
     });
+    */
 
     // Cleanup function
     return () => {

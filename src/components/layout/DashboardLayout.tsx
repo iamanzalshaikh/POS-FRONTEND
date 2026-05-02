@@ -18,6 +18,7 @@ interface DashboardLayoutProps {
   role: string;
   accentColor?: string;
   headerExtra?: React.ReactNode;
+  noPadding?: boolean;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
@@ -27,7 +28,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   subtitle, 
   role,
   accentColor,
-  headerExtra
+  headerExtra,
+  noPadding
 }) => {
   const { collapsed } = useSidebar();
   const portalLabel = `${role.replace('_', ' ')} Portal`;
@@ -42,7 +44,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       <main className={`flex-1 flex flex-col min-h-screen transition-all duration-300 ${collapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         <TopNavbar portalLabel={portalLabel} branchLabel={title} />
 
-        <div className="p-4 md:p-6 lg:p-8 flex-1 overflow-auto bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 custom-scrollbar uppercase">
+        <div className={`flex-1 flex flex-col overflow-hidden bg-[#F7F9FC] dark:bg-slate-950 transition-colors duration-500 custom-scrollbar uppercase ${noPadding ? 'p-0' : 'p-4 md:p-6 lg:p-8'}`}>
           {subtitle && (
             <div className="mb-6">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">

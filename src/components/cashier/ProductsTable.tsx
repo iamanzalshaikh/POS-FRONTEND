@@ -46,7 +46,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
     () => [
       {
         accessorKey: "name",
-        header:() => <div className="text-center">Product Description</div>,
+        header:() => <div className="text-center">Product </div>,
         cell: ({ row }) => {
           const product = row.original;
           return (
@@ -191,7 +191,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-6 py-6 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500"
+                    className="px-4 py-4 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500"
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
@@ -208,7 +208,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
                 {row.getVisibleCells().map((cell, index) => (
                   <td
                     key={cell.id}
-                    className={`px-3 py-4 align-middle ${
+                    className={`px-2 py-3 align-middle ${
                       index === 0 ? "text-left" : index === 4 ? "text-right" : "text-center"
                     }`}
                   >
@@ -222,19 +222,19 @@ const ProductsTable: React.FC<ProductsTableProps> = ({
       </div>
       
       {/* Table Legend/Info */}
-      <div className="flex items-center justify-between mt-6 px-4">
+      <div className="flex items-center justify-between mt-3 px-4 py-2 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Available</span>
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Available</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-200" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Low Stock</span>
+            <div className="w-2 h-2 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Low Stock</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-200" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Out of Stock</span>
+            <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Out of Stock</span>
           </div>
         </div>
         <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 italic">

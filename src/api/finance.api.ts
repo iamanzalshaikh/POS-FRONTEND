@@ -104,6 +104,12 @@ export interface FinanceSummaryData {
   revenueChange: number;
   expensesChange: number;
   profitChange: number;
+  expenseBreakdown?: {
+    operatingExpenses: number;
+    payrollExpenses: number;
+    stockProcurementExpenses: number;
+    advancePayments: number;
+  };
 }
 
 export interface MonthlyCloseData {

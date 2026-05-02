@@ -105,6 +105,13 @@ export interface PayrollRecord {
   };
 }
 
+export interface PayrollStats {
+  totalPaidCurrent: number;
+  totalPaidAdvance: number;
+  totalPaid: number;
+}
+
+
 export interface PayrollPaginatedResponse {
   success: boolean;
   data: {
@@ -115,6 +122,7 @@ export interface PayrollPaginatedResponse {
       limit: number;
       totalPages: number;
     };
+    stats?: PayrollStats;
   };
   message?: string;
 }

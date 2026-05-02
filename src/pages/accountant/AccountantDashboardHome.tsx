@@ -114,7 +114,7 @@ const AccountantDashboardHome: React.FC = () => {
     return [
       { name: 'COGS', value: summary.cogs, color: '#2563eb' },
       { name: 'Operating', value: summary.operatingExpenses, color: '#10b981' },
-      { name: 'Salaries', value: summary.expenseBreakdown.payrollExpenses, color: '#f59e0b' },
+      { name: 'Salaries', value: summary.expenseBreakdown?.payrollExpenses || 0, color: '#f59e0b' },
       { name: 'Sourcing Paid', value: summary.totalStockPaid, color: '#8b5cf6' },
     ].filter(r => r.value > 0);
   }, [summary]);
@@ -156,7 +156,7 @@ const AccountantDashboardHome: React.FC = () => {
   if (loading) return <DashboardSkeleton />;
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 animate-fade-in">
+    <div className="w-full space-y-4 sm:space-y-6 animate-fade-in pb-10">
       <PageHeader
         title="Dashboard"
         description="Financial Intelligence Unit"
@@ -171,7 +171,7 @@ const AccountantDashboardHome: React.FC = () => {
 
       {/* Main Stats Grid - Consolidated KPIs */}
       {/* Main Stats Grid - Detailed Financial KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         <MetricCard
           title="Total Sales (Net)"
           value={summary?.totalRevenue ?? 0}
@@ -213,7 +213,7 @@ const AccountantDashboardHome: React.FC = () => {
           value={summary?.expenseBreakdown?.payrollExpenses ?? 0}
           isCurrency={true}
           icon={Wallet}
-          subtitle={summary?.expenseBreakdown?.advancePayments > 0 ? `Excl. ${formatCurrency(summary.expenseBreakdown.advancePayments)} Advance` : `Source: ${summary?.salariesSource || 'N/A'}`}
+          subtitle={(summary?.expenseBreakdown?.advancePayments ?? 0) > 0 ? `Excl. ${formatCurrency(summary?.expenseBreakdown?.advancePayments ?? 0)} Advance` : `Source: ${summary?.salariesSource || 'N/A'}`}
           colorClass="bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/30 dark:border-amber-900/50"
         />
         <MetricCard
@@ -283,7 +283,7 @@ const AccountantDashboardHome: React.FC = () => {
       {/* Dynamic Charts Section */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
         {/* Revenue Trend - Area Chart */}
-        <div className="xl:col-span-2 bg-white dark:bg-slate-900 p-8 rounded-[3rem] shadow-sm relative overflow-hidden group">
+        <div className="xl:col-span-2 bg-white dark:bg-slate-900 p-4 sm:p-8 rounded-[2rem] sm:rounded-[3rem] shadow-sm relative overflow-hidden group border border-slate-200 dark:border-slate-800">
           <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-15 transition-opacity">
             <Activity className="w-28 h-28 text-indigo-500/20" strokeWidth={1} />
           </div>
@@ -338,7 +338,7 @@ const AccountantDashboardHome: React.FC = () => {
         </div>
 
         {/* Cost Distribution - Donut Chart */}
-        <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col transition-all duration-500 hover:shadow-md">
+        <div className="bg-white dark:bg-slate-900 p-4 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col transition-all duration-500 hover:shadow-md">
           <div className="mb-10">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Capital Flow</h3>
             <p className="text-lg font-black text-slate-900 dark:text-white mt-1 uppercase">Expense Distribution</p>

@@ -153,13 +153,13 @@ const ProfitLossReport: React.FC = () => {
     new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-8 animate-fade-in">
+    <div className="w-full space-y-4 sm:space-y-6 animate-fade-in pb-10">
       <PageHeader
         title="Financial Statement"
         description="Real-time performance metrics"
         icon={PieChart}
       >
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4 lg:mt-0">
            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
             {(['today', 'week', 'month'] as const).map((preset) => (
               <button
@@ -176,17 +176,17 @@ const ProfitLossReport: React.FC = () => {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-fit">
-            <Calendar size={18} className="text-slate-400" />
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest tabular-nums">
+          <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-full sm:w-fit">
+            <Calendar size={14} className="text-slate-400" />
+            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest tabular-nums">
               {formatDate(sDateStr)} — {formatDate(eDateStr)}
             </span>
           </div>
         </div>
       </PageHeader>
 
-      {/* Metric Grid - High Density Responsive */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+      {/* Metric Grid - Fluid Layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
         <MetricCard title="Total Revenue" value={formatCurrency(customMetrics?.rev ?? 0)} icon={DollarSign} colorClass="bg-blue-50 text-blue-600 border-blue-100" />
         <MetricCard title="Total Expenses" value={formatCurrency(customMetrics?.exps ?? 0)} icon={ArrowDownRight} subtitle="Opex + Staff + Sourcing Paid" colorClass="bg-red-50 text-red-600 border-red-100" />
         <MetricCard title="Net Profit" value={formatCurrency(customMetrics?.profit ?? 0)} icon={TrendingUp} colorClass={cn(
@@ -198,17 +198,17 @@ const ProfitLossReport: React.FC = () => {
         <MetricCard title="Net Margin" value={`${customMetrics?.margin.toFixed(1)}%`} icon={PieChart} colorClass="bg-indigo-50 text-indigo-600 border-indigo-100" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Main Content Area - Chart & Stats */}
-        <div className="lg:col-span-8 space-y-8">
+        <div className="xl:col-span-8 space-y-6">
           {/* Dynamic Trend Chart */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] p-8 shadow-sm group">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] sm:rounded-[2.5rem] p-4 sm:p-8 shadow-sm group">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
               <div>
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Monthly Performance Trend</h3>
                 <p className="text-sm font-black text-slate-800 dark:text-white mt-1 uppercase tracking-tight">Revenue vs Operative Profit</p>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                  <div className="flex items-center gap-2">
                    <div className="w-2 h-2 rounded-full bg-blue-600" />
                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Revenue</span>
@@ -251,7 +251,7 @@ const ProfitLossReport: React.FC = () => {
         </div>
 
         {/* Sidebar - Statement Breakdown */}
-        <div className="lg:col-span-4 flex flex-col gap-8">
+        <div className="xl:col-span-4 flex flex-col gap-6">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] overflow-hidden shadow-sm flex flex-col h-full border-b-8 border-b-blue-600/10">
             <div className="px-8 py-7 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
               <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-[0.2em]">Statement Breakdown</h2>
@@ -353,21 +353,21 @@ const InfoRow = ({ label, value, valueClass = "text-slate-900" }: any) => (
 );
 
 const ProfitLossSkeleton = () => (
-  <div className="max-w-[1600px] mx-auto space-y-8 animate-pulse">
+  <div className="w-full space-y-6 sm:space-y-8 animate-pulse pb-10">
     <div className="flex flex-col gap-4">
       <div className="h-8 w-64 bg-slate-200 dark:bg-slate-800 rounded-lg" />
       <div className="h-4 w-96 bg-slate-100 dark:bg-slate-800/50 rounded-lg" />
     </div>
 
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="h-32 bg-slate-100 dark:bg-slate-800 rounded-[2rem]" />
       ))}
     </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      <div className="lg:col-span-8 bg-slate-100 dark:bg-slate-800 rounded-[2.5rem] h-[500px]" />
-      <div className="lg:col-span-4 bg-slate-100 dark:bg-slate-800 rounded-[2.5rem] h-[500px]" />
+    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <div className="xl:col-span-8 bg-slate-100 dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] h-[500px]" />
+      <div className="xl:col-span-4 bg-slate-100 dark:bg-slate-800 rounded-[2rem] sm:rounded-[2.5rem] h-[500px]" />
     </div>
   </div>
 );

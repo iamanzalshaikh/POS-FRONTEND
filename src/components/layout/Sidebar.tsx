@@ -67,7 +67,7 @@ export default function Sidebar({ collapsed = false }: { collapsed?: boolean }) 
 
     return (
         <aside
-            className={`bg-[#262255] border-r border-[#2A2760]/20 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300 ${collapsed ? 'w-20' : 'w-[260px]'}`}
+            className={`bg-[#0f172a] border-r border-slate-800/40 h-screen fixed left-0 top-0 flex flex-col z-50 transition-all duration-300 ${collapsed ? 'w-20' : 'w-[260px]'}`}
         >
             {/* Top Section */}
             <div className={`overflow-hidden transition-all duration-300 ${collapsed ? 'p-4' : 'p-8'}`}>
