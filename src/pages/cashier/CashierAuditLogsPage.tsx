@@ -77,20 +77,20 @@ const CashierAuditLogsPage: React.FC = () => {
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
+                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
                         <History className="text-emerald-500" size={32} />
                         Personal Audit Log
                     </h1>
-                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[11px] mt-1">
+                    <p className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest text-[11px] mt-1">
                         Track your daily operations and secure transaction history
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="hidden lg:flex items-center gap-4 mr-4 px-6 py-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                        <ShieldCheck className="text-emerald-600" size={20} />
+                    <div className="hidden lg:flex items-center gap-4 mr-4 px-6 py-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+                        <ShieldCheck className="text-emerald-600 dark:text-emerald-400" size={20} />
                         <div>
-                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest leading-none">Security Status</p>
-                            <p className="text-sm font-bold text-emerald-900 mt-1">Authenticated Trace</p>
+                            <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none">Security Status</p>
+                            <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100 mt-1">Authenticated Trace</p>
                         </div>
                     </div>
                 </div>
@@ -125,7 +125,7 @@ const CashierAuditLogsPage: React.FC = () => {
             </div>
 
             {/* Advanced Filters Card */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-wrap items-end gap-6">
+            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm flex flex-wrap items-end gap-6">
                 <div className="flex-1 min-w-[200px] space-y-3">
                     <div className="flex items-center gap-2 ml-1">
                         <Activity size={12} className="text-emerald-500" />
@@ -134,7 +134,7 @@ const CashierAuditLogsPage: React.FC = () => {
                     <select
                         value={action}
                         onChange={(e) => { setAction(e.target.value); setPage(1); }}
-                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 outline-none transition-all cursor-pointer appearance-none shadow-sm"
+                        className="w-full px-5 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 outline-none transition-all cursor-pointer appearance-none shadow-sm"
                     >
                         <option value="">All Operational Actions</option>
                         {ACTION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
@@ -153,7 +153,7 @@ const CashierAuditLogsPage: React.FC = () => {
                             placeholder="Search by invoice # or product..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 outline-none transition-all shadow-sm shadow-emerald-500/[0.02]"
+                            className="w-full pl-12 pr-5 py-3.5 bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800 rounded-2xl text-sm font-bold text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500/40 outline-none transition-all shadow-sm"
                         />
                     </div>
                 </div>
@@ -172,7 +172,7 @@ const CashierAuditLogsPage: React.FC = () => {
                 </div>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
                 <ActivityLogsTable
                     data={logs}
                     isLoading={isLoading}

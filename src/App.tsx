@@ -56,6 +56,8 @@ const SuperAdminAuditLogs = lazy(() => import('@/pages/super-admin/SuperAdminAud
 const SuperAdminSettings = lazy(() => import('@/pages/super-admin/SuperAdminSettings'));
 const StoreDetailsPage = lazy(() => import('@/pages/super-admin/StoreDetailsPage'));
 
+import { SocketProvider } from '@/providers/SocketProvider';
+
 const App: React.FC = () => {
   const { hydrate, isLoading, isAuthenticated, user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -110,9 +112,10 @@ const App: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <SidebarProvider defaultOpen={true}>
-        <Toaster />
-        <Router>
-          <SocketInvalidator />
+        <SocketProvider>
+          <Toaster />
+          <Router>
+            <SocketInvalidator />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Routes */}
@@ -184,6 +187,7 @@ const App: React.FC = () => {
             </Routes>
           </Suspense>
         </Router>
+        </SocketProvider>
       </SidebarProvider>
     </ThemeProvider>
   );

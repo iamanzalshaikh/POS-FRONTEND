@@ -29,9 +29,9 @@ import { useDeviceStore } from '../../store/useDeviceStore';
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatAmount } from '../../utils/expense-utils';
-import { offlineStorage } from '../../services/offline-storage.service';
-import type { OfflineSale } from '../../services/offline-storage.service';
-import { useOnlineStatus } from '../../hooks/useOnlineStatus';
+// import { offlineStorage } from '../../services/offline-storage.service';
+// import type { OfflineSale } from '../../services/offline-storage.service';
+// import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 import { useSocket } from '../../hooks/useSocket';
 import ProductsFilters from '../../components/cashier/ProductsFilters';
 import ProductsTable from '../../components/cashier/ProductsTable';
@@ -89,6 +89,47 @@ type Product = {
 
 type DiscountMode = 'amount' | 'percent';
 
+const HOLD_LIMIT_MINUTES = 15;
+
+const HoldOrderTimer: React.FC<{ heldAt: Date; onExpire: () => void }> = ({ heldAt, onExpire }) => {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isUrgent, setIsUrgent] = useState(false);
+
+  useEffect(() => {
+    const updateTimer = () => {
+      const now = new Date().getTime();
+      const heldTime = new Date(heldAt).getTime();
+      const expiryTime = heldTime + (HOLD_LIMIT_MINUTES * 60 * 1000);
+      const diff = expiryTime - now;
+
+      if (diff <= 0) {
+        onExpire();
+        return;
+      }
+
+      const minutes = Math.floor(diff / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      setIsUrgent(minutes < 2);
+      setTimeLeft(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+    return () => clearInterval(interval);
+  }, [heldAt, onExpire]);
+
+  return (
+    <div className={cn(
+      "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black tabular-nums transition-colors",
+      isUrgent ? "bg-rose-500 text-white animate-pulse" : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+    )}>
+      <Clock size={12} className={isUrgent ? "animate-spin-slow" : ""} />
+      <span>{timeLeft}</span>
+    </div>
+  );
+};
+
 function parseProductTaxPct(product: {
   effectiveTaxPercentage?: unknown;
   taxPercentage?: unknown;
@@ -109,7 +150,10 @@ const POSInterface: React.FC = () => {
   const displayTerminalName = user?.assignedTerminals?.[0]?.deviceName ?? null;
   
   // Use online status hook with auto-sync
-  const { isOnline, syncProgress, pendingCount, triggerSync } = useOnlineStatus();
+  // const { isOnline, syncProgress, pendingCount, triggerSync } = useOnlineStatus();
+  const isOnline = true; // Hardcoded to true to bypass offline logic
+  const syncProgress = null;
+  const pendingCount = 0;
 
   const [barcodeInput, setBarcodeInput] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -137,6 +181,28 @@ const POSInterface: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Auto-cleanup for expired hold orders
+  useEffect(() => {
+    const checkExpiry = () => {
+      const now = new Date().getTime();
+      setHoldOrders(prev => {
+        const active = prev.filter(order => {
+          const heldTime = new Date(order.timestamp).getTime();
+          return (now - heldTime) < (HOLD_LIMIT_MINUTES * 60 * 1000);
+        });
+        
+        if (active.length !== prev.length) {
+          localStorage.setItem('pos-hold-orders', JSON.stringify(active));
+          toast.info("Expired hold orders were automatically cleared.");
+        }
+        return active;
+      });
+    };
+
+    const interval = setInterval(checkExpiry, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   // Auto-clear error after 5 seconds
   useEffect(() => {
     if (error) {
@@ -154,12 +220,17 @@ const POSInterface: React.FC = () => {
   const [receivedAmount, setReceivedAmount] = useState<string>('');
   const [lastSaleForReceipt, setLastSaleForReceipt] = useState<any | null>(null);
 
+  const [lastSequence, setLastSequence] = useState<number>(0);
+  const [offlineSyncCount, setOfflineSyncCount] = useState<number>(0);
+
+  /*
   const [lastSequence, setLastSequence] = useState<number>(() => {
     return Number(localStorage.getItem('pos-last-sequence')) || 0;
   });
   const [offlineSyncCount, setOfflineSyncCount] = useState<number>(() => {
     return Number(localStorage.getItem('pos-offline-count')) || 0;
   });
+  */
 
   // Extract fetchLastSeq to a memoized function so we can refresh it after online sales
   const refreshSequence = useCallback(async () => {
@@ -174,14 +245,13 @@ const POSInterface: React.FC = () => {
         if (!isNaN(seq)) {
           console.log('🔄 [POSInterface] Sequence refreshed:', seq);
           setLastSequence(seq);
-          localStorage.setItem('pos-last-sequence', seq.toString());
-          setOfflineSyncCount(0);
-          localStorage.setItem('pos-offline-count', '0');
+          // localStorage.setItem('pos-last-sequence', seq.toString());
+          // setOfflineSyncCount(0);
+          // localStorage.setItem('pos-offline-count', '0');
         }
       }
 
       // 2. SELF-HEALING: Refresh Lane and Total Lanes from server
-      // This ensures if a new terminal was added, we pick up the new interleaving rules.
       const devicesRes = await devicesApi.getAll();
       const list = devicesRes.data?.data || devicesRes.data || [];
       if (Array.isArray(list)) {
@@ -246,19 +316,22 @@ const POSInterface: React.FC = () => {
   } = useQuery({
     queryKey: ['pos-products'],
     queryFn: async () => {
+        /*
         if (!isOnline) {
             console.log('📶 [POSInterface] Offline: Fetching products from local cache...');
             const cached = await offlineStorage.getProducts();
             return { success: true, data: cached };
         }
+        */
         
         try {
             const data = await fetchProducts();
             return data;
         } catch (err) {
-            console.warn('⚠️ [POSInterface] API failed, trying local cache...', err);
-            const cached = await offlineStorage.getProducts();
-            return { success: true, data: cached };
+            // console.warn('⚠️ [POSInterface] API failed, trying local cache...', err);
+            // const cached = await offlineStorage.getProducts();
+            // return { success: true, data: cached };
+            throw err;
         }
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -286,10 +359,12 @@ const POSInterface: React.FC = () => {
 
   // Persistent Cache Sync: Save products to local storage whenever they are successfully fetched online
   useEffect(() => {
+    /*
     if (isOnline && allProducts.length > 0) {
         offlineStorage.saveProducts(allProducts)
             .catch(err => console.error('❌ [POSInterface] Failed to cache products:', err));
     }
+    */
   }, [allProducts, isOnline]);
 
   // Totals
@@ -444,14 +519,14 @@ const POSInterface: React.FC = () => {
 
       if (!isOnline) {
         console.log('📶 [POSInterface] Offline: Checking local product cache for barcode:', value);
-        product = await offlineStorage.getProductByBarcode(value);
+        // product = await offlineStorage.getProductByBarcode(value);
       } else {
         const res = await getProductByBarcode(value, deviceId);
         if (res.data?.success && res.data.data) {
           product = res.data.data as Product;
         } else {
             // Fallback to local if API says not found but we are online (maybe recently synced)
-            product = await offlineStorage.getProductByBarcode(value);
+            // product = await offlineStorage.getProductByBarcode(value);
         }
       }
 
@@ -459,18 +534,21 @@ const POSInterface: React.FC = () => {
         handleAddProductToCart(product);
         setBarcodeInput('');
       } else {
-        setError('Product not found in system or cache.');
+        setError('Product not found in system.');
       }
     } catch (err: any) {
       console.error('❌ [POSInterface] Barcode fetch error:', err);
       // Final attempt: check local storage anyway on error
-      const cachedProduct = await offlineStorage.getProductByBarcode(value);
+      // const cachedProduct = await offlineStorage.getProductByBarcode(value);
+      /*
       if (cachedProduct) {
         handleAddProductToCart(cachedProduct);
         setBarcodeInput('');
       } else {
         setError('Product lookup failed. Please try manual search.');
       }
+      */
+      setError('Product lookup failed. Please try manual search.');
     }
   };
 
@@ -554,16 +632,59 @@ const POSInterface: React.FC = () => {
     setError(null);
   };
 
-  const handleResumeOrder = (holdOrderId: string) => {
-    const holdOrder = holdOrders.find((order) => order.id === holdOrderId);
-    if (!holdOrder) return;
-    
-    // Restore cart from held order
-    setCart(holdOrder.items);
-    
-    // Remove from state - useEffect will update localStorage
+  const handleResumeOrder = async (holdOrderId: string) => {
+    const orderToResume = holdOrders.find((order) => order.id === holdOrderId);
+    if (!orderToResume) return;
+
+    // If there's already something in the cart, ask to confirm
+    if (cart.length > 0) {
+      if (!window.confirm('You have items in your current cart. These will be replaced by the held order. Continue?')) {
+        return;
+      }
+    }
+
+    // --- STOCK VERIFICATION LOGIC ---
+    const verifiedItems: CartItem[] = [];
+    const removedItems: string[] = [];
+    const adjustedItems: string[] = [];
+
+    orderToResume.items.forEach(heldItem => {
+      // Find the most recent stock data from our current product list
+      const liveProduct = allProducts.find(p => p.id === heldItem.id);
+      const liveStock = liveProduct?.inventoryStock?.totalQuantity ?? liveProduct?.stock ?? 0;
+
+      if (liveStock <= 0) {
+        removedItems.push(heldItem.name);
+      } else if (liveStock < heldItem.quantity) {
+        verifiedItems.push({
+          ...heldItem,
+          quantity: liveStock // Set to max available
+        });
+        adjustedItems.push(heldItem.name);
+      } else {
+        verifiedItems.push(heldItem);
+      }
+    });
+
+    // Notify user of any changes
+    if (removedItems.length > 0) {
+      toast.error(`Out of Stock: ${removedItems.join(', ')} were removed.`);
+    }
+    if (adjustedItems.length > 0) {
+      toast.warning(`Limited Stock: ${adjustedItems.join(', ')} quantities were reduced.`);
+    }
+
+    if (verifiedItems.length === 0 && orderToResume.items.length > 0) {
+      toast.error("All items in this held order are now out of stock.");
+      // We don't resume an empty cart, but we keep the hold order or delete it? 
+      // Better to delete it to keep the UI clean if everything is gone.
+      setHoldOrders((prev) => prev.filter((order) => order.id !== holdOrderId));
+      return;
+    }
+
+    setCart(verifiedItems);
     setHoldOrders((prev) => prev.filter((order) => order.id !== holdOrderId));
-    console.log(`✅ [POSInterface] Held order resumed: ${holdOrderId}`);
+    console.log(`✅ [POSInterface] Held order resumed with stock verification: ${holdOrderId}`);
   };
 
   const handleDeleteHoldOrder = (holdOrderId: string) => {
@@ -800,7 +921,8 @@ const POSInterface: React.FC = () => {
           toast.error(errorMsg, "Checkout Failed");
         }
       } else {
-        // OFFLINE MODE - Save to IndexedDB and redirect to receipt page
+        // OFFLINE MODE - DISABLED
+        /*
         console.log('🔴 [POSInterface] OFFLINE MODE - Saving sale locally...');
 
         const newOfflineCount = offlineSyncCount + 1;
@@ -922,6 +1044,8 @@ const POSInterface: React.FC = () => {
         // DO NOT navigate - stay on POS Terminal
         console.log('✅ [POSInterface] Offline sale completed, staying on terminal.');
         toast.info("Offline sale saved locally. It will sync when online.", "Offline Recorded");
+        */
+        setError("Internet connection required to complete sale.");
       }
     } catch (err: any) {
       console.error('❌ [POSInterface] Sale error:', err);
@@ -1000,83 +1124,16 @@ const POSInterface: React.FC = () => {
   };
 
   return (
-    <div className="w-full overflow-hidden">
-      <div className="flex flex-col h-screen max-h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden">
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm transition-colors duration-500 m-0">
-      {/* Offline Banner */}
+    <div className="w-full flex-1 flex flex-col min-h-0 overflow-hidden h-full">
+      <div className="flex-1 flex flex-col min-h-0 bg-slate-100 dark:bg-slate-950 overflow-hidden h-full">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white dark:bg-slate-900 shadow-sm transition-colors duration-500 m-0 h-full">
+      {/* Offline/Sync Banners - DISABLED */}
+      {/*
       {isOnline === false && (
-        <div className="flex items-center justify-between px-6 py-3 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm font-medium">
-          <div className="flex items-center space-x-3">
-            <WifiOff size={16} className="text-blue-500" />
-            <span className="font-semibold">
-              YOU ARE OFFLINE
-            </span>
-            <span className="text-blue-700">
-              – Sales will be saved locally and synced when back online.
-            </span>
-          </div>
-          {pendingCount > 0 && (
-            <div className="flex items-center space-x-2 text-xs">
-              <Clock size={14} className="text-blue-600" />
-              <span className="font-bold">{pendingCount} pending sync</span>
-            </div>
-          )}
-        </div>
+        ...
       )}
-
-      {/* Sync Progress Banner */}
-      {syncProgress && syncProgress.status === 'syncing' && (
-        <div className="flex items-center justify-between px-6 py-3 bg-blue-50 border-b border-blue-200 text-blue-900 text-sm font-medium">
-          <div className="flex items-center space-x-3">
-            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="font-semibold">
-              SYNCING OFFLINE SALES
-            </span>
-            <span className="text-blue-700">
-              {syncProgress.completed}/{syncProgress.total} completed
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-32 h-2 bg-blue-200 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-blue-500 transition-all duration-300"
-                style={{ width: `${(syncProgress.completed / syncProgress.total) * 100}%` }}
-              />
-            </div>
-            <span className="text-xs font-bold">{Math.round((syncProgress.completed / syncProgress.total) * 100)}%</span>
-          </div>
-        </div>
-      )}
-
-      {/* Sync Complete Banner */}
-      {syncProgress && syncProgress.status === 'completed' && (
-        <div className="flex items-center justify-between px-6 py-3 bg-emerald-50 border-b border-emerald-200 text-emerald-900 text-sm font-medium">
-          <div className="flex items-center space-x-3">
-            <CheckCircle size={16} className="text-emerald-500" />
-            <span className="font-semibold">
-              SYNC COMPLETED
-            </span>
-            <span className="text-emerald-700">
-              {syncProgress.message}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Sync Error Banner */}
-      {syncProgress && syncProgress.status === 'error' && (
-        <div className="flex items-center justify-between px-6 py-3 bg-red-50 border-b border-red-200 text-red-900 text-sm font-medium">
-          <div className="flex items-center space-x-3">
-            <AlertCircle size={16} className="text-red-500" />
-            <span className="font-semibold">
-              SYNC FAILED
-            </span>
-            <span className="text-red-700">
-              {syncProgress.message}
-            </span>
-          </div>
-        </div>
-      )}
+      ...
+      */}
 
       {error && (
         <div className="flex items-center space-x-3 px-6 py-3 bg-red-50 border-b border-red-200 text-red-700 text-sm font-medium">
@@ -1085,11 +1142,11 @@ const POSInterface: React.FC = () => {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden h-full">
           {/* Left: Product Selection */}
-          <section className="flex-[1.2] flex flex-col min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 bg-white dark:bg-slate-900">
-            {/* Barcode Scanner */}
-            <form onSubmit={handleScanSubmit} className="flex-shrink-0">
+          <section className="flex-[1.5] xl:flex-[1.8] flex flex-col min-h-0 overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 h-full">
+            {/* Barcode Scanner Area */}
+            <form onSubmit={handleScanSubmit} className="flex-shrink-0 p-4 border-b border-slate-100 dark:border-slate-800">
               <div className="relative">
                 <Scan className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -1097,7 +1154,7 @@ const POSInterface: React.FC = () => {
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
                   placeholder="Scan barcode or type product name/SKU..."
-                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 focus:border-blue-400"
                 />
               </div>
             </form>
@@ -1105,7 +1162,7 @@ const POSInterface: React.FC = () => {
             {/* Products Table Section */}
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               {/* Filters (Pinned at top) */}
-              <div className="flex-shrink-0 p-4 border-b border-slate-100 bg-white">
+              <div className="flex-shrink-0 p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <ProductsFilters
                   searchQuery={productSearch}
                   setSearchQuery={setProductSearch}
@@ -1134,7 +1191,7 @@ const POSInterface: React.FC = () => {
           
 
             {/* Internal Footer for Left Section: Hold Orders */}
-            <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50">
+            <div className="flex-shrink-0 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
 {/* Hold Orders Section */}
       {holdOrders.length > 0 && (
         <div className="p-4 animate-in slide-in-from-top duration-500 overflow-hidden flex flex-col">
@@ -1145,19 +1202,31 @@ const POSInterface: React.FC = () => {
             </h3>
           </div>
           <div className="overflow-x-auto pb-2 custom-scrollbar">
-            <div className="flex gap-3 min-w-max">
+            <div className="flex gap-4 min-w-max">
               {holdOrders.map((order) => (
                 <div
                   key={order.id}
-                  className="w-[200px] p-3.5 rounded-[1.5rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
+                  className="w-[260px] p-4 rounded-[1.8rem] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group relative overflow-hidden"
                 >
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-full -mr-8 -mt-8"></div>
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-full -mr-10 -mt-10"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{order.id.split('-').pop()}</span>
-                      <span className="text-[8px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-1.5 py-0.5 rounded-lg">
-                        {order.items.length} ITEMS
-                      </span>
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex flex-col">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Order ID</span>
+                        <span className="text-[10px] font-black text-slate-600 dark:text-slate-400 tabular-nums">#{order.id.slice(-6)}</span>
+                      </div>
+                      <HoldOrderTimer 
+                        heldAt={order.timestamp} 
+                        onExpire={() => {
+                          const updated = holdOrders.filter(o => o.id !== order.id);
+                          setHoldOrders(updated);
+                          localStorage.setItem('pos-hold-orders', JSON.stringify(updated));
+                        }} 
+                      />
+                      <div className="flex flex-col items-end">
+                        <span className="text-[8px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">{order.items.length} {order.items.length === 1 ? 'Item' : 'Items'}</span>
+                        <div className="w-8 h-1 bg-indigo-100 dark:bg-indigo-900/50 rounded-full mt-0.5"></div>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
@@ -1192,9 +1261,9 @@ const POSInterface: React.FC = () => {
     </section>
 
     {/* Right: Added Products & Active Checkout Stack */}
-    <aside className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] z-20">
-      <div className="flex-1 flex flex-col overflow-hidden border-b border-slate-200">
-        <div className="px-5 py-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
+    <aside className="w-full lg:w-[400px] xl:w-[450px] flex flex-col bg-white dark:bg-slate-900 overflow-hidden flex-shrink-0 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.05)] z-20 h-full">
+      <div className="flex-1 flex flex-col overflow-hidden border-b border-slate-200 dark:border-slate-800">
+        <div className="px-5 py-4 bg-slate-50/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
                 <h3 className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 flex items-center gap-2">
                   <ShoppingCart size={15} className="text-blue-600" />
                   Added Products
@@ -1204,7 +1273,7 @@ const POSInterface: React.FC = () => {
                 </span>
               </div>
 
-              <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
+              <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
                 {cart.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-2 py-10 px-4">
                     <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
@@ -1289,34 +1358,35 @@ const POSInterface: React.FC = () => {
               </div>
             </div>
 
-            {/* Bottom: Active Cart Totals & Checkout */}
-            <div className="flex-shrink-0 max-h-[60%] overflow-y-auto bg-white border-t border-slate-100 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.05)] custom-scrollbar">
-              <div className="px-4 py-2 space-y-1">
-              <div className="flex justify-between items-center text-[11px]">
+            {/* Bottom Stack: Totals -> Options -> Payment -> Action Buttons */}
+            <div className="flex-shrink-0 flex flex-col bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_30px_-10px_rgba(0,0,0,0.1)]">
+              <div className="max-h-[50vh] overflow-y-auto custom-scrollbar border-b border-slate-50 dark:border-slate-800">
+                <div className="px-4 py-2 space-y-1">
+                             <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-500 font-medium">Subtotal</span>
-                <span className="font-bold text-slate-700">
+                <span className="font-bold text-slate-700 dark:text-slate-300">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-500 font-medium">Tax (GST)</span>
-                <span className="font-bold text-slate-700">
+                <span className="font-bold text-slate-700 dark:text-slate-300">
                   {formatCurrency(tax)}
                 </span>
               </div>
               <div className="flex justify-between items-center text-[11px]">
                 <span className="text-slate-500 font-medium">Discount</span>
-                <span className="font-bold text-slate-900">
+                <span className="font-bold text-slate-900 dark:text-white">
                   -{formatCurrency(discountAmount)}
                 </span>
               </div>
-              <hr className="my-1 border-dashed border-slate-200" />
+              <hr className="my-1 border-dashed border-slate-200 dark:border-slate-800" />
               <div className="flex justify-between items-center text-[15px] font-black py-1">
-                <span className="flex items-center space-x-1 text-slate-900">
+                <span className="flex items-center space-x-1 text-slate-900 dark:text-white">
                   <Banknote size={18} className="text-blue-600" />
                   <span className="tracking-tighter">TOTAL</span>
                 </span>
-                <span className="text-slate-950 font-black text-lg tabular-nums">
+                <span className="text-slate-950 dark:text-white font-black text-base tabular-nums">
                   {formatCurrency(total)}
                 </span>
               </div>
@@ -1356,7 +1426,7 @@ const POSInterface: React.FC = () => {
                   min={0}
                   value={discountValue || ''}
                   onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
-                  className="flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-100 focus:border-blue-400"
+                  className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 text-[11px] font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-100 dark:focus:ring-blue-900 focus:border-blue-400"
                   placeholder={discountMode === 'amount' ? 'Rs. amount' : '% value'}
                 />
                 <span className="text-[11px] text-slate-500 font-semibold">
@@ -1413,15 +1483,15 @@ const POSInterface: React.FC = () => {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Customer notes..."
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-900 resize-none focus:outline-none focus:ring-1 focus:ring-emerald-100 focus:border-emerald-400"
+                  className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 text-[11px] font-medium text-slate-900 dark:text-white resize-none focus:outline-none focus:ring-1 focus:ring-emerald-100 dark:focus:ring-emerald-900 focus:border-emerald-400"
                 />
               </div>
             </div>
 
             {/* Received Amount & Change Calculation */}
             {paymentMethod === 'CASH' && cart.length > 0 && (
-              <div className="px-4 py-1.5 border-t border-slate-100 space-y-1.5 bg-slate-50/30">
-                <div className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+              <div className="px-4 py-1.5 border-t border-slate-100 dark:border-slate-800 space-y-1.5 bg-slate-50/30 dark:bg-slate-800/30">
+                <div className="text-[9px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
                   <span>Payment Details</span>
                 </div>
 
@@ -1445,26 +1515,26 @@ const POSInterface: React.FC = () => {
                 {receivedAmount && (
                   <div className={`rounded-lg p-2 border ${
                     hasInsufficientAmount
-                      ? 'bg-red-50 border-red-200'
+                      ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50'
                       : hasExactAmount
-                      ? 'bg-blue-50 border-blue-200'
+                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50'
                       : hasChange
-                      ? 'bg-blue-50 border-blue-200'
-                      : 'bg-slate-50 border-slate-200'
+                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900/50'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                   }`}>
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                         Bill Total
                       </span>
-                      <span className="text-[11px] font-bold text-slate-700">
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                         {formatCurrency(total)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                         Received
                       </span>
-                      <span className="text-[11px] font-bold text-slate-700">
+                      <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
                         {formatCurrency(receivedAmountNum)}
                       </span>
                     </div>
@@ -1522,10 +1592,10 @@ const POSInterface: React.FC = () => {
                 )}
               </div>
             )}
+                </div>
 
-              </div>
-
-              <div className="px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+              {/* 2. Fixed Action Buttons Footer */}
+              <div className="px-4 py-2 bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-sm border-t border-slate-100 dark:border-slate-800">
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -1563,16 +1633,17 @@ const POSInterface: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+
           </aside>
         </div>
       </div>
       </div>
       
-      
       {/* Hidden Receipt for direct thermal printing */}
       <ThermalReceipt sale={lastSaleForReceipt} />
     </div>
-);
+  );
 };
 
 export default POSInterface;
