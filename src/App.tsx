@@ -16,6 +16,7 @@ import SocketInvalidator from '@/components/shared/SocketInvalidator';
 
 // Lazy loading pages
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
+const LandingPage = lazy(() => import('@/pages/landing/LandingPage'));
 const CreateStorePage = lazy(() => import('@/pages/super-admin/CreateStorePage'));
 const EditStorePage = lazy(() => import('@/pages/super-admin/EditStorePage'));
 
@@ -182,7 +183,11 @@ const App: React.FC = () => {
               </Route>
 
               {/* Intelligent Redirect Handling */}
-              <Route path="/" element={<HomeRedirect />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/features" element={<LandingPage />} />
+              <Route path="/security" element={<LandingPage />} />
+              <Route path="/pricing" element={<LandingPage />} />
+              <Route path="/contact" element={<LandingPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>

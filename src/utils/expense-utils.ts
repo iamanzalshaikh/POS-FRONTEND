@@ -119,6 +119,7 @@ export const getMonthlyExpenses = (expenses: Expense[]): number => {
  */
 export const getExpenseSummary = (expenses: Expense[]): ExpenseSummary => {
   const paid = expenses.reduce((sum, e) => {
+    if (e.category === 'SALARIES') return sum;
     const total = Number(e.amount || 0);
     const alreadyPaid = e.category === 'SUPPLIER_PURCHASE' ? Number(e.paidAmount || 0) : total;
     // Only count payment up to the amount of the expense to ignore credit balances in the summary

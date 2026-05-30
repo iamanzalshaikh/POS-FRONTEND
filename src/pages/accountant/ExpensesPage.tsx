@@ -39,7 +39,7 @@ interface GroupedSupplierExpense {
   id: string; // Synthetic ID
 }
 
-type TableRow = Expense | GroupedSupplierExpense;
+
 
 const ExpensesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -157,8 +157,7 @@ const ExpensesPage: React.FC = () => {
     queryFn: () => getSupplierPurchases({ limit: 1000 }), // High limit for grouping
   });
 
-  const suppliers = useMemo(() => suppliersRes?.data?.data || [], [suppliersRes]);
-  const purchases = useMemo(() => purchasesRes?.data?.data?.items || [], [purchasesRes]);
+
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter(e => {
@@ -235,7 +234,7 @@ const ExpensesPage: React.FC = () => {
     {
       header: "Paid Amount",
       cell: ({ row }) => {
-        const expense = row.original as any;
+        const expense = row.original;
         let settled = expense.amount;
 
         if (expense.category === 'SUPPLIER_PURCHASE') {
@@ -255,7 +254,7 @@ const ExpensesPage: React.FC = () => {
     {
       header: "Remaining",
       cell: ({ row }) => {
-        const expense = row.original as any;
+        const expense = row.original;
         const remaining = expense.category === 'SUPPLIER_PURCHASE' 
           ? (expense.supplierPurchase ? Number(expense.supplierPurchase.balance) : (expense.amount - (expense.paidAmount || 0))) 
           : 0;
@@ -363,7 +362,7 @@ const ExpensesPage: React.FC = () => {
         />
         
         <MetricCard
-          title="Supplier Paid"
+          title="Total Expenses Paid"
           value={formatAmount(summary.paid)}
           icon={Wallet}
           colorClass="bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400"

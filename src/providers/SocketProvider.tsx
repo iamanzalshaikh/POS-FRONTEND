@@ -22,17 +22,17 @@ export const useSocket = () => {
 
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isAuthenticated } = useAuthStore();
-  const socketRef = useRef<Socket | null>(null);
+  const [socket, setSocket] = React.useState<Socket | null>(null);
   const [isConnected, setIsConnected] = React.useState(false);
 
   useEffect(() => {
     // Only connect if authenticated and we don't have an active socket
-    if (isAuthenticated && user && !socketRef.current) {
+    if (isAuthenticated && user && !socket) {
       console.log('🔌 [Socket] Initializing shared connection to', SOCKET_URL);
       
       const token = localStorage.getItem('access_token');
       
-      const socket = io(SOCKET_URL, {
+      const newSocket = io(SOCKET_URL, {
         auth: { token },
         transports: ['websocket'],
         reconnection: true,
@@ -40,44 +40,44 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         reconnectionDelay: 1000,
       });
 
-      socket.on('connect', () => {
-        console.log('✅ [Socket] Connected:', socket.id);
+      newSocket.on('connect', () => {
+        console.log('✅ [Socket] Connected:', newSocket.id);
         setIsConnected(true);
         
         // Join specific rooms if needed (backend handles auto-join on connect but explicit is safer)
         const storeId = user.storeId || user.store?.id;
         if (storeId) {
           console.log(`🏠 [Socket] Joining store room: ${storeId}`);
-          socket.emit('join:room', { storeId });
+          newSocket.emit('join:room', { storeId });
         }
       });
 
-      socket.on('disconnect', () => {
+      newSocket.on('disconnect', () => {
         console.log('❌ [Socket] Disconnected');
         setIsConnected(false);
       });
 
-      socket.on('connect_error', (err) => {
+      newSocket.on('connect_error', (err) => {
         console.error('⚠️ [Socket] Connection error:', err.message);
         setIsConnected(false);
       });
 
-      socketRef.current = socket;
+      setSocket(newSocket);
     }
 
     // Cleanup on unmount or logout
     return () => {
-      if (socketRef.current && (!isAuthenticated || !user)) {
+      if (socket && (!isAuthenticated || !user)) {
         console.log('🔌 [Socket] Closing shared connection');
-        socketRef.current.disconnect();
-        socketRef.current = null;
+        socket.disconnect();
+        setSocket(null);
         setIsConnected(false);
       }
     };
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated, user?.id, socket]);
 
   return (
-    <SocketContext.Provider value={{ socket: socketRef.current, isConnected }}>
+    <SocketContext.Provider value={{ socket, isConnected }}>
       {children}
     </SocketContext.Provider>
   );

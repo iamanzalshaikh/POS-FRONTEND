@@ -125,6 +125,8 @@ const ExpenseReport: React.FC = () => {
         'Subcategory': e.subcategory?.name || '—',
         'Description': e.description,
         'Amount': Number(e.amount),
+        'Supplier Paid': e.category === 'SUPPLIER_PURCHASE' ? Number(e.paidAmount || 0) : '—',
+        'Supplier Balance': e.category === 'SUPPLIER_PURCHASE' ? Number(e.supplierPurchase?.balance || 0) : '—',
         'Notes': e.notes || '—'
       };
     });
@@ -286,10 +288,10 @@ const ExpenseReport: React.FC = () => {
                               {expense.category === 'SUPPLIER_PURCHASE' && (
                                 <div className="flex flex-col mt-1">
                                   <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tight leading-tight">
-                                    Payable: {formatCurrency(expense.supplierPayable || 0)}
+                                    Payable: {formatCurrency(Number(expense.supplierPurchase?.balance || 0))}
                                   </span>
                                   <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tight leading-tight">
-                                    Paid: {formatCurrency(expense.supplierPaid || 0)}
+                                    Paid: {formatCurrency(expense.paidAmount || 0)}
                                   </span>
                                 </div>
                               )}

@@ -14,7 +14,8 @@ import { cn } from '@/lib/utils';
 
 const ProfitLossReport: React.FC = () => {
   const [periodPreset, setPeriodPreset] = useState<'today' | 'week' | 'month' | 'custom'>('month');
-  
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().split('T')[0].slice(0, 7)); // YYYY-MM
+
   const { startDate, endDate } = useMemo(() => {
     const today = new Date();
     const end = new Date();
@@ -36,13 +37,20 @@ const ProfitLossReport: React.FC = () => {
         start.setHours(0, 0, 0, 0);
         return { startDate: start, endDate: end };
     }
+    if (periodPreset === 'custom' && selectedMonth) {
+        const [year, month] = selectedMonth.split('-').map(Number);
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 0);
+        end.setHours(23, 59, 59, 999);
+        return { startDate: start, endDate: end };
+    }
     
     // Default 90 days for custom/old behavior
     const start = new Date(today);
     start.setDate(start.getDate() - 89);
     start.setHours(0, 0, 0, 0);
     return { startDate: start, endDate: end };
-  }, [periodPreset]);
+  }, [periodPreset, selectedMonth]);
 
   const sDateStr = startDate.toISOString().split('T')[0];
   const eDateStr = endDate.toISOString().split('T')[0];
@@ -161,7 +169,7 @@ const ProfitLossReport: React.FC = () => {
       >
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4 lg:mt-0">
            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-            {(['today', 'week', 'month'] as const).map((preset) => (
+            {(['today', 'week', 'month', 'custom'] as const).map((preset) => (
               <button
                 key={preset}
                 onClick={() => setPeriodPreset(preset)}
@@ -172,10 +180,23 @@ const ProfitLossReport: React.FC = () => {
                     : 'text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700'
                 )}
               >
-                {preset}
+                {preset === 'custom' ? 'History' : preset}
               </button>
             ))}
           </div>
+
+          {periodPreset === 'custom' && (
+            <div className="flex items-center gap-3 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl w-full sm:w-fit animate-in fade-in zoom-in-95">
+              <Calendar size={14} className="text-indigo-600 dark:text-indigo-400" />
+              <input 
+                type="month"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="bg-transparent border-none p-0 text-[10px] font-black uppercase tracking-widest text-indigo-700 dark:text-indigo-300 focus:ring-0 cursor-pointer [color-scheme:light] dark:[color-scheme:dark]"
+              />
+            </div>
+          )}
+
           <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl w-full sm:w-fit">
             <Calendar size={14} className="text-slate-400" />
             <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest tabular-nums">

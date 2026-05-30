@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { authApi } from '../service/api';
 import { getDeviceFingerprint } from '../utils/fingerprint';
-import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -73,7 +73,16 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 selection:bg-indigo-100">
+    <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 selection:bg-indigo-100 relative">
+      {/* Back to Website Button */}
+      <button
+        onClick={() => navigate('/')}
+        className="absolute top-6 left-6 flex items-center gap-2 bg-white/80 hover:bg-white text-slate-600 hover:text-indigo-600 px-4 py-2.5 rounded-xl border border-slate-200/60 shadow-sm transition-all duration-200 text-xs font-bold active:scale-95 cursor-pointer z-20 group"
+      >
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+        Back to Website
+      </button>
+
       {/* Background Decorative Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-indigo-100/50 blur-[120px]" />
