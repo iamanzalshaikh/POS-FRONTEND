@@ -83,10 +83,10 @@ const ExpensesTable: React.FC<ExpensesTableProps> = ({
                     {expense.category === 'SUPPLIER_PURCHASE' && (
                       <div className="flex flex-col mt-1">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight leading-tight">
-                          Payable: {formatCurrency(expense.supplierPayable || 0)}
+                          Payable: {formatCurrency(Number(expense.supplierPurchase?.balance || 0))}
                         </span>
                         <span className="text-[10px] font-black text-emerald-600 uppercase tracking-tight leading-tight">
-                          Paid: {formatCurrency(expense.supplierPaid || 0)}
+                          Paid: {formatCurrency(expense.paidAmount || 0)}
                         </span>
                       </div>
                     )}

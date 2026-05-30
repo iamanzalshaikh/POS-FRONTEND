@@ -30,6 +30,20 @@ const ReportsPage = () => {
     const calculateDateRange = (range: string) => {
         const end = new Date();
         const start = new Date();
+        
+        // Handle Specific Month selection (Format: YYYY-MM)
+        if (range.includes('-') && range.length === 7) {
+            const [year, month] = range.split('-').map(Number);
+            const specificStart = new Date(year, month - 1, 1);
+            const specificEnd = new Date(year, month, 0); // Last day of that month
+            specificEnd.setHours(23, 59, 59, 999);
+            
+            return {
+                startDate: toLocalYMD(specificStart),
+                endDate: toLocalYMD(specificEnd)
+            };
+        }
+
         if (range === 'Today') {
             start.setHours(0, 0, 0, 0);
         } else if (range === 'This Week' || range === '7D') {
@@ -147,8 +161,14 @@ const ReportsPage = () => {
 
     const salesStats = data ? [
         { name: "Total Revenue", stat: formatCurrencyShort(data.summary?.totalRevenue ?? 0), change: "+14%", changeType: "positive" as const },
-        { name: "Transactions", stat: formatNumberShort(data.summary?.totalTransactions ?? 0), change: "+8%", changeType: "positive" as const },
-        { name: "GST", stat: formatCurrencyShort(Number(data.summary?.totalTax ?? 0)), change: "+12%", changeType: "positive" as const },
+        { name: "Total Expenses", stat: formatCurrencyShort(data.expenseBreakdown?.totalBookedExpenses ?? 0), change: "+5%", changeType: "negative" as const },
+        { 
+            name: "Net Profit", 
+            stat: formatCurrencyShort((data.summary?.totalRevenue ?? 0) - (data.expenseBreakdown?.totalBookedExpenses ?? 0)), 
+            change: "+18%", 
+            changeType: ((data.summary?.totalRevenue ?? 0) - (data.expenseBreakdown?.totalBookedExpenses ?? 0)) >= 0 ? "positive" as const : "negative" as const 
+        },
+        { name: "GST Collected", stat: formatCurrencyShort(Number(data.summary?.totalTax ?? 0)), change: "+12%", changeType: "positive" as const },
         { name: "Discounts", stat: formatCurrencyShort(data.summary?.totalDiscount ?? 0), change: "+2%", changeType: "positive" as const }
     ] : [];
 

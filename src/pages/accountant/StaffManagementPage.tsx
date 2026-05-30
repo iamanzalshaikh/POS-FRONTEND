@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -93,7 +93,7 @@ const StaffManagementPage: React.FC = () => {
   const debouncedSearch = useDebounce(searchQuery, 500);
 
   // Queries
-  const { data: staffRes, isLoading: staffLoading, error: staffError, refetch: refetchStaff } = useQuery({
+  const { data: staffRes, isLoading: staffLoading, refetch: refetchStaff } = useQuery({
     queryKey: ['accountant-staff-list', statusFilter, roleFilter, debouncedSearch],
     queryFn: () => getStaff({ 
       status: statusFilter === 'ALL' ? 'all' : statusFilter,
@@ -149,8 +149,9 @@ const StaffManagementPage: React.FC = () => {
       setEditingStaffData(null);
       setSelectedStaff(null);
       refetchData();
-    } catch (err: any) {
-      const message = err.response?.data?.message || 'Failed to sync staff record with registry';
+    } catch (err: unknown) {
+      const error = err as any;
+      const message = error.response?.data?.message || 'Failed to sync staff record with registry';
       if (!message.toLowerCase().includes('cnic')) {
         toast.error(message);
       }
@@ -169,8 +170,9 @@ const StaffManagementPage: React.FC = () => {
       setShowDeleteModal(false);
       setSelectedStaff(null);
       refetchData();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Termination sequence failed');
+    } catch (err: unknown) {
+      const error = err as any;
+      toast.error(error.response?.data?.message || 'Termination sequence failed');
     } finally {
       setIsDeleting(false);
     }
